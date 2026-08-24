@@ -25,7 +25,7 @@ Audit: [milestones/v1.0-MILESTONE-AUDIT.md](milestones/v1.0-MILESTONE-AUDIT.md)
 **Milestone Goal:** Add Blackjack as a second game and make deck count (1 or 2 decks) a first-class, explorable probability variable across both games.
 
 - [x] **Phase 4: Multiset Deck & Streaming Foundation** - Physical-card-identity deck model (1 or 2 decks, no dedup collapse) and a generalized streaming worker runner, proven behavior-identical to v1.0 at deckCount=1 (completed 2026-08-24)
-- [ ] **Phase 5: Game-Mode Shell & Store Separation** - Users can switch between Hold'em and Blackjack, each with fully independent state and odds
+- [x] **Phase 5: Game-Mode Shell & Store Separation** - Users can switch between Hold'em and Blackjack, each with fully independent state and odds (completed 2026-08-24)
 - [ ] **Phase 6: Blackjack Core Odds Loop** - Full Blackjack vertical slice: deal, bust/dealer-outcome odds, Stand/Hit EV, hit/stand play, dealer reveal, deck toggle
 - [ ] **Phase 7: 2-Deck Hold'em Evaluation Layer** - Hold'em over a 104-card shoe with correct duplicate-card evaluation and a Five of a Kind category
 - [ ] **Phase 8: Cross-Game Deck-Count Toggle UI** - One shared deck-count control spanning both games
@@ -82,7 +82,7 @@ Plans:
   3. Switching to Blackjack shows an independent game screen/state that shares no store fields or odds-cache keys with Hold'em, verified by a store-isolation test.
   4. Switching modes mid-simulation cleanly cancels any in-flight worker run for the game being left, so no stale odds bleed across modes.
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 **UI hint**: yes
 
 Plans:
@@ -96,7 +96,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 05-03-PLAN.md — Mode-shell source-shape guard, full 281-test regression sweep, browser acceptance checkpoint (D-09/D-10)
+- [x] 05-03-PLAN.md — Mode-shell source-shape guard, full 281-test regression sweep, browser acceptance checkpoint (D-09/D-10)
 
 ### Phase 6: Blackjack Core Odds Loop
 
@@ -157,7 +157,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Scenario Construction & Street Navigation | v1.0 | 6/6 | Complete | 2026-08-24 |
 | 3. Casino Table UI & Animation | v1.0 | 6/6 | Complete | 2026-08-24 |
 | 4. Multiset Deck & Streaming Foundation | v2.0 | 6/6 | Complete   | 2026-08-24 |
-| 5. Game-Mode Shell & Store Separation | v2.0 | 2/3 | In Progress|  |
+| 5. Game-Mode Shell & Store Separation | v2.0 | 3/3 | Complete   | 2026-08-24 |
 | 6. Blackjack Core Odds Loop | v2.0 | 0/TBD | Not started | - |
 | 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 0/TBD | Not started | - |
 | 8. Cross-Game Deck-Count Toggle UI | v2.0 | 0/TBD | Not started | - |
