@@ -112,8 +112,19 @@ function App() {
         </div>
       )}
       {errorMessage !== null && (
-        <div className="simulation-error" data-testid="simulation-error" role="alert">
-          {SIMULATION_ERROR_MESSAGE}
+        // IMP-16: shows the underlying error detail alongside the existing recovery-path
+        // copy. Deliberate a11y trade-off: the detail sits OUTSIDE the role="alert" live
+        // region so the announced text stays the actionable recovery-path sentence
+        // (UI-SPEC Copywriting Contract keeps that copy verbatim on the alert element
+        // itself) rather than a raw technical string — the detail is still in normal
+        // reading order for anyone who wants it, just not what a screen reader announces.
+        <div className="simulation-error-banner">
+          <div className="simulation-error" data-testid="simulation-error" role="alert">
+            {SIMULATION_ERROR_MESSAGE}
+          </div>
+          <p className="simulation-error-detail" data-testid="simulation-error-detail">
+            Reported error: {errorMessage}
+          </p>
         </div>
       )}
       <div className="control-bar">

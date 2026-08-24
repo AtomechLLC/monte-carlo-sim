@@ -34,10 +34,27 @@ if (typeof HTMLDialogElement !== 'undefined') {
 // Guarded on `typeof window !== 'undefined'` for the same reason as the HTMLDialogElement
 // polyfill above: this setup file also runs for suites under `@vitest-environment node` (no DOM
 // globals at all) — see src/engine/*.test.ts and src/worker/simulationApi.test.ts.
+const REDUCED_MOTION_QUERY = /\(\s*prefers-reduced-motion\s*(?::\s*([\w-]+)\s*)?\)/;
+
+// IMP-15: replaces a plain substring match against the feature name (which answered
+// `true` for `'(prefers-reduced-motion: no-preference)'` — the exact negation of what that
+// query means) with a real parse of the one feature this harness cares about.
+function matchesReducedMotion(query: string): boolean {
+  const match = REDUCED_MOTION_QUERY.exec(query);
+  if (match === null) return false;
+  // The bare feature form `(prefers-reduced-motion)` (no `: value`) is true whenever the
+  // value is anything OTHER than `no-preference` — and this harness deliberately forces
+  // `reduce` for every test (D-09), so a missing value defaults to `reduce`. Any unrelated
+  // query (e.g. `(min-width: 1024px)`) fails the regex entirely and correctly returns
+  // `false` instead of accidentally matching a substring.
+  const value = match[1] ?? 'reduce';
+  return value === 'reduce';
+}
+
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   window.matchMedia = function (query: string): MediaQueryList {
     return {
-      matches: query.includes('prefers-reduced-motion'),
+      matches: matchesReducedMotion(query),
       media: query,
       onchange: null,
       addListener: () => {},
