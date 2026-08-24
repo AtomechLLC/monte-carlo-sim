@@ -103,6 +103,8 @@ No new color system. Reuses the existing CSS custom properties from `src/index.c
 
 ## Layout & Component Inventory
 
+**Focal point:** the street label + Advance control pair is the primary visual anchor this phase — street navigation is the loop that drives every odds change, so it is where the eye should land first; the card picker slots are the secondary anchor.
+
 Top-to-bottom document order (a single vertical stack, no grid/columns this phase — table-scene layout is Phase 3/TBL-01):
 
 1. `<h1>` — "Monte Carlo Poker Simulator" (unchanged, Phase 1)
@@ -129,7 +131,7 @@ Clicking a slot button opens the 52-card panel (`<dialog>`) scoped to that slot.
 - Heading: `"Pick a card for {Slot Name}"`
 - Four suit groups, each preceded by its group heading (Clubs / Diamonds / Hearts / Spades), each containing 13 rank buttons in `ALL_RANKS` order (`2,3,4,5,6,7,8,9,T,J,Q,K,A`)
 - Each card button's label is the raw card code (e.g. `"Ac"`); a used card's label becomes `"Ac (used)"` and the button is `disabled` with `title="Already used in this hand"`
-- A `"Cancel"` button closes the dialog without picking (native `Escape` key and `<dialog>` backdrop click also close it — both must remain enabled, do not intercept/preventDefault on them)
+- A `"Cancel Pick"` button closes the dialog without picking (native `Escape` key and `<dialog>` backdrop click also close it — both must remain enabled, do not intercept/preventDefault on them)
 
 ### Component: StreetControls
 
@@ -209,14 +211,14 @@ Renders `board.slice(0, STREET_BOARD_COUNT[street])` as raw card-code text insid
 | Picker slot names | `"Hero 1"`, `"Hero 2"`, `"Flop 1"`, `"Flop 2"`, `"Flop 3"`, `"Turn"`, `"River"` |
 | Picker panel heading | `"Pick a card for {Slot Name}"` |
 | Suit group headings | `"Clubs"`, `"Diamonds"`, `"Hearts"`, `"Spades"` |
-| Panel cancel action | `"Cancel"` |
+| Panel cancel action | `"Cancel Pick"` |
 
 ---
 
 ## Accessibility Contract
 
 - **Keyboard:** every new interactive element is a native `<button>` — reachable via Tab, activatable via Enter/Space, with no custom `tabindex`/`onKeyDown` reimplementation needed.
-- **Focus management:** the 52-card panel uses `<dialog>.showModal()`, which natively traps focus and restores focus to the invoking slot button on close (both on pick and on Cancel/Escape). Do not add a custom focus trap.
+- **Focus management:** the 52-card panel uses `<dialog>.showModal()`, which natively traps focus and restores focus to the invoking slot button on close (both on pick and on Cancel Pick/Escape). Do not add a custom focus trap.
 - **Escape/backdrop close:** must remain functional (native `<dialog>` behavior) — do not call `preventDefault()` on the dialog's `cancel` event.
 - **`:focus-visible` outlines:** must remain visible (browser default or `var(--accent)` per Phase 1's existing `.counter:focus-visible` pattern in `App.css`) on every new button — no CSS reset that removes them.
 - **Disabled state semantics:** every `disabled` button in this contract (used cards, boundary nav, revealed opponents, empty Clear buttons) uses the native `disabled` HTML attribute (not just a visual/CSS-only disabled look), so assistive tech announces it correctly.
