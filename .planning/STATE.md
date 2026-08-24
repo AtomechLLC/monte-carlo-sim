@@ -77,7 +77,8 @@ None yet.
 
 ### Blockers/Concerns
 
-- ⚠️ [Phases 1-3] Security enforcement is enabled but no SECURITY.md exists for any phase — `/gsd:secure-phase 1|2|3` closes the gate (client-only app; low risk).
+- ⚠️ [Phase 4→6/7/8] 04-REVIEW.md warnings are FUTURE-PHASE TRAPS to fold into upcoming phase contexts: WR-01 Phase 8 MUST pass deckCount into setPick (comment corrected in c29091a); WR-02 Phase 6 should add wire-shape validation for deckCount (reject 0 and >2); WR-03 nothing may pass deckCount:2 into the HOLD'EM trial path until Phase 7's duplicate-aware evaluator exists (evaluator crashes on duplicates); WR-04 Phase 7 should strengthen the shoe-path guard against .includes() membership and add behavioral 2-deck CardPicker tests.
+- ⚠️ [Phases 1-4] Security enforcement is enabled but no SECURITY.md exists for any phase — `/gsd:secure-phase N` closes the gate (client-only app; low risk).
 - ⚠️ [Phase 7 flag] 2-deck poker hand-ranking convention (Five of a Kind above Royal Flush) is single-sourced from a community forum thread, not an official rulebook — treat as working convention, revisit if a more authoritative source surfaces.
 - ⚠️ [Phase 6 flag] Blackjack EV payout model (3:2 natural, 1:1 win, push at 0, per-1-unit labeling) must be an explicit documented decision before implementation, not inferred while coding.
 - (Resolved) WR-02 worker-crash surfacing — FIXED in quick task 260824-biv (Worker error/messageerror listeners now route into the error banner).
