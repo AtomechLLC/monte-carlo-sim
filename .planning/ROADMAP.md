@@ -64,7 +64,7 @@ Plans:
   3. User can rewind to an earlier street and see odds return to their earlier-street values; re-advancing shows the same cards unless a separate re-deal action is taken.
   4. User can reveal any opponent's hole cards mid-hand and see all odds recalculate to account for the newly known cards.
 
-**Plans:** 2/6 plans executed
+**Plans:** 3/6 plans executed
 
 Plans:
 **Wave 1**
@@ -77,7 +77,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-03-PLAN.md — Knowledge-keyed settled-odds cache and one-way opponent reveal (NAV-02, NAV-03)
+- [x] 02-03-PLAN.md — Knowledge-keyed settled-odds cache and one-way opponent reveal (NAV-02, NAV-03)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -115,5 +115,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Odds Loop | 4/4 | Complete   | 2026-08-24 |
-| 2. Scenario Construction & Street Navigation | 2/6 | In Progress|  |
+| 2. Scenario Construction & Street Navigation | 3/6 | In Progress|  |
 | 3. Casino Table UI & Animation | 0/TBD | Not started | - |
