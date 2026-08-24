@@ -16,8 +16,10 @@ const SUIT_LABEL: Record<Suit, string> = {
 /**
  * Fixed deck count for this phase (D-09): the picker's blocking is count-aware but this phase
  * ships no visible UI for it, so `deckCount` stays pinned to 1 here — identical to v1's every-
- * card-unique behaviour. This is the single line Phase 8's cross-game deck-count toggle will
- * replace with a `gameModeStore` read once that store exists.
+ * card-unique behaviour. Phase 8 (cross-game deck-count toggle): replacing this const with a
+ * `gameModeStore` read is NOT sufficient on its own — the `setPick(openSlot, card)` call below
+ * MUST also pass `deckCount` as its third argument, or the store keeps blocking at its default
+ * of 1 while `isUsed` shows a second copy as available (silent lost picks — 04-REVIEW WR-01).
  */
 const deckCount: DeckCount = 1;
 
