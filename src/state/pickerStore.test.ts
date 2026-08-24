@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { usePickerStore, pickedCards, SLOT_ORDER, SLOT_LABEL } from './pickerStore';
+import { remainingCopies } from './pickerStore';
 
 const EMPTY_PICKS = {
   'hero-0': null,
@@ -100,5 +101,90 @@ describe('pickerStore — seven-slot draft with duplicate rejection', () => {
     for (const slot of SLOT_ORDER) {
       expect(slot).not.toContain('opponent');
     }
+  });
+
+  describe('deckCount=2 — count-aware duplicate rejection (D-09/DECK-04)', () => {
+    it('remainingCopies of an empty draft is 1 at the default deck count and 2 at deckCount=2', () => {
+      const { picks } = usePickerStore.getState();
+      expect(remainingCopies(picks, 'As')).toBe(1);
+      expect(remainingCopies(picks, 'As', 2)).toBe(2);
+    });
+
+    it('after one pick, remainingCopies drops to 0 at deckCount=1 and 1 at deckCount=2', () => {
+      usePickerStore.getState().setPick('hero-0', 'As');
+      const { picks } = usePickerStore.getState();
+
+      expect(remainingCopies(picks, 'As')).toBe(0);
+      expect(remainingCopies(picks, 'As', 2)).toBe(1);
+    });
+
+    it('after two slots hold the same card at deckCount=2, remainingCopies is 0 and never negative', () => {
+      usePickerStore.getState().setPick('hero-0', 'As', 2);
+      usePickerStore.getState().setPick('flop-0', 'As', 2);
+      const { picks } = usePickerStore.getState();
+
+      expect(remainingCopies(picks, 'As', 2)).toBe(0);
+    });
+
+    it('remainingCopies is unaffected by picks of OTHER cards', () => {
+      usePickerStore.getState().setPick('hero-0', 'Kd');
+      const { picks } = usePickerStore.getState();
+
+      expect(remainingCopies(picks, 'As', 2)).toBe(2);
+    });
+
+    it('setPick at the default deck count still rejects a second slot holding the same card (v1 behaviour unchanged)', () => {
+      usePickerStore.getState().setPick('hero-0', 'As');
+      usePickerStore.getState().setPick('flop-0', 'As');
+
+      const { picks } = usePickerStore.getState();
+      expect(picks['hero-0']).toBe('As');
+      expect(picks['flop-0']).toBeNull();
+    });
+
+    it('setPick admits the same card into a second slot at deckCount=2 (DECK-04 headline case)', () => {
+      usePickerStore.getState().setPick('hero-0', 'As');
+      usePickerStore.getState().setPick('flop-0', 'As', 2);
+
+      const { picks } = usePickerStore.getState();
+      expect(picks['hero-0']).toBe('As');
+      expect(picks['flop-0']).toBe('As');
+    });
+
+    it('a third setPick at deckCount=2 is a no-op once two copies are already committed', () => {
+      usePickerStore.getState().setPick('hero-0', 'As', 2);
+      usePickerStore.getState().setPick('flop-0', 'As', 2);
+      usePickerStore.getState().setPick('turn', 'As', 2);
+
+      const { picks } = usePickerStore.getState();
+      expect(picks['turn']).toBeNull();
+    });
+
+    it('re-picking the same card into the slot that already holds it is accepted at deckCount=2', () => {
+      usePickerStore.getState().setPick('hero-0', 'As', 2);
+      usePickerStore.getState().setPick('hero-0', 'As', 2);
+
+      expect(usePickerStore.getState().picks['hero-0']).toBe('As');
+    });
+
+    it('replacing a pick frees its remaining copy at either deck count', () => {
+      usePickerStore.getState().setPick('hero-0', 'As');
+      usePickerStore.getState().setPick('hero-0', 'Kd');
+
+      const { picks } = usePickerStore.getState();
+      expect(remainingCopies(picks, 'As')).toBe(1);
+      expect(remainingCopies(picks, 'As', 2)).toBe(2);
+    });
+
+    it('clearSlot and clearAll restore remaining copies', () => {
+      usePickerStore.getState().setPick('hero-0', 'As', 2);
+      usePickerStore.getState().setPick('flop-0', 'As', 2);
+
+      usePickerStore.getState().clearSlot('hero-0');
+      expect(remainingCopies(usePickerStore.getState().picks, 'As', 2)).toBe(1);
+
+      usePickerStore.getState().clearAll();
+      expect(remainingCopies(usePickerStore.getState().picks, 'As', 2)).toBe(2);
+    });
   });
 });
