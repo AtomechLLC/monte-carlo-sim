@@ -24,7 +24,7 @@ Audit: [milestones/v1.0-MILESTONE-AUDIT.md](milestones/v1.0-MILESTONE-AUDIT.md)
 
 **Milestone Goal:** Add Blackjack as a second game and make deck count (1 or 2 decks) a first-class, explorable probability variable across both games.
 
-- [ ] **Phase 4: Multiset Deck & Streaming Foundation** - Physical-card-identity deck model (1 or 2 decks, no dedup collapse) and a generalized streaming worker runner, proven behavior-identical to v1.0 at deckCount=1
+- [x] **Phase 4: Multiset Deck & Streaming Foundation** - Physical-card-identity deck model (1 or 2 decks, no dedup collapse) and a generalized streaming worker runner, proven behavior-identical to v1.0 at deckCount=1 (completed 2026-08-24)
 - [ ] **Phase 5: Game-Mode Shell & Store Separation** - Users can switch between Hold'em and Blackjack, each with fully independent state and odds
 - [ ] **Phase 6: Blackjack Core Odds Loop** - Full Blackjack vertical slice: deal, bust/dealer-outcome odds, Stand/Hit EV, hit/stand play, dealer reveal, deck toggle
 - [ ] **Phase 7: 2-Deck Hold'em Evaluation Layer** - Hold'em over a 104-card shoe with correct duplicate-card evaluation and a Five of a Kind category
@@ -45,7 +45,7 @@ Audit: [milestones/v1.0-MILESTONE-AUDIT.md](milestones/v1.0-MILESTONE-AUDIT.md)
   3. The card picker's duplicate-blocking is verified count-aware: a card is blocked after 1 pick at 1 deck, and only after 2 picks at 2 decks, with remaining-copy state exposed for the UI to consume.
   4. The generalized streaming runner passes the full existing Hold'em `simulationApi` test suite unchanged, proving the worker-protocol refactor is behavior-preserving before any new game rides on it.
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 **Wave 1**
@@ -67,7 +67,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 04-06-PLAN.md — DECK-01 shoe-path source guard, simultaneous gate sweep, human regression checkpoint
+- [x] 04-06-PLAN.md — DECK-01 shoe-path source guard, simultaneous gate sweep, human regression checkpoint
 
 ### Phase 5: Game-Mode Shell & Store Separation
 
@@ -143,7 +143,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Core Odds Loop | v1.0 | 4/4 | Complete | 2026-08-24 |
 | 2. Scenario Construction & Street Navigation | v1.0 | 6/6 | Complete | 2026-08-24 |
 | 3. Casino Table UI & Animation | v1.0 | 6/6 | Complete | 2026-08-24 |
-| 4. Multiset Deck & Streaming Foundation | v2.0 | 5/6 | In Progress|  |
+| 4. Multiset Deck & Streaming Foundation | v2.0 | 6/6 | Complete   | 2026-08-24 |
 | 5. Game-Mode Shell & Store Separation | v2.0 | 0/TBD | Not started | - |
 | 6. Blackjack Core Odds Loop | v2.0 | 0/TBD | Not started | - |
 | 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 0/TBD | Not started | - |
