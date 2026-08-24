@@ -117,7 +117,7 @@ No new *page-level* color system — this phase extends the existing `src/index.
 | Hero hole card | 88px | 5 / 7 |
 | Opponent hole card (face-down or revealed) | 64px | 5 / 7 |
 | Community card | 76px | 5 / 7 |
-| Deck-origin stack (2-3 offset `CardBack`s, 2px stagger) | 64px (matches opponent size) | 5 / 7 |
+| Deck-origin stack (2-3 offset `CardBack`s, 2px stagger — decorative micro-offset, exempt from the spacing scale like border widths) | 64px (matches opponent size) | 5 / 7 |
 
 **Card surface treatment (all card/back elements):** `border-radius: 6px`; `border: 1px solid rgba(0,0,0,0.15)`; `box-shadow: 0 2px 6px rgba(0,0,0,0.35)` — makes cards read as physical objects sitting on the felt.
 
