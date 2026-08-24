@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Blackjack & Multi-Deck
-status: ready_to_plan
-stopped_at: Phase 05 complete (3/3) — ready to discuss Phase 6
-last_updated: 2026-08-24T20:01:42.336Z
-last_activity: 2026-08-24 -- Phase 05 execution started
+status: planning
+stopped_at: Phase 6 context gathered
+last_updated: "2026-08-24T20:05:31.498Z"
+last_activity: 2026-08-24
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
   completed_plans: 9
-  percent: 20
+  percent: 40
 ---
 
 # Project State
@@ -109,9 +109,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-24T18:13:14.901Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-game-mode-shell-store-separation/05-CONTEXT.md
+Last session: 2026-08-24T20:05:31.484Z
+Stopped at: Phase 6 context gathered
+Resume file: .planning/phases/06-blackjack-core-odds-loop/06-CONTEXT.md
 
 ## Operator Next Steps
 
