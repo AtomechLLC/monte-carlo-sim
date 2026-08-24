@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can see a full hand-category probability table (high card through royal flush) that sums to ~100% and updates live.
   4. User can watch a visible trial counter climb and percentages visibly settle/converge in real time, with the page staying fully responsive (no freeze) throughout.
 
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 **Wave 1**
@@ -45,7 +45,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — Replace the stub with real hand evaluation and add the 10-row category table (ENG-01, ENG-02, ODDS-01, ODDS-02)
+- [x] 01-03-PLAN.md — Replace the stub with real hand evaluation and add the 10-row category table (ENG-01, ENG-02, ODDS-01, ODDS-02)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -89,6 +89,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Odds Loop | 2/4 | In Progress|  |
+| 1. Core Odds Loop | 3/4 | In Progress|  |
 | 2. Scenario Construction & Street Navigation | 0/TBD | Not started | - |
 | 3. Casino Table UI & Animation | 0/TBD | Not started | - |
