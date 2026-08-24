@@ -32,6 +32,7 @@
    * board card while mid-flight. */
   --z-felt: 0;
   --z-deck: 1;
+  --z-community: 1; /* board cards sit below every seat — a player's own cards are never occluded */
   --z-seat: 2;
   --z-seat-label: 3;
   --z-in-flight: 50;

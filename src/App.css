@@ -387,10 +387,10 @@ h2 {
 }
 .community-area {
   position: absolute;
-  top: 40%;
+  top: 38%; /* within the ±2% fine-tuning budget — reduces hero overlap at narrow viewports */
   left: 50%;
   transform: translateX(-50%);
-  z-index: var(--z-seat);
+  z-index: var(--z-community);
 }
 .deck-origin {
   position: absolute;
