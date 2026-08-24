@@ -1,11 +1,31 @@
 import type { Card } from '@poker-apprentice/types';
 import { CATEGORY_COUNT } from '../worker/protocol';
 import { evaluateHand, compareHands, type Hand } from './evaluator';
+import { BOARD_SIZE, HOLE_CARDS_PER_PLAYER } from './cards';
 
-/** The known/unknown card partition a trial batch is conditioned on. */
+/**
+ * The known/unknown card partition a trial batch is conditioned on. `knownBoard` and
+ * `knownOpponentHoles` are ALWAYS derived from the user's current visibility state
+ * (`deriveConditionedState` in `conditioning.ts`) — never from a stored predetermined
+ * runout directly (D-02).
+ */
 export interface ConditionedState {
   heroHole: [Card, Card];
+  /** 0-5 cards, in street order (flop 3, then turn, then river). */
+  knownBoard: Card[];
+  /** Length `OPPONENT_COUNT` (3). `null` = still hidden. */
+  knownOpponentHoles: (readonly [Card, Card] | null)[];
+  /** Every card NOT in `heroHole`, `knownBoard`, or any non-null `knownOpponentHoles` entry. */
   remainingDeck: Card[];
+}
+
+/**
+ * Number of cards `drawUnknown()` must supply per trial for this knowledge partition:
+ * the remaining unseen board slots plus 2 cards for every still-hidden opponent.
+ */
+export function unknownCardsPerTrial(state: ConditionedState): number {
+  const hiddenOpponentCount = state.knownOpponentHoles.filter((hole) => hole === null).length;
+  return BOARD_SIZE - state.knownBoard.length + HOLE_CARDS_PER_PLAYER * hiddenOpponentCount;
 }
 
 /** Tallies produced by a single call to `runTrials`. */
@@ -19,8 +39,11 @@ export interface TrialBatchResult {
 /**
  * Runs `trialCount` real Monte Carlo trials of Hold'em vs. 3 opponents.
  *
- * Each trial draws 11 unknown cards via `draw11()` (5 board + 2 per opponent x 3),
- * evaluates all four hands with `evaluateHand`, buckets the hero's category into a
+ * Each trial draws `unknownCardsPerTrial(state)` unknown cards via `drawUnknown()` — the
+ * remaining unseen board slots plus 2 cards per still-hidden opponent, which may be as few
+ * as 0 (a fully-determined river-all-revealed state) or as many as 11 (Phase 1's original
+ * preflop-no-reveals shape). Known board cards and known opponent holes are used verbatim.
+ * Evaluates all four hands with `evaluateHand`, buckets the hero's category into a
  * `CATEGORY_COUNT`-length histogram, and determines win/tie/lose via an explicit
  * max-then-count-ties reduction over `compareHands` — never ad-hoc pairwise
  * greater-than chains, which get multi-way tie shapes wrong.
@@ -32,19 +55,23 @@ export interface TrialBatchResult {
 export function runTrials(
   state: ConditionedState,
   trialCount: number,
-  draw11: () => Card[],
+  drawUnknown: () => Card[],
 ): TrialBatchResult {
   const categoryCounts = new Array(CATEGORY_COUNT).fill(0);
   const outcomes = { win: 0, tie: 0, lose: 0 };
+  const unknownBoardCount = BOARD_SIZE - state.knownBoard.length;
 
   for (let t = 0; t < trialCount; t++) {
-    const sampled = draw11();
-    const board = sampled.slice(0, 5);
-    const oppHoles: [Card, Card][] = [
-      [sampled[5], sampled[6]],
-      [sampled[7], sampled[8]],
-      [sampled[9], sampled[10]],
-    ];
+    const drawn = drawUnknown();
+    const board = [...state.knownBoard, ...drawn.slice(0, unknownBoardCount)];
+
+    let cursor = unknownBoardCount;
+    const oppHoles: [Card, Card][] = state.knownOpponentHoles.map((known) => {
+      if (known !== null) return known as [Card, Card];
+      const pair: [Card, Card] = [drawn[cursor], drawn[cursor + 1]];
+      cursor += 2;
+      return pair;
+    });
 
     const hero = evaluateHand(state.heroHole, board);
     const villains = oppHoles.map((hole) => evaluateHand(hole, board));
