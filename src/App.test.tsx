@@ -23,6 +23,7 @@ vi.mock('./state/simulationService', () => ({
 function resetStores() {
   useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
   useOddsStore.getState().reset();
+  useOddsStore.getState().clearCache();
   vi.mocked(simulationService.startSimulation).mockReset();
   vi.mocked(simulationService.cancelSimulation).mockReset();
 }
@@ -294,5 +295,97 @@ describe('App — street navigation drives conditioned recomputation', () => {
     await user.click(screen.getByTestId('advance-button'));
 
     expect(screen.queryByTestId('simulation-error')).not.toBeInTheDocument();
+  });
+});
+
+describe('App — settled-odds cache gate and reveal-recomputes-everything', () => {
+  beforeEach(() => {
+    resetStores();
+  });
+
+  function mockSettledSnapshot(win: number, tie: number, lose: number) {
+    return vi.fn(
+      async (
+        _conditioned: ConditionedState,
+        onProgress: (snapshot: ProgressSnapshot) => void,
+      ) => {
+        onProgress({
+          requestId: 1,
+          categoryCounts: new Array(10).fill(0),
+          outcomes: { win, tie, lose },
+          trialsCompleted: win + tie + lose,
+          done: true,
+        });
+      },
+    );
+  }
+
+  it('rewind-then-re-advance to an already-settled street is a cache hit: no new startSimulation call, same win%', async () => {
+    vi.mocked(simulationService.startSimulation).mockImplementation(mockSettledSnapshot(60, 10, 30));
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    await user.click(screen.getByTestId('advance-button')); // -> flop, settles at 60/10/30
+
+    expect(screen.getByTestId('win-pct').textContent).toBe('60.0%');
+    const callsAfterFlop = vi.mocked(simulationService.startSimulation).mock.calls.length;
+
+    await user.click(screen.getByTestId('rewind-button')); // -> preflop, fresh run (different key)
+    await user.click(screen.getByTestId('advance-button')); // -> flop again, should be a cache hit
+
+    expect(vi.mocked(simulationService.startSimulation).mock.calls.length).toBe(callsAfterFlop + 1);
+    expect(screen.getByTestId('win-pct').textContent).toBe('60.0%');
+  });
+
+  it('clicking opponent-seat-0 triggers a new startSimulation call with knownOpponentHoles[0] non-null', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    vi.mocked(simulationService.startSimulation).mockClear();
+
+    await user.click(screen.getByTestId('opponent-seat-0'));
+
+    expect(simulationService.startSimulation).toHaveBeenCalled();
+    const lastCall = vi.mocked(simulationService.startSimulation).mock.calls.at(-1)!;
+    const conditioned = lastCall[0] as ConditionedState;
+    expect(conditioned.knownOpponentHoles[0]).not.toBeNull();
+  });
+
+  it('reveal on the flop then rewind to pre-flop recomputes with an empty board and the reveal known (D-11)', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    await user.click(screen.getByTestId('advance-button')); // -> flop
+    await user.click(screen.getByTestId('opponent-seat-0')); // reveal on flop
+
+    vi.mocked(simulationService.startSimulation).mockClear();
+    await user.click(screen.getByTestId('rewind-button')); // -> preflop, mask changed => cache miss
+
+    expect(simulationService.startSimulation).toHaveBeenCalled();
+    const lastCall = vi.mocked(simulationService.startSimulation).mock.calls.at(-1)!;
+    const conditioned = lastCall[0] as ConditionedState;
+    expect(conditioned.knownBoard).toHaveLength(0);
+    expect(conditioned.knownOpponentHoles[0]).not.toBeNull();
+  });
+
+  it('settling the flop then clicking Deal calls startSimulation again (no cross-hand cache hit)', async () => {
+    vi.mocked(simulationService.startSimulation).mockImplementation(mockSettledSnapshot(60, 10, 30));
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    await user.click(screen.getByTestId('advance-button')); // -> flop, settles
+
+    const callsBeforeRedeal = vi.mocked(simulationService.startSimulation).mock.calls.length;
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+
+    expect(vi.mocked(simulationService.startSimulation).mock.calls.length).toBe(callsBeforeRedeal + 1);
   });
 });
