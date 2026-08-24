@@ -123,6 +123,45 @@ describe('useExitGate — container-level gate registration for an AnimatePresen
     expect(useUiStore.getState().pendingAnimationCount).toBe(0);
   });
 
+  it('overlapping drops while a hold is pending arm only ONE unit — a single onExitComplete release returns the count to 0 (CR-02a)', () => {
+    const { result, rerender } = renderHook(({ count }: { count: number }) => useExitGate(count, true), {
+      initialProps: { count: 5 },
+    });
+
+    // River -> turn: arms one hold for community-4's exit.
+    rerender({ count: 4 });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    // Turn -> flop inside the 150ms exit window: community-3 joins the SAME AnimatePresence
+    // exiting set, whose user-level onExitComplete fires exactly once when the whole set
+    // drains — a second armed unit here would never have a second release.
+    rerender({ count: 3 });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    // The single onExitComplete for the drained set fully reopens the gate.
+    act(() => {
+      result.current();
+    });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
+  it('a resetKey change while a hold is pending releases it — a re-deal mid-exit cannot strand the gate (CR-02b)', () => {
+    const { rerender } = renderHook(
+      ({ count, resetKey }: { count: number; resetKey: string }) => useExitGate(count, true, resetKey),
+      { initialProps: { count: 5, resetKey: 'deal-1' } },
+    );
+
+    // River -> turn: arms one hold for community-4's exit.
+    rerender({ count: 4, resetKey: 'deal-1' });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    // Deal clicked during the exit: the re-keyed AnimatePresence discards the old exiting
+    // children, so their onExitComplete can never fire — the reset branch must release the
+    // pending hold itself, not just re-baseline.
+    rerender({ count: 0, resetKey: 'deal-2' });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
   it('a count drop accompanied by a reset-key change (simulating a re-deal) does not register a hold', () => {
     const { rerender } = renderHook(
       ({ count, resetKey }: { count: number; resetKey: string }) => useExitGate(count, true, resetKey),

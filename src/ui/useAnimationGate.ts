@@ -71,9 +71,12 @@ export function useAnimationGate(
 /**
  * Container-level gate registration for an AnimatePresence exit group (03-04, D-08/D-12).
  *
- * Registers ONE animation with the same gate `useAnimationGate` uses whenever `count` drops
- * below its own previously observed value — i.e. children are about to exit — and never when
- * `count` rises or stays the same. The returned callback is what the caller passes to
+ * Registers AT MOST ONE animation (a "hold") with the same gate `useAnimationGate` uses
+ * whenever `count` drops below its own previously observed value — i.e. children are about to
+ * exit — and never when `count` rises or stays the same. Overlapping drops while a hold is
+ * already pending do NOT arm a second unit (03-REVIEW CR-02a): they join the same
+ * AnimatePresence exiting set, whose user-level `onExitComplete` fires exactly once when the
+ * whole set drains. The returned callback is what the caller passes to
  * `<AnimatePresence onExitComplete={...}>`; it releases the registration exactly once, is safe
  * to call more than once (idempotent, same pendingRef guard as `useAnimationGate.complete`), and
  * is also released automatically on unmount if the exit was interrupted before completing
@@ -87,7 +90,9 @@ export function useAnimationGate(
  * the old board). Passing a value that changes exactly when the re-deal happens (`dealNonce`)
  * re-baselines this hook's internal previous-count tracking WITHOUT registering, even if `count`
  * also happens to drop in that same render — so the very next drop is measured against the NEW
- * baseline, not the old one.
+ * baseline, not the old one. If a hold is pending when `resetKey` changes, it is RELEASED
+ * (03-REVIEW CR-02b): the re-keyed presence tree discards its old exiting children, so their
+ * `onExitComplete` can never fire.
  *
  * @param count     current item count (e.g. `visibleBoard.length`)
  * @param enabled   false (e.g. reduced motion) means never register at all
@@ -106,6 +111,14 @@ export function useExitGate(count: number, enabled: boolean, resetKey?: string |
       // dropped in this same render — that drop is an instant replacement, not an exit.
       prevResetKeyRef.current = resetKey;
       prevCountRef.current = count;
+      // CR-02b (03-REVIEW): if a hold is pending when the reset arrives, the caller's re-keyed
+      // presence tree discards the old exiting children, so their onExitComplete can never
+      // fire — this release is the hold's only remaining release path. Deliberately not gated
+      // on `enabled`: a release must always run if a hold is outstanding.
+      if (pendingRef.current) {
+        pendingRef.current = false;
+        useUiStore.getState().endAnimation();
+      }
       return;
     }
 
@@ -114,7 +127,12 @@ export function useExitGate(count: number, enabled: boolean, resetKey?: string |
 
     if (!enabled) return;
 
-    if (count < previous) {
+    // CR-02a (03-REVIEW): arm AT MOST ONE hold at a time. A second drop while a hold is pending
+    // (an overlapping rewind inside the exit window) adds children to the SAME AnimatePresence
+    // exiting set, and the installed AnimatePresence fires the user-level onExitComplete exactly
+    // ONCE when that whole set drains (framer-motion AnimatePresence/index.mjs —
+    // isEveryExitComplete) — a second unit armed here would have no second release.
+    if (count < previous && !pendingRef.current) {
       useUiStore.getState().beginAnimation();
       pendingRef.current = true;
     }
