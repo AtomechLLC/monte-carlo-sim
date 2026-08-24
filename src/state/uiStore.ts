@@ -14,7 +14,18 @@ interface UiState {
   /** Releases one animation. Clamped at 0 — never negative, so an over-release (e.g. a
    * double-completion) can never strand the gate open in the wrong direction. */
   endAnimation: () => void;
-  /** Hard reset to 0 — used by tests and as a re-deal safety valve. */
+  /**
+   * Hard reset to 0 — TEST-ONLY helper (beforeEach isolation). Deliberately never called from
+   * production code (03-REVIEW WR-01): gate correctness relies solely on balanced arm/release
+   * accounting — every beginAnimation() has a guaranteed release path (useAnimationGate's
+   * complete/key-change/unmount, useExitGate's closed hold lifecycle, TableScene's per-action
+   * release). Calling this from deal() would NOT be a safe valve as-is: old in-flight cards'
+   * unmount cleanups run in the re-deal commit and would decrement units armed AFTER the reset
+   * (the clamp prevents negatives, not cross-registration theft), letting the gate open before
+   * the new deal's cards finish registering. A real valve would need generation-aware
+   * registrations (tag with dealNonce, drop stale releases) — not needed while accounting stays
+   * balanced by construction.
+   */
   resetAnimations: () => void;
 }
 
