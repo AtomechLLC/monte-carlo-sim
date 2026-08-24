@@ -49,7 +49,11 @@ status: complete
 
 ## Defects Found
 
-None. All four ROADMAP Phase 5 success criteria satisfied (switcher on screen; Hold'em identical via untouched suites; independent Blackjack screen with proven store/cache/DOM isolation; clean mid-simulation switch cancellation via the race test + single-call-site guard).
+None found by the checkpoint itself — see the post-checkpoint addendum.
+
+## Post-Checkpoint Addendum (same day)
+
+The subsequent code review (05-REVIEW.md) found 2 CRITICAL switch-back-path defects the checkpoint missed (its frame-dependent steps ran on automated evidence; the criticals live in the exact closure-vs-registration window the race test had exploited as a "test-only" trick without recognizing production reaches it): CR-01 gate bypass on switch-back, CR-02 TableScene stealing a gate unit per re-mount (double under StrictMode), plus WR-01 (stale error banner across the dwell) and WR-02 (switch-back replayed the deal choreography against locked D-07/UI-SPEC instant-swap). All four fixed same-day (commits a6f4ced, ab90734, 28c5e15, c9abed0; review statuses at 10697b5) with a three-layer switch-back defense: restore-mounts render instantly without arming the gate, TableScene releases only on real navigation changes (prev-values ref, StrictMode-safe), and the odds effect gained a secondary live-read guard alongside the kept subscription. Suite 376 → 388 (12 additive, race-test assertions tightened from >=0 to exact values). WR-03 (HoldemGame extraction) deferred to Phase 6 by orchestrator decision, tracked in STATE.md.
 
 ## Deviations
 
