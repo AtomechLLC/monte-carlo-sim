@@ -610,14 +610,16 @@ test.prop([
 
 **If this table is empty:** N/A — see above; all three assumptions are low-risk implementation-detail inferences from strongly-worded (but not 100%-explicit) context, not load-bearing product decisions.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does `deal()` consume (clear) the picker draft after use, or leave it in place for a repeat "what-if" deal with the same fixed cards?**
+Both questions below were resolved during UI-SPEC generation — see `02-UI-SPEC.md` Autonomous Resolution Log entries A2 and A3. Plans 02-04 (Task 2) and 02-03 implement exactly these resolutions.
+
+1. **(RESOLVED — picks persist until explicitly cleared; UI-SPEC A2)** **Does `deal()` consume (clear) the picker draft after use, or leave it in place for a repeat "what-if" deal with the same fixed cards?**
    - What we know: D-06 provides explicit Clear/Clear-all actions, implying Deal itself is not expected to be the mechanism that clears picks (see Assumption A1).
    - What's unclear: `02-CONTEXT.md` never states this explicitly either way.
    - Recommendation: Default to "picks persist until explicitly cleared" (matches the "construct a scenario and explore it" framing of DEAL-02); the planner should confirm this reading during plan creation, or raise it back to `/gsd:discuss-phase` if it materially changes the picker's state-ownership design.
 
-2. **Should the opponent-reveal UI expose which street the opponent's hand was revealed "as of" (i.e., does a reveal happen at a specific street, or is it street-agnostic once triggered)?**
+2. **(RESOLVED — reveal is street-agnostic, no provenance display; UI-SPEC A3)** **Should the opponent-reveal UI expose which street the opponent's hand was revealed "as of" (i.e., does a reveal happen at a specific street, or is it street-agnostic once triggered)?**
    - What we know: D-08 says reveal is a one-way action on an opponent seat; D-09 says reveals persist across navigation and earlier streets' odds legitimately change after a reveal.
    - What's unclear: Whether the UI needs to show "revealed at Flop" provenance, or whether reveal is simply a global (non-street-scoped) fact about the current hand once triggered. The odds-computation model in this research treats reveal as global/non-street-scoped (a single `revealedMask` shared across all streets), which matches D-09's explicit requirement that earlier streets recompute using the reveal — this question is about UI presentation only, not the underlying model.
    - Recommendation: Treat as UI polish, not a blocking modeling question — the `revealedMask` model above already satisfies the functional requirement regardless of how the UI chooses to present "when" a reveal happened.
