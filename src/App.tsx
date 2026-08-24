@@ -51,6 +51,13 @@ function App() {
     const cached = useOddsStore.getState().getCached(street, revealedMask);
     if (cached) {
       useOddsStore.getState().applySnapshot(cached);
+      // WR-01 fix (02-REVIEW.md): a cache hit is a valid, current result for this knowledge
+      // state — any error banner left over from a previous run no longer describes what's on
+      // screen. Deferred via a microtask, mirroring the live branch's callback-shaped setState
+      // discipline (setErrorMessage there is called from inside startSimulation's onProgress
+      // callback, not synchronously in the effect body) — react-hooks/set-state-in-effect flags
+      // a setState call reachable directly from the effect's own synchronous scope.
+      queueMicrotask(() => setErrorMessage(null));
       return;
     }
 
