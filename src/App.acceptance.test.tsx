@@ -6,6 +6,7 @@ import * as simulationService from './state/simulationService';
 import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
 import { usePickerStore } from './state/pickerStore';
+import { useUiStore } from './state/uiStore';
 import type { ProgressSnapshot } from './worker/protocol';
 import type { ConditionedState } from './engine/equity';
 
@@ -30,6 +31,10 @@ let callIndex = 0;
 
 function resetStores() {
   useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
+  // Placed AFTER the gameStore reset (03-03 test-harness adjustment): a reset must never leave a
+  // stale armed count behind from a previous test — that would incorrectly gate every subsequent
+  // test's odds effect forever, since nothing would ever release it.
+  useUiStore.getState().resetAnimations();
   useOddsStore.getState().reset();
   useOddsStore.getState().clearCache();
   usePickerStore.getState().clearAll();
