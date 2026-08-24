@@ -7,7 +7,13 @@ import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
 import type { ProgressSnapshot } from './worker/protocol';
 
-vi.mock('./state/simulationService');
+// Explicit factory (not bare automocking): automocking would still import the real module to
+// introspect its exports, which instantiates a real Worker at module scope — unsupported by
+// jsdom. A factory sidesteps that entirely, per this test's purpose (UI wiring, not the worker
+// boundary — that's covered by simulationApi.test.ts and the phase acceptance checkpoint).
+vi.mock('./state/simulationService', () => ({
+  startSimulation: vi.fn(),
+}));
 
 describe('App — Deal happy path', () => {
   beforeEach(() => {
