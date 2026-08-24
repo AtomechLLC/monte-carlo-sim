@@ -51,7 +51,8 @@ Validated in Phase 4: multiset-deck-streaming-foundation (2026-08-24, v2.0):
 
 ### Active (v2.0, in progress)
 
-- [ ] BJ-01..07 — Blackjack game (Phases 5-6)
+- [x] BJ-01 — Hold'em/Blackjack mode switcher with proven store/DOM/race isolation (Phase 5, 2026-08-24)
+- [ ] BJ-02..07 — Blackjack gameplay & odds (Phase 6)
 - [ ] HE2-01..03 — 2-deck Hold'em variant (Phase 7)
 - [ ] DECK-02 — Cross-game deck-count toggle (Phase 8)
 
