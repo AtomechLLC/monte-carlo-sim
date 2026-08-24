@@ -1,10 +1,7 @@
 import { useGameStore } from '../state/gameStore';
 import { OPPONENT_COUNT } from '../engine/cards';
 import { isOpponentRevealed } from '../engine/conditioning';
-import { PlayingCard } from './PlayingCard';
-import { CardBack } from './CardBack';
-
-const HERO_HOLE_SLOTS = [0, 1] as const;
+import { Seat } from './Seat';
 
 export function HandDisplay() {
   const heroHole = useGameStore((state) => state.runout?.heroHole);
@@ -18,61 +15,26 @@ export function HandDisplay() {
   const reveal = useGameStore((state) => state.reveal);
 
   return (
-    <div>
-      <div data-testid="hero-hole">
-        {HERO_HOLE_SLOTS.map((slot) => {
-          const card = heroHole?.[slot];
-          return (
-            <span key={slot} className="card-slot card-slot--hero">
-              {card && <PlayingCard card={card} />}
-            </span>
-          );
-        })}
-      </div>
+    <>
+      <Seat variant="hero" heroHole={heroHole} />
       <div data-testid="opponents">
         {Array.from({ length: OPPONENT_COUNT }, (_, i) => {
           const revealed = opponentHoles !== undefined && isOpponentRevealed(revealedMask, i);
           const hole = opponentHoles?.[i];
 
-          if (revealed && hole) {
-            return (
-              <button
-                key={i}
-                type="button"
-                data-testid={`opponent-seat-${i}`}
-                disabled
-                aria-label={`Opponent ${i + 1} hole cards: ${hole[0]} ${hole[1]} (revealed)`}
-              >
-                <span className="card-slot card-slot--opponent">
-                  <PlayingCard card={hole[0]} decorative />
-                </span>
-                <span className="card-slot card-slot--opponent">
-                  <PlayingCard card={hole[1]} decorative />
-                </span>
-              </button>
-            );
-          }
-
           return (
-            <button
+            <Seat
               key={i}
-              type="button"
-              data-testid={`opponent-seat-${i}`}
-              disabled={opponentHoles === undefined}
-              onClick={() => reveal(i)}
-              aria-label={`Reveal Opponent ${i + 1} hole cards`}
-              title="Click to reveal this opponent's hole cards"
-            >
-              <span className="card-slot card-slot--opponent">
-                <CardBack />
-              </span>
-              <span className="card-slot card-slot--opponent">
-                <CardBack />
-              </span>
-            </button>
+              variant="opponent"
+              index={i}
+              hole={hole}
+              revealed={revealed}
+              hasHand={opponentHoles !== undefined}
+              onReveal={reveal}
+            />
           );
         })}
       </div>
-    </div>
+    </>
   );
 }
