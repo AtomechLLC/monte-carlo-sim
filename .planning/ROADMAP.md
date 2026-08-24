@@ -48,11 +48,25 @@ Audit: [milestones/v1.0-MILESTONE-AUDIT.md](milestones/v1.0-MILESTONE-AUDIT.md)
 **Plans:** 6 plans in 5 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 04-01-PLAN.md — Golden parity baseline: pin seeded v1 remainingDeck ordering and streaming tallies BEFORE any refactor (D-08)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 04-02-PLAN.md — src/engine/shoe.ts: count-aware buildShoe/shoeWithout multiset primitive with v1-parity and closure properties
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 04-03-PLAN.md — Thread deckCount through ConditionedState/deriveConditionedState; additive DECK-03 without-replacement property tests
 - [ ] 04-04-PLAN.md — Count-aware pickerStore blocking plus the remainingCopies selector, picker UI unchanged at 1 deck
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 04-05-PLAN.md — Extract the generic streamingRunner; simulationApi becomes a Hold'em config with deck-count-aware validation (D-06/D-07)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 04-06-PLAN.md — DECK-01 shoe-path source guard, simultaneous gate sweep, human regression checkpoint
 
 ### Phase 5: Game-Mode Shell & Store Separation
