@@ -2,6 +2,7 @@ import type { Card } from '@poker-apprentice/types';
 import { CATEGORY_COUNT } from '../worker/protocol';
 import { evaluateHand, compareHands, type Hand } from './evaluator';
 import { BOARD_SIZE, HOLE_CARDS_PER_PLAYER } from './cards';
+import type { DeckCount } from './shoe';
 
 /**
  * The known/unknown card partition a trial batch is conditioned on. `knownBoard` and
@@ -17,6 +18,8 @@ export interface ConditionedState {
   knownOpponentHoles: (readonly [Card, Card] | null)[];
   /** Every card NOT in `heroHole`, `knownBoard`, or any non-null `knownOpponentHoles` entry. */
   remainingDeck: Card[];
+  /** Physical decks the shoe was built from (D-04). ABSENT MEANS 1. */
+  deckCount?: DeckCount;
 }
 
 /**
