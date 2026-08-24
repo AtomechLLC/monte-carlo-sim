@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
 import type { Card, Suit } from '@poker-apprentice/types';
 import { ALL_RANKS, ALL_SUITS } from '@poker-apprentice/types';
-import { usePickerStore, pickedCards, SLOT_ORDER, SLOT_LABEL } from '../state/pickerStore';
+import { usePickerStore, pickedCards, remainingCopies, SLOT_ORDER, SLOT_LABEL } from '../state/pickerStore';
 import type { SlotId } from '../state/pickerStore';
+import type { DeckCount } from '../engine/shoe';
 
 /** UI-SPEC A6 — full English suit-group headings, in `ALL_SUITS` order (c, d, h, s). */
 const SUIT_LABEL: Record<Suit, string> = {
@@ -11,6 +12,14 @@ const SUIT_LABEL: Record<Suit, string> = {
   h: 'Hearts',
   s: 'Spades',
 };
+
+/**
+ * Fixed deck count for this phase (D-09): the picker's blocking is count-aware but this phase
+ * ships no visible UI for it, so `deckCount` stays pinned to 1 here — identical to v1's every-
+ * card-unique behaviour. This is the single line Phase 8's cross-game deck-count toggle will
+ * replace with a `gameModeStore` read once that store exists.
+ */
+const deckCount: DeckCount = 1;
 
 export function CardPicker() {
   const picks = usePickerStore((state) => state.picks);
@@ -34,13 +43,16 @@ export function CardPicker() {
     dialogRef.current?.close();
   }
 
-  // Used-elsewhere set (A7/D-05): pickedCards(picks) minus whatever the OPEN slot itself already
-  // holds, so re-picking that same card into the same slot is never blocked. Reuses pickedCards
-  // rather than re-deriving a second duplicate-filtering helper (Task 1 constraint).
-  const usedElsewhere = new Set(pickedCards(picks));
-  if (openSlot !== null) {
-    const ownCard = picks[openSlot];
-    if (ownCard !== null) usedElsewhere.delete(ownCard);
+  // Count-based availability (A7/D-09): remainingCopies(picks, card, deckCount) counts every
+  // slot's pick against `card` at the current deckCount, then the OPEN slot's own pick is added
+  // back so re-picking that same card into the same slot is never blocked. Reuses
+  // remainingCopies rather than re-deriving a second duplicate-counting helper (Task 1
+  // constraint) — no value-based Set of card values survives in the picker path.
+  const ownCard = openSlot !== null ? picks[openSlot] : null;
+  function isUsed(card: Card): boolean {
+    let available = remainingCopies(picks, card, deckCount);
+    if (ownCard === card) available += 1;
+    return available <= 0;
   }
 
   return (
@@ -79,7 +91,7 @@ export function CardPicker() {
                 <h3>{SUIT_LABEL[suit]}</h3>
                 {ALL_RANKS.map((rank) => {
                   const card = `${rank}${suit}` as Card;
-                  const used = usedElsewhere.has(card);
+                  const used = isUsed(card);
                   return (
                     <button
                       key={card}
