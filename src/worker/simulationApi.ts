@@ -40,6 +40,18 @@ function validateConditionedState(conditioned: ConditionedState): void {
   // check is arithmetically identical to the original hardcoded-52-card-deck formula at
   // deckCount=1, and correctly validates a 2-deck request instead of rejecting it.
   const deckCount = conditioned.deckCount ?? 1;
+  // D-09 / WR-02: deckCount SHAPE validation — value-based, not type-based. `DeckCount = 1 | 2`
+  // is a compile-time union and provides no protection at a Comlink boundary, where payloads
+  // arrive as deserialized runtime data (the same defence-in-depth framing as this function's
+  // header comment). Rejects only PRESENT-but-invalid values (0, >2, non-integers,
+  // non-numbers) — absent still means 1, per the `?? 1` line above. Placed BEFORE
+  // `shoeSize(deckCount)` consumes the value, so an invalid deckCount can never reach the
+  // length or overlap arithmetic below.
+  if (deckCount !== 1 && deckCount !== 2) {
+    throw new Error(
+      `runSimulation: deckCount must be 1 or 2, got ${String(conditioned.deckCount)}`,
+    );
+  }
   const revealedCount = knownOpponentHoles.filter((hole) => hole !== null).length;
   const expectedRemainingDeckLength = shoeSize(deckCount) - 2 - knownBoard.length - 2 * revealedCount;
   if (remainingDeck.length !== expectedRemainingDeckLength) {
