@@ -5,6 +5,7 @@ import { createRng, drawN } from '../engine/rng';
 import type { PredeterminedRunout } from '../engine/conditioning';
 import type { Street } from '../engine/streets';
 import { nextStreet, previousStreet } from '../engine/streets';
+import { useOddsStore } from './oddsStore';
 
 interface GameState {
   /** The full predetermined runout for the current hand, or `null` before the first deal (D-01). */
@@ -24,6 +25,11 @@ interface GameState {
   advanceStreet: () => void;
   /** Moves the visible street backward one step; no-op at `'preflop'`. Never redraws cards. */
   rewindStreet: () => void;
+  /**
+   * Reveals opponent `opponentIndex`'s hole cards. Monotonic (D-08): OR-in a bit, never clear
+   * one — there is deliberately no un-reveal/toggle action exposed anywhere in this store.
+   */
+  reveal: (opponentIndex: number) => void;
 }
 
 export const useGameStore = create<GameState>()((set, get) => ({
@@ -48,11 +54,17 @@ export const useGameStore = create<GameState>()((set, get) => ({
     };
 
     set({ runout, street: 'preflop', revealedMask: 0, dealNonce: get().dealNonce + 1 });
+    // A fresh hand must never serve a previous hand's settled odds (RESEARCH Pitfall 4,
+    // option (a) — clear the whole cache on every deal rather than namespacing keys).
+    useOddsStore.getState().clearCache();
   },
   advanceStreet: () => {
     set({ street: nextStreet(get().street) });
   },
   rewindStreet: () => {
     set({ street: previousStreet(get().street) });
+  },
+  reveal: (opponentIndex) => {
+    set((state) => ({ revealedMask: state.revealedMask | (1 << opponentIndex) }));
   },
 }));

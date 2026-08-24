@@ -1,19 +1,45 @@
 import { create } from 'zustand';
 import { CATEGORY_COUNT } from '../worker/protocol';
 import type { ProgressSnapshot } from '../worker/protocol';
+import type { Street } from '../engine/streets';
+
+// oddsStore must not import gameStore — the dependency runs one way only (gameStore.deal()
+// calls useOddsStore.getState().clearCache(), never the reverse).
+
+/** Composite cache key: `${street}|${revealedMask}`, e.g. `knowledgeKey('flop', 5)` -> `"flop|5"`. */
+export function knowledgeKey(street: Street, revealedMask: number): string {
+  return `${street}|${revealedMask}`;
+}
 
 interface OddsState {
   categoryCounts: number[];
   outcomes: { win: number; tie: number; lose: number };
   trialsCompleted: number;
   done: boolean;
-  /** Restores initial (all-zero) state — call before starting a fresh simulation run. */
+  /**
+   * Settled (done: true) snapshots keyed by knowledgeKey(street, revealedMask). Because the key
+   * includes the reveal mask, a reveal changes the key for every street simultaneously — every
+   * future lookup at any street misses until recomputed, satisfying D-11 with no explicit
+   * invalidation code path.
+   */
+  settledCache: Map<string, ProgressSnapshot>;
+  /** Restores initial (all-zero) LIVE DISPLAY fields — call before starting a fresh simulation
+   * run. Deliberately does NOT touch settledCache: reset() runs before every fresh simulation
+   * and must not throw away previously settled streets (load-bearing for D-10). */
   reset: () => void;
   /** Writes a streamed snapshot's fields into state. */
   applySnapshot: (snapshot: ProgressSnapshot) => void;
+  /** Returns the cached settled snapshot for (street, revealedMask), or undefined on a miss. */
+  getCached: (street: Street, revealedMask: number) => ProgressSnapshot | undefined;
+  /** Stores `snapshot` under (street, revealedMask) ONLY when `snapshot.done` is true — a
+   * no-op write-gate for unsettled (still-converging) snapshots. */
+  cacheIfSettled: (street: Street, revealedMask: number, snapshot: ProgressSnapshot) => void;
+  /** Empties settledCache — called by gameStore.deal() so a new hand never serves the previous
+   * hand's settled numbers. Leaves the live display fields untouched. */
+  clearCache: () => void;
 }
 
-function initialOddsFields(): Omit<OddsState, 'reset' | 'applySnapshot'> {
+function initialOddsFields(): Omit<OddsState, 'reset' | 'applySnapshot' | 'settledCache' | 'getCached' | 'cacheIfSettled' | 'clearCache'> {
   return {
     categoryCounts: new Array(CATEGORY_COUNT).fill(0),
     outcomes: { win: 0, tie: 0, lose: 0 },
@@ -50,8 +76,12 @@ function checkSnapshotConsistency(snapshot: ProgressSnapshot): void {
   }
 }
 
-export const useOddsStore = create<OddsState>()((set) => ({
+export const useOddsStore = create<OddsState>()((set, get) => ({
   ...initialOddsFields(),
+  settledCache: new Map<string, ProgressSnapshot>(),
+  // Partial merge (set() only overwrites the live-display keys returned by initialOddsFields())
+  // — settledCache is untouched, which is load-bearing for D-10 (rewinding to a previously
+  // settled street must not lose its cached numbers just because a fresh run started).
   reset: () => set(initialOddsFields()),
   applySnapshot: (snapshot) => {
     if (import.meta.env.DEV) {
@@ -64,4 +94,14 @@ export const useOddsStore = create<OddsState>()((set) => ({
       done: snapshot.done,
     });
   },
+  getCached: (street, revealedMask) => get().settledCache.get(knowledgeKey(street, revealedMask)),
+  cacheIfSettled: (street, revealedMask, snapshot) => {
+    if (!snapshot.done) return;
+    // Copy-on-write: never mutate the existing Map in place (Zustand reference-equality rule —
+    // subscribers comparing the old/new Map reference would otherwise miss the update).
+    set((state) => ({
+      settledCache: new Map(state.settledCache).set(knowledgeKey(street, revealedMask), snapshot),
+    }));
+  },
+  clearCache: () => set({ settledCache: new Map<string, ProgressSnapshot>() }),
 }));

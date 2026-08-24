@@ -25,6 +25,16 @@ function App() {
   useEffect(() => {
     if (!runout) return;
 
+    // Cache gate (D-10/D-12): consult the settled-odds cache BEFORE ever touching the worker.
+    // On a hit, apply the cached snapshot and stop — no startSimulation call, no cleanup
+    // function, so rewinding to an unchanged-knowledge street is a pure Map.get with zero
+    // re-simulation noise. On a miss, fall through to the normal live-converging run below.
+    const cached = useOddsStore.getState().getCached(street, revealedMask);
+    if (cached) {
+      useOddsStore.getState().applySnapshot(cached);
+      return;
+    }
+
     // Ignore-flag cleanup (RESEARCH Pitfall 3): dependency array covers all four navigation
     // triggers (runout/street/revealedMask/dealNonce), so a narrow re-deal-only fix would still
     // leave the identical stale-write race reachable from rapid Advance/Rewind clicks.
@@ -41,6 +51,12 @@ function App() {
         // reacting to the external worker, not synchronously in the effect body).
         setErrorMessage(null);
         useOddsStore.getState().applySnapshot(snapshot);
+        // Filed under the (street, revealedMask) captured in THIS effect's closure, not a fresh
+        // getState() read — a late snapshot from a superseded run must not be cached under
+        // whatever street/mask happens to be current by the time it arrives. The store's own
+        // write-gate decides whether this write actually lands, so no `if (snapshot.done)`
+        // check is needed here.
+        useOddsStore.getState().cacheIfSettled(street, revealedMask, snapshot);
       },
       (message) => {
         console.error('[simulation]', message);
