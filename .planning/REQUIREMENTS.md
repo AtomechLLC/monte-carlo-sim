@@ -9,35 +9,35 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Simulation Engine
 
-- [ ] **ENG-01**: Hand evaluator correctly ranks best-5-of-7 cards, including kickers, ties/split pots, and the A-2-3-4-5 wheel straight
-- [ ] **ENG-02**: Monte Carlo simulation conditions on all known cards (user's hole cards, dealt board, revealed opponents) — hidden opponents are sampled uniformly from the remaining unseen deck, and no card can appear twice in a trial
-- [ ] **ENG-03**: Simulation runs off the main thread and streams incremental results — the UI never freezes during computation
-- [ ] **ENG-04**: Displayed probabilities are verifiably accurate — validated against published benchmark odds, with internal consistency checks (hand categories sum to 100%, win/tie/lose sums to 100%)
+- [x] **ENG-01**: Hand evaluator correctly ranks best-5-of-7 cards, including kickers, ties/split pots, and the A-2-3-4-5 wheel straight
+- [x] **ENG-02**: Monte Carlo simulation conditions on all known cards (user's hole cards, dealt board, revealed opponents) — hidden opponents are sampled uniformly from the remaining unseen deck, and no card can appear twice in a trial
+- [x] **ENG-03**: Simulation runs off the main thread and streams incremental results — the UI never freezes during computation
+- [x] **ENG-04**: Displayed probabilities are verifiably accurate — validated against published benchmark odds, with internal consistency checks (hand categories sum to 100%, win/tie/lose sums to 100%)
 
 ### Odds Display
 
-- [ ] **ODDS-01**: User can see live win/tie/lose probability for their hand against the 3 opponents
-- [ ] **ODDS-02**: User can see a full hand-category probability table — their chance of ending with each rank (high card → royal flush) by the river
-- [ ] **ODDS-03**: User can watch percentages visibly settle in real time as simulation trials accumulate, with a visible trial counter
+- [x] **ODDS-01**: User can see live win/tie/lose probability for their hand against the 3 opponents
+- [x] **ODDS-02**: User can see a full hand-category probability table — their chance of ending with each rank (high card → royal flush) by the river
+- [x] **ODDS-03**: User can watch percentages visibly settle in real time as simulation trials accumulate, with a visible trial counter
 
 ### Cards & Dealing
 
-- [ ] **DEAL-01**: User can deal a random hand (own hole cards + 3 opponents) with one click, and re-deal at any time
-- [ ] **DEAL-02**: User can manually pick their own hole cards and board cards from a card picker for "what-if" scenario construction
+- [x] **DEAL-01**: User can deal a random hand (own hole cards + 3 opponents) with one click, and re-deal at any time
+- [x] **DEAL-02**: User can manually pick their own hole cards and board cards from a card picker for "what-if" scenario construction
 - [x] **DEAL-03**: Duplicate card selection is impossible — every card exists exactly once across hands, board, and deck
 
 ### Street Navigation
 
 - [x] **NAV-01**: User can advance street by street (pre-flop → flop → turn → river) and all odds recompute at each street
-- [ ] **NAV-02**: User can rewind to earlier streets — odds return to their earlier-street values, and re-advancing shows the same cards (a separate re-deal action reshuffles)
+- [x] **NAV-02**: User can rewind to earlier streets — odds return to their earlier-street values, and re-advancing shows the same cards (a separate re-deal action reshuffles)
 - [x] **NAV-03**: User can reveal any opponent's hole cards mid-hand — revealed cards become known information and all odds recalculate to account for them
 
 ### Table Presentation
 
-- [ ] **TBL-01**: Full casino-table scene: felt table, user's seat, 3 anonymous opponent seats, community card area
-- [ ] **TBL-02**: Detailed playing card faces with proper pips and court cards
-- [ ] **TBL-03**: Cards animate — dealing, flipping, and opponent reveal
-- [ ] **TBL-04**: Odds displays coordinate with animations — numbers never contradict or spoil cards still being dealt/flipped
+- [x] **TBL-01**: Full casino-table scene: felt table, user's seat, 3 anonymous opponent seats, community card area
+- [x] **TBL-02**: Detailed playing card faces with proper pips and court cards
+- [x] **TBL-03**: Cards animate — dealing, flipping, and opponent reveal
+- [x] **TBL-04**: Odds displays coordinate with animations — numbers never contradict or spoil cards still being dealt/flipped
 
 ## v2 Requirements
 
@@ -71,23 +71,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENG-01 | Phase 1: Core Odds Loop | Pending |
-| ENG-02 | Phase 1: Core Odds Loop | Pending |
-| ENG-03 | Phase 1: Core Odds Loop | Pending |
-| ENG-04 | Phase 1: Core Odds Loop | Pending |
-| ODDS-01 | Phase 1: Core Odds Loop | Pending |
-| ODDS-02 | Phase 1: Core Odds Loop | Pending |
-| ODDS-03 | Phase 1: Core Odds Loop | Pending |
-| DEAL-01 | Phase 1: Core Odds Loop | Pending |
-| DEAL-02 | Phase 2: Scenario Construction & Street Navigation | Pending |
+| ENG-01 | Phase 1: Core Odds Loop | Complete |
+| ENG-02 | Phase 1: Core Odds Loop | Complete |
+| ENG-03 | Phase 1: Core Odds Loop | Complete |
+| ENG-04 | Phase 1: Core Odds Loop | Complete |
+| ODDS-01 | Phase 1: Core Odds Loop | Complete |
+| ODDS-02 | Phase 1: Core Odds Loop | Complete |
+| ODDS-03 | Phase 1: Core Odds Loop | Complete |
+| DEAL-01 | Phase 1: Core Odds Loop | Complete |
+| DEAL-02 | Phase 2: Scenario Construction & Street Navigation | Complete |
 | DEAL-03 | Phase 2: Scenario Construction & Street Navigation | Complete |
 | NAV-01 | Phase 2: Scenario Construction & Street Navigation | Complete |
-| NAV-02 | Phase 2: Scenario Construction & Street Navigation | Pending |
+| NAV-02 | Phase 2: Scenario Construction & Street Navigation | Complete |
 | NAV-03 | Phase 2: Scenario Construction & Street Navigation | Complete |
-| TBL-01 | Phase 3: Casino Table UI & Animation | Pending |
-| TBL-02 | Phase 3: Casino Table UI & Animation | Pending |
-| TBL-03 | Phase 3: Casino Table UI & Animation | Pending |
-| TBL-04 | Phase 3: Casino Table UI & Animation | Pending |
+| TBL-01 | Phase 3: Casino Table UI & Animation | Complete |
+| TBL-02 | Phase 3: Casino Table UI & Animation | Complete |
+| TBL-03 | Phase 3: Casino Table UI & Animation | Complete |
+| TBL-04 | Phase 3: Casino Table UI & Animation | Complete |
 
 **Coverage:**
 - v1 requirements: 17 total
