@@ -409,3 +409,52 @@ describe('App — settled-odds cache gate and reveal-recomputes-everything', () 
     expect(vi.mocked(simulationService.startSimulation).mock.calls.length).toBe(callsBeforeRedeal + 1);
   });
 });
+
+describe('App — Phase 3 re-skin: control bar, "Set Up Scenario" disclosure, off-felt odds panel', () => {
+  beforeEach(() => {
+    resetStores();
+  });
+
+  it('the "Set Up Scenario" disclosure starts collapsed and toggles the card picker on click', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const toggle = screen.getByTestId('set-up-scenario-button');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('card-picker')).not.toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByTestId('card-picker')).toBeInTheDocument();
+  });
+
+  it('the "Set Up Scenario" button label is always exactly "Set Up Scenario" in both states (UI-SPEC A5)', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const toggle = screen.getByTestId('set-up-scenario-button');
+    expect(toggle.textContent).toBe('Set Up Scenario');
+
+    await user.click(toggle);
+
+    expect(toggle.textContent).toBe('Set Up Scenario');
+  });
+
+  it('empty-hand-state contains the exact A7 copy string', () => {
+    render(<App />);
+
+    expect(screen.getByTestId('empty-hand-state').textContent).toContain(
+      'Click Deal to draw a random hand, or click Set Up Scenario to construct your own hand, then click Deal.',
+    );
+  });
+
+  it('odds-panel exists and table-scene does NOT contain it (D-05)', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+
+    expect(screen.getByTestId('odds-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('table-scene').contains(screen.getByTestId('odds-panel'))).toBe(false);
+  });
+});

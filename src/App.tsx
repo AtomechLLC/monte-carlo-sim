@@ -3,10 +3,8 @@ import './App.css';
 import { DealButton } from './ui/DealButton';
 import { CardPicker } from './ui/CardPicker';
 import { StreetControls } from './ui/StreetControls';
-import { HandDisplay } from './ui/HandDisplay';
-import { BoardDisplay } from './ui/BoardDisplay';
-import { WinTieLossDisplay } from './ui/WinTieLossDisplay';
-import { OddsTable } from './ui/OddsTable';
+import { TableScene } from './ui/TableScene';
+import { OddsPanel } from './ui/OddsPanel';
 import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
 import { startSimulation, cancelSimulation } from './state/simulationService';
@@ -14,6 +12,8 @@ import { deriveConditionedState } from './engine/conditioning';
 
 const SIMULATION_ERROR_MESSAGE =
   'The simulation hit an unexpected error and stopped updating. Re-deal, or navigate to another street, to try again.';
+
+const CARD_PICKER_REGION_ID = 'card-picker';
 
 function App() {
   const runout = useGameStore((state) => state.runout);
@@ -23,6 +23,9 @@ function App() {
 
   // Transient UI state, not odds data — held here rather than in oddsStore.
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Scenario-construction disclosure (D-06/A4): collapsed by default; the existing CardPicker's
+  // slot/panel/dialog semantics are untouched, only its visibility is toggled from here.
+  const [scenarioOpen, setScenarioOpen] = useState(false);
 
   useEffect(() => {
     if (!runout) return;
@@ -79,8 +82,8 @@ function App() {
         <div className="empty-hand-state" data-testid="empty-hand-state">
           <h2>No hand dealt yet</h2>
           <p>
-            Click Deal to draw a random hand, or use the card picker below to set up your own
-            scenario, then click Deal.
+            Click Deal to draw a random hand, or click Set Up Scenario to construct your own
+            hand, then click Deal.
           </p>
         </div>
       )}
@@ -89,22 +92,27 @@ function App() {
           {SIMULATION_ERROR_MESSAGE}
         </div>
       )}
-      <DealButton />
-      <div className="phase2-section">
-        <CardPicker />
-      </div>
-      <div className="phase2-section">
+      <div className="control-bar">
+        <DealButton />
+        <button
+          type="button"
+          data-testid="set-up-scenario-button"
+          aria-expanded={scenarioOpen}
+          aria-controls={CARD_PICKER_REGION_ID}
+          onClick={() => setScenarioOpen((open) => !open)}
+        >
+          Set Up Scenario
+        </button>
         <StreetControls />
       </div>
-      <div className="phase2-section">
-        <HandDisplay />
-      </div>
-      <div className="phase2-section">
-        <BoardDisplay />
-      </div>
-      <div className="phase2-section">
-        <WinTieLossDisplay />
-        <OddsTable />
+      {scenarioOpen && (
+        <div id={CARD_PICKER_REGION_ID}>
+          <CardPicker />
+        </div>
+      )}
+      <div className="table-row">
+        <TableScene />
+        <OddsPanel />
       </div>
     </>
   );

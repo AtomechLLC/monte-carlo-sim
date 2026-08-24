@@ -19,6 +19,23 @@
   --card-w-opponent: 64px;
   --card-w-community: 76px;
 
+  /* Phase 3 (03-02): felt palette + seat-badge tokens (UI-SPEC Color, Table Geometry). Badge
+   * tokens are mode-independent — they always sit on the dark felt, never on --bg. */
+  --felt: #1a5c3a;
+  --felt-dark: #0d3d24;
+  --felt-rail: #3a2317;
+  --seat-badge-bg: rgba(0, 0, 0, 0.45);
+  --seat-badge-text: #ffffff;
+
+  /* Phase 3 (03-02): stacking-order scale for the felt scene (UI-SPEC Table Geometry). Every
+   * animating card (plan 03-03) uses --z-in-flight so it is never occluded by a settled seat/
+   * board card while mid-flight. */
+  --z-felt: 0;
+  --z-deck: 1;
+  --z-seat: 2;
+  --z-seat-label: 3;
+  --z-in-flight: 50;
+
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
@@ -52,6 +69,13 @@
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+
+    /* Phase 3 (03-02): dark-mode felt palette. Rail and badge tokens are deliberately NOT
+     * overridden here — --felt-rail's dark value is set below, --seat-badge-* stay identical
+     * in both modes (UI-SPEC Color). */
+    --felt: #12432a;
+    --felt-dark: #081f14;
+    --felt-rail: #241509;
   }
 
   #social .button-icon {
@@ -78,18 +102,19 @@ body {
 h1,
 h2 {
   font-family: var(--heading);
-  font-weight: 500;
+  /* Phase 3 (03-02, UI-SPEC A6): both the Display (h1) and Heading (h2) roles are weight 600 —
+   * the scaffold's orphan weight-500 style is retired, landing the app on exactly 2 locked
+   * weights (400/600) app-wide. */
+  font-weight: 600;
   color: var(--text-h);
 }
 
+/* Display role (32/600/1.2, UI-SPEC A6): the felt table, not this banner, is the visual
+ * centerpiece now, so the old 56px scaffold heading shrinks accordingly. */
 h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
+  font-size: 32px;
+  line-height: 1.2;
+  margin: 16px 0;
 }
 h2 {
   font-size: 24px;

@@ -355,3 +355,203 @@ h2 {
 .card-slot--community {
   width: var(--card-w-community);
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 3 felt table scene (03-02)
+ *
+ * The oval felt composition root, seat/community/deck absolute placement, and
+ * the control-bar/scene-row shell. Positioned via `position: absolute` +
+ * percentage offsets (RESEARCH Pattern 1) — never CSS Grid — anchored to
+ * `.felt`'s own `position: relative` box. A small number of layout classes
+ * (`.felt`, `.seat*`, `.community-area`, `.deck-origin`, `.seat-label`,
+ * `.card-placeholder`, `.visually-hidden`, `.control-bar`, `.table-row`)
+ * continue alongside the existing testid-scoped-selector convention above —
+ * the felt geometry itself has no natural testid to hang off of.
+ * ------------------------------------------------------------------------- */
+.felt {
+  position: relative;
+  width: min(100%, 760px);
+  aspect-ratio: 16 / 10;
+  margin-inline: auto;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, var(--felt) 0%, var(--felt-dark) 100%);
+  box-shadow:
+    inset 0 0 0 12px var(--felt-rail),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: var(--z-felt);
+}
+
+/* Seat/community/deck placement (UI-SPEC Table Geometry) — hero bottom-centre,
+ * 3 opponents arced across the top, community centred, deck at the right.
+ * Percentages are relative to .felt's own box; ±2% fine-tuning is allowed,
+ * this hero/3-opponent-arc/community/deck structure is not (D-04). */
+.seat-hero {
+  position: absolute;
+  bottom: 3%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-seat);
+}
+.seat-opponent-0 {
+  position: absolute;
+  top: 6%;
+  left: 14%;
+  z-index: var(--z-seat);
+}
+.seat-opponent-1 {
+  position: absolute;
+  top: 0%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-seat);
+}
+.seat-opponent-2 {
+  position: absolute;
+  top: 6%;
+  left: 86%;
+  transform: translateX(-100%);
+  z-index: var(--z-seat);
+}
+.community-area {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-seat);
+}
+.deck-origin {
+  position: absolute;
+  top: 40%;
+  left: 90%;
+  width: var(--card-w-opponent);
+  aspect-ratio: 5 / 7;
+  z-index: var(--z-deck);
+}
+
+/* The opponents container fills the felt so its 3 seat-opponent-{i} children
+ * can be positioned independently (each is position:absolute above) while
+ * `opponents` itself stays the plain 3-child element the Phase 1-2 contract
+ * expects — unaffected by this styling. */
+[data-testid='opponents'] {
+  position: absolute;
+  inset: 0;
+}
+
+/* Seat internals: the two hole-card slots sit `xs` (4px) apart, then `sm`
+ * (8px) above the seat-label badge. */
+.seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+[data-testid='hero-hole'],
+[data-testid^='opponent-seat-'] {
+  display: flex;
+  gap: 4px;
+}
+
+/* Seat-label badge (Body role, badge tokens, UI-SPEC Table Geometry). */
+.seat-label {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  background: var(--seat-badge-bg);
+  color: var(--seat-badge-text);
+  border-radius: 12px;
+  padding: 4px 8px;
+  z-index: var(--z-seat-label);
+}
+
+/* Community row: 5 slots (visible cards + dashed placeholders), `md` (16px)
+ * gap between each, one uniform rhythm whether a slot holds a card or a
+ * placeholder. */
+.community-area,
+[data-testid='board-cards'] {
+  display: flex;
+  gap: 16px;
+}
+
+/* Dashed placeholders (UI-SPEC A8): every not-yet-dealt hero/community
+ * position renders as an outline box at the same locked dimensions as the
+ * card it stands in for, rather than rendering nothing. Community
+ * placeholders are explicit `.card-placeholder` siblings of board-cards/
+ * board-empty-state (BoardDisplay.tsx); hero placeholders are simply the
+ * empty `.card-slot--hero` span Seat.tsx already renders pre-deal. */
+.card-placeholder,
+.card-slot--hero:empty {
+  aspect-ratio: 5 / 7;
+  border: 2px dashed var(--border);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+/* Deck-origin stack: 2-3 overlapping backs with a 2px stagger offset
+ * (decorative micro-offset, exempt from the spacing scale, like border
+ * widths — UI-SPEC Table Geometry). */
+.deck-origin .playing-card {
+  position: absolute;
+  inset: 0;
+}
+.deck-origin .playing-card:nth-child(2) {
+  top: 2px;
+  left: 2px;
+}
+.deck-origin .playing-card:nth-child(3) {
+  top: 4px;
+  left: 4px;
+}
+
+/* Visually-hidden utility (used by BoardDisplay's "Board" landmark heading):
+ * keeps the element in the accessibility tree while removing it from the
+ * visual layout and the flex/gap rhythm above. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Control bar: Deal / Set Up Scenario / Street Controls cluster, `sm` (8px)
+ * gap, wrapping at narrow widths. */
+.control-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* 44px minimum hit area (UI-SPEC D-06 / Spacing Scale exceptions), extended
+ * to the control bar's own direct-child buttons — Deal (no testid of its
+ * own) and Set Up Scenario (new this phase). Rewind/Advance are nested one
+ * level deeper inside StreetControls, so this direct-child selector leaves
+ * their existing testid-scoped hit-area rule (above) untouched. */
+.control-bar > button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-weight: 400;
+}
+
+/* Main scene row: TableScene + OddsPanel, `xl` (32px) gap side-by-side at
+ * >=1024px, collapsing to a column stack below that; `2xl` (48px) vertical
+ * margin separates the block from the control bar / page bottom. */
+.table-row {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-block: 48px;
+
+  @media (min-width: 1024px) {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 32px;
+  }
+}
