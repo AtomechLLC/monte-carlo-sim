@@ -105,6 +105,15 @@ export function HoldemGame() {
       conditioned,
       (snapshot) => {
         if (ignore) return;
+        // Same-key/wrong-generation guard (06-REVIEW CR-02): a late snapshot from a run
+        // whose HAND has been superseded must neither display nor cache. deal() clears the
+        // cache SYNCHRONOUSLY, but this callback stays live until React's passive-effect
+        // flush runs the ignore-flag cleanup — worker messages are macrotasks that can be
+        // delivered inside that gap, re-caching the stale hand's odds under the unchanged
+        // (street, revealedMask) key AFTER the clear (a re-deal lands on the SAME
+        // "preflop|0" key with different cards). dealNonce is the hand's generation
+        // identity; street/mask changes are already covered by the key itself.
+        if (useGameStore.getState().dealNonce !== dealNonce) return;
         // A streamed snapshot means this run is actively progressing — clear any stale error
         // from a previous run (react-hooks/set-state-in-effect: setState belongs in a callback
         // reacting to the external worker, not synchronously in the effect body).

@@ -515,6 +515,85 @@ describe('Mode isolation: a Hold\'em round trip leaves the blackjack round intac
   });
 });
 
+describe('06-REVIEW CR-02: a late snapshot landing between a store action and the effect cleanup must neither display nor cache', () => {
+  // The race, scripted deterministically: the store action runs synchronously (clearCache +
+  // reset), THEN the superseded run's snapshot arrives — all inside one act() callback,
+  // BEFORE React's passive-effect flush runs the cleanup that flips the ignore flag. This
+  // is exactly the delivery window a real worker message (a macrotask) can land in.
+
+  it('re-deal: a superseded run\'s late done-snapshot must not poison the fresh round\'s cache (same key, wrong roundNonce)', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Run 1 HANGS and hands us its onProgress so the test can deliver the late snapshot
+    // at the exact race point.
+    let lateOnProgress: ((snapshot: BlackjackProgressSnapshot) => void) | null = null;
+    startBlackjack.mockImplementationOnce(
+      async (
+        _conditioned: BlackjackConditionedState,
+        onProgress: (snapshot: BlackjackProgressSnapshot) => void,
+      ) => {
+        lateOnProgress = onProgress;
+        await new Promise(() => {});
+      },
+    );
+    await deal(user, PLAIN_DEAL);
+    expect(startBlackjack).toHaveBeenCalledTimes(1);
+    expect(lateOnProgress).not.toBeNull();
+
+    scriptDeal(['7h', '8c', 'Td', '5s']);
+    act(() => {
+      useBlackjackStore.getState().deal(); // synchronous clearCache() + reset()
+      lateOnProgress!(snapshotForCall(5)); // round 1's late settled snapshot (42.5% win)
+    });
+    await act(async () => {});
+
+    // A poisoned cache would hit at the unchanged key "2|0", apply round 1's odds to
+    // round 2's completely different hand, and start NO run — sticky until the next key
+    // change. The fresh round must instead get its own live run (42.0%, call index 0).
+    expect(startBlackjack).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('blackjack-stand-win-pct').textContent).toBe('42.0%');
+    const cached = useBlackjackOddsStore.getState().getCached(2, false);
+    expect(cached?.standOutcomes.win).toBe(420);
+  });
+
+  it('mid-turn deck toggle: the old shoe\'s late snapshot must not be served under the new shoe\'s subtitle (same key, wrong deckCount)', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    let lateOnProgress: ((snapshot: BlackjackProgressSnapshot) => void) | null = null;
+    startBlackjack.mockImplementationOnce(
+      async (
+        _conditioned: BlackjackConditionedState,
+        onProgress: (snapshot: BlackjackProgressSnapshot) => void,
+      ) => {
+        lateOnProgress = onProgress;
+        await new Promise(() => {});
+      },
+    );
+    await deal(user, PLAIN_DEAL);
+    expect(startBlackjack).toHaveBeenCalledTimes(1);
+
+    // The re-run under the new shoe also hangs, so a poisoned display (1-deck numbers
+    // under the 2-deck subtitle) is observable rather than instantly overwritten.
+    startBlackjack.mockImplementationOnce(() => new Promise(() => {}));
+    act(() => {
+      useBlackjackStore.getState().setDeckCount(2); // no nonce change — deckCount IS the generation here
+      lateOnProgress!(snapshotForCall(5)); // the old 1-deck run's late settled snapshot
+    });
+    await act(async () => {});
+
+    // BJ-07/D-12: the toggle must produce a VISIBLE re-run over the new shoe — never an
+    // instant cached answer carrying the old shoe's numbers.
+    expect(startBlackjack).toHaveBeenCalledTimes(2);
+    expect(startBlackjack.mock.calls[1][0].deckCount).toBe(2);
+    expect(screen.getByText('Given the cards you can see · 2-deck shoe')).toBeInTheDocument();
+    expect(screen.getByTestId('blackjack-trial-counter').textContent).toBe('0');
+    expect(screen.getByTestId('blackjack-stand-win-pct').textContent).toBe(DASH);
+    expect(useBlackjackOddsStore.getState().settledCache.size).toBe(0);
+  });
+});
+
 describe('Natural path (D-03a/A16): a natural-resolved deal runs zero trials and shows the zero-trials state, never the previous round\'s numbers', () => {
   it('shows the locked natural banner, calls startBlackjackSimulation zero times, and zeroes the panel despite a pre-seeded settled state', async () => {
     const user = userEvent.setup();

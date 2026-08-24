@@ -119,6 +119,17 @@ export function BlackjackGame() {
       conditioned,
       (snapshot) => {
         if (ignore) return;
+        // Same-key/wrong-generation guard (06-REVIEW CR-02): a late snapshot from a run
+        // whose round or shoe has been superseded must neither display nor cache.
+        // deal()/setDeckCount() clear the cache SYNCHRONOUSLY, but this callback stays
+        // live until React's passive-effect flush runs the ignore-flag cleanup — worker
+        // messages are macrotasks that can be delivered inside that gap, re-caching the
+        // stale run's odds under the unchanged (playerHandLength, revealedHole) key
+        // AFTER the clear. The closure-captured key dimensions below defend the
+        // wrong-KEY hazard only; roundNonce (a re-deal) and deckCount (a mid-turn
+        // toggle, which changes no nonce) are the round's generation identity.
+        const bj = useBlackjackStore.getState();
+        if (bj.roundNonce !== roundNonce || bj.deckCount !== deckCount) return;
         // A streamed snapshot means this run is actively progressing — clear any stale
         // error from a previous run (react-hooks/set-state-in-effect: setState belongs in a
         // callback reacting to the external worker, not synchronously in the effect body).
