@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import type { Card } from '@poker-apprentice/types';
+import type { DeckCount } from '../engine/shoe';
+import { cardCounts } from '../engine/shoe';
 
 /**
  * The seven manually-pickable slots (D-07): hero hole plus all five board slots. There is
@@ -48,20 +50,37 @@ export function pickedCards(picks: PickerDraft): Card[] {
   return result;
 }
 
+/**
+ * Copies of `card` still available to the draft at `deckCount` decks (D-09). The single
+ * shared source of "how many more times can this card be picked" for both `setPick`'s
+ * block threshold and the picker UI's disabled-state rendering — never duplicate this
+ * counting elsewhere. Reuses `cardCounts` (from `../engine/shoe`) over `pickedCards(picks)`
+ * rather than a fourth hand-rolled counting loop. Clamped at 0 via `Math.max` — never
+ * returns a negative count.
+ */
+export function remainingCopies(picks: PickerDraft, card: Card, deckCount: DeckCount = 1): number {
+  const used = cardCounts(pickedCards(picks)).get(card) ?? 0;
+  return Math.max(0, deckCount - used);
+}
+
 interface PickerState {
   picks: PickerDraft;
-  /** No-op when `card` already occupies a DIFFERENT slot (D-05 store-level second line of defence). */
-  setPick: (slot: SlotId, card: Card) => void;
+  /**
+   * No-op once picks already using `card` reach `deckCount` (D-09, D-05 store-level second
+   * line of defence). `deckCount` defaults to 1, matching v1's every-card-unique behaviour
+   * unchanged; a caller passes 2 to admit a second physical copy of the same card value.
+   */
+  setPick: (slot: SlotId, card: Card, deckCount?: DeckCount) => void;
   clearSlot: (slot: SlotId) => void;
   clearAll: () => void;
 }
 
 export const usePickerStore = create<PickerState>()((set, get) => ({
   picks: { ...EMPTY_DRAFT },
-  setPick: (slot, card) => {
+  setPick: (slot, card, deckCount = 1) => {
     const { picks } = get();
-    const heldByAnotherSlot = SLOT_ORDER.some((otherSlot) => otherSlot !== slot && picks[otherSlot] === card);
-    if (heldByAnotherSlot) return;
+    const heldByOtherSlots = SLOT_ORDER.filter((otherSlot) => otherSlot !== slot && picks[otherSlot] === card).length;
+    if (heldByOtherSlots >= deckCount) return;
     set({ picks: { ...picks, [slot]: card } });
   },
   clearSlot: (slot) => {

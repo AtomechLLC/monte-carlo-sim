@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { usePickerStore, pickedCards, remainingCopies, SLOT_ORDER, SLOT_LABEL } from './pickerStore';
+import { usePickerStore, pickedCards, SLOT_ORDER, SLOT_LABEL } from './pickerStore';
+import { remainingCopies } from './pickerStore';
 
 const EMPTY_PICKS = {
   'hero-0': null,
