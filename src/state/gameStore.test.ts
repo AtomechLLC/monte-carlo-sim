@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from './gameStore';
 import { useOddsStore } from './oddsStore';
 import { usePickerStore } from './pickerStore';
+import { useUiStore } from './uiStore';
 import { FULL_DECK } from '../engine/cards';
 import type { ProgressSnapshot } from '../worker/protocol';
 
@@ -19,6 +20,7 @@ describe('gameStore — predetermined runout and street pointer', () => {
   beforeEach(() => {
     useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
     usePickerStore.setState({ picks: { ...EMPTY_PICKS } });
+    useUiStore.getState().resetAnimations();
   });
 
   it('starts with no runout, preflop street, no reveals, and dealNonce 0', () => {
@@ -158,6 +160,66 @@ describe('gameStore — predetermined runout and street pointer', () => {
     expect(useGameStore.getState().revealedMask).toBe(0);
   });
 
+  it('deal() increments pendingAnimationCount by exactly 1', () => {
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+    useGameStore.getState().deal();
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+  });
+
+  it('advanceStreet() from preflop arms the gate; a second call at river (no-op) does not', () => {
+    useGameStore.getState().deal();
+    useUiStore.getState().resetAnimations();
+
+    useGameStore.getState().advanceStreet(); // preflop -> flop, changes state
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    useGameStore.setState({ street: 'river' });
+    useUiStore.getState().resetAnimations();
+    useGameStore.getState().advanceStreet(); // river -> river, no-op
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+    expect(useGameStore.getState().street).toBe('river');
+  });
+
+  it('rewindStreet() from flop arms the gate; a call at preflop (no-op) does not', () => {
+    useGameStore.getState().deal();
+    useGameStore.setState({ street: 'flop' });
+    useUiStore.getState().resetAnimations();
+
+    useGameStore.getState().rewindStreet(); // flop -> preflop, changes state
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    useUiStore.getState().resetAnimations();
+    useGameStore.getState().rewindStreet(); // preflop -> preflop, no-op
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+    expect(useGameStore.getState().street).toBe('preflop');
+  });
+
+  it('reveal(0) on a hidden opponent arms the gate; a repeat reveal(0) does not', () => {
+    useUiStore.getState().resetAnimations();
+    useGameStore.getState().reveal(0);
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    useUiStore.getState().resetAnimations();
+    useGameStore.getState().reveal(0); // already revealed, no-op
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+    expect(useGameStore.getState().revealedMask).toBe(0b001);
+  });
+
+  it('no-op navigation actions never change runout, street, revealedMask or dealNonce', () => {
+    useGameStore.getState().deal();
+    const stateAfterDeal = useGameStore.getState();
+    useGameStore.setState({ street: 'river' });
+    const before = useGameStore.getState();
+
+    useGameStore.getState().advanceStreet(); // no-op at river
+    const after = useGameStore.getState();
+    expect(after.runout).toBe(before.runout);
+    expect(after.street).toBe(before.street);
+    expect(after.revealedMask).toBe(before.revealedMask);
+    expect(after.dealNonce).toBe(before.dealNonce);
+    expect(after.dealNonce).toBe(stateAfterDeal.dealNonce);
+  });
+
   it('deal() clears the settled odds cache even when entries existed for the previous hand', () => {
     useOddsStore.getState().clearCache();
     const snapshot: ProgressSnapshot = {
@@ -180,6 +242,7 @@ describe('gameStore — merge-on-deal (picker draft honoured, unset slots random
   beforeEach(() => {
     useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
     usePickerStore.setState({ picks: { ...EMPTY_PICKS } });
+    useUiStore.getState().resetAnimations();
   });
 
   it('with no picks set, deal() still produces 13 distinct random cards (unchanged 02-02 behavior)', () => {
