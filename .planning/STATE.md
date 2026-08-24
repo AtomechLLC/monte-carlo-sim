@@ -77,10 +77,9 @@ None yet.
 
 ### Blockers/Concerns
 
-- ⚠️ [Phase 2] Code review WR-01 (02-REVIEW.md): the `simulation-error` banner is only cleared by a live run's snapshot — the cache-hit navigation path never clears it, so a stale banner can sit over valid cached odds. Advisory.
-- ⚠️ [Phase 2] Code review WR-02 (02-REVIEW.md): hard worker death (script load failure) fires the unsubscribed Worker `error` event and leaves Comlink promises hanging — call-rejection errors are surfaced, but worker-crash errors are not. Advisory.
-- ⚠️ [Phases 1-2] Security enforcement is enabled but no SECURITY.md exists for either phase — `/gsd:secure-phase 1` and `/gsd:secure-phase 2` close the gate (client-only app; low risk).
-- ⚠️ [Phase 1] Cosmetic: `index.html` title is still "scaffold-tmp"; scheduled for Phase 3 (visual polish). (Phase 1's WR-01/WR-02 were fixed in Phase 2 plan 02-01.)
+- ⚠️ [Phase 2] Code review WR-02 (02-REVIEW.md): hard worker death (script load failure) fires the unsubscribed Worker `error` event and leaves Comlink promises hanging — call-rejection errors are surfaced, but worker-crash errors are not. Advisory. (WR-01, the stale error banner on cache hits, was FIXED in Phase 3 plan 03-05.)
+- ⚠️ [Phases 1-3] Security enforcement is enabled but no SECURITY.md exists for any phase — `/gsd:secure-phase 1|2|3` closes the gate (client-only app; low risk).
+- (Resolved) Phase 1 cosmetic debt (scaffold-tmp title, default favicon, dead scaffold assets) — closed in Phase 3 plan 03-05 (D-14).
 
 ## Deferred Items
 
