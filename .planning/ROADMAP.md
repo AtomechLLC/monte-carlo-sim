@@ -45,7 +45,7 @@ Audit: [milestones/v1.0-MILESTONE-AUDIT.md](milestones/v1.0-MILESTONE-AUDIT.md)
   3. The card picker's duplicate-blocking is verified count-aware: a card is blocked after 1 pick at 1 deck, and only after 2 picks at 2 decks, with remaining-copy state exposed for the UI to consume.
   4. The generalized streaming runner passes the full existing Hold'em `simulationApi` test suite unchanged, proving the worker-protocol refactor is behavior-preserving before any new game rides on it.
 
-**Plans:** 2/6 plans executed
+**Plans:** 4/6 plans executed
 
 Plans:
 **Wave 1**
@@ -58,8 +58,8 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 04-03-PLAN.md — Thread deckCount through ConditionedState/deriveConditionedState; additive DECK-03 without-replacement property tests
-- [ ] 04-04-PLAN.md — Count-aware pickerStore blocking plus the remainingCopies selector, picker UI unchanged at 1 deck
+- [x] 04-03-PLAN.md — Thread deckCount through ConditionedState/deriveConditionedState; additive DECK-03 without-replacement property tests
+- [x] 04-04-PLAN.md — Count-aware pickerStore blocking plus the remainingCopies selector, picker UI unchanged at 1 deck
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -143,7 +143,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Core Odds Loop | v1.0 | 4/4 | Complete | 2026-08-24 |
 | 2. Scenario Construction & Street Navigation | v1.0 | 6/6 | Complete | 2026-08-24 |
 | 3. Casino Table UI & Animation | v1.0 | 6/6 | Complete | 2026-08-24 |
-| 4. Multiset Deck & Streaming Foundation | v2.0 | 2/6 | In Progress|  |
+| 4. Multiset Deck & Streaming Foundation | v2.0 | 4/6 | In Progress|  |
 | 5. Game-Mode Shell & Store Separation | v2.0 | 0/TBD | Not started | - |
 | 6. Blackjack Core Odds Loop | v2.0 | 0/TBD | Not started | - |
 | 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 0/TBD | Not started | - |
