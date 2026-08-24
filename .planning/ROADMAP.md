@@ -104,8 +104,33 @@ Plans:
   3. User sees cards animate when dealt, flipped, and revealed (opponent reveal).
   4. User never sees odds numbers contradict or spoil cards that are still mid-animation — odds update only once the corresponding animation has completed.
 
-**Plans**: TBD
+**Plans:** 0/6 plans complete
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Vendor the CC0 SVG deck and render real card art everywhere (TBL-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — Felt table scene: seats, community area, deck origin, off-felt odds panel (TBL-01)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03-03-PLAN.md — Install Motion, deal choreography, and the animation-gated odds effect (TBL-03, TBL-04)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 03-04-PLAN.md — Street-advance enter, rewind exit, and the opponent reveal flip (TBL-03, TBL-04)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 03-05-PLAN.md — Reduced motion, re-deal cancellation, cosmetic debt, and the acceptance suite (all)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 03-06-PLAN.md — Phase acceptance: human walkthrough of the finished casino table (all)
 
 ## Progress
 
@@ -116,4 +141,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Core Odds Loop | 4/4 | Complete   | 2026-08-24 |
 | 2. Scenario Construction & Street Navigation | 6/6 | Complete   | 2026-08-24 |
-| 3. Casino Table UI & Animation | 0/TBD | Not started | - |
+| 3. Casino Table UI & Animation | 0/6 | Not started | - |
