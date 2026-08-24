@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react';
 import type { Card } from '@poker-apprentice/types';
 import { PlayingCard } from './PlayingCard';
-import { CardBack } from './CardBack';
 import { AnimatedCard } from './AnimatedCard';
+import { FlipCard } from './FlipCard';
 import { dealOriginOffset, dealIndex } from './tableGeometry';
 
 const HERO_HOLE_SLOTS = [0, 1] as const;
@@ -119,11 +118,19 @@ function OpponentSeat({
   // deal there is nothing to fly in from, so a plain (non-animated) slot is rendered instead —
   // otherwise AnimatedCard would arm the gate on initial page load. `hasHand` flips true exactly
   // when `deal()` first runs, so the very first deal animates too, not just re-deals.
-  function renderHoleSlot(slotIndex: 0 | 1, content: ReactNode) {
+  //
+  // Every slot (hidden or revealed) renders the SAME FlipCard (03-04) — its own `faceUp`/`card`
+  // props drive whether the face is shown, so this call site never branches on `revealed`
+  // itself. `card` is passed as `undefined` whenever the seat is hidden — NEVER the real card —
+  // which is what keeps a hidden opponent's hole cards out of the DOM entirely (T-03-12).
+  function renderHoleSlot(slotIndex: 0 | 1) {
+    const flipKey = `${seatKey}-${slotIndex}-${dealNonce}`;
+    const flip = <FlipCard flipKey={flipKey} faceUp={revealed} card={revealed ? hole?.[slotIndex] : undefined} />;
+
     if (!hasHand) {
       return (
         <span key={slotIndex} className="card-slot card-slot--opponent">
-          {content}
+          {flip}
         </span>
       );
     }
@@ -138,7 +145,7 @@ function OpponentSeat({
         dealIndex={dealIndex(seatDealIndex, slotIndex)}
         className="card-slot card-slot--opponent"
       >
-        {content}
+        {flip}
       </AnimatedCard>
     );
   }
@@ -152,8 +159,8 @@ function OpponentSeat({
           disabled
           aria-label={`${label} hole cards: ${hole[0]} ${hole[1]} (revealed)`}
         >
-          {renderHoleSlot(0, <PlayingCard card={hole[0]} decorative />)}
-          {renderHoleSlot(1, <PlayingCard card={hole[1]} decorative />)}
+          {renderHoleSlot(0)}
+          {renderHoleSlot(1)}
         </button>
       ) : (
         <button
@@ -164,8 +171,8 @@ function OpponentSeat({
           aria-label={`Reveal ${label} hole cards`}
           title="Click to reveal this opponent's hole cards"
         >
-          {renderHoleSlot(0, <CardBack />)}
-          {renderHoleSlot(1, <CardBack />)}
+          {renderHoleSlot(0)}
+          {renderHoleSlot(1)}
         </button>
       )}
       <span data-testid={`seat-label-opponent-${index}`} className="seat-label" aria-hidden="true">

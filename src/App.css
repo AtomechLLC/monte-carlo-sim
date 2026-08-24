@@ -363,6 +363,42 @@ h2 {
 }
 
 /* ---------------------------------------------------------------------------
+ * Phase 3 opponent reveal flip (03-04)
+ *
+ * The 3D rotateY reveal (FlipCard.tsx): `perspective` on `.flip-card` (the outer, non-rotating
+ * element), `transform-style: preserve-3d` on `.flip-card-inner` (the element Motion actually
+ * rotates), and `backface-visibility: hidden` on both `.flip-card-face` children — all three are
+ * required together, or the rotation collapses into a flat squash instead of a true 3D flip
+ * (03-RESEARCH Pattern 3 / Assumption A2). Both faces are absolutely stacked inside `.flip-card`,
+ * whose own width/aspect-ratio come from the SAME card-slot tokens every other card uses (never
+ * from either face image's own intrinsic size) — so a reveal changes only the rotation, never
+ * the seat's box dimensions (UI-SPEC Table Geometry & Card Dimensions: no layout shift).
+ * ------------------------------------------------------------------------- */
+.flip-card {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  perspective: 1000px;
+}
+
+.flip-card-inner {
+  width: 100%;
+  height: 100%;
+}
+
+.flip-card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.flip-card-face .playing-card {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------------------
  * Phase 3 felt table scene (03-02)
  *
  * The oval felt composition root, seat/community/deck absolute placement, and
