@@ -104,7 +104,7 @@ Plans:
   3. User sees cards animate when dealt, flipped, and revealed (opponent reveal).
   4. User never sees odds numbers contradict or spoil cards that are still mid-animation — odds update only once the corresponding animation has completed.
 
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 **UI hint**: yes
 
 Plans:
@@ -114,7 +114,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — Felt table scene: seats, community area, deck origin, off-felt odds panel (TBL-01)
+- [x] 03-02-PLAN.md — Felt table scene: seats, community area, deck origin, off-felt odds panel (TBL-01)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -141,4 +141,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Core Odds Loop | 4/4 | Complete   | 2026-08-24 |
 | 2. Scenario Construction & Street Navigation | 6/6 | Complete   | 2026-08-24 |
-| 3. Casino Table UI & Animation | 1/6 | In Progress|  |
+| 3. Casino Table UI & Animation | 2/6 | In Progress|  |
