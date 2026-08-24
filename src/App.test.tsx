@@ -380,6 +380,27 @@ describe('App — settled-odds cache gate and reveal-recomputes-everything', () 
     expect(conditioned.knownOpponentHoles[0]).not.toBeNull();
   });
 
+  it('03-04: a reveal click still produces a fresh startSimulation call with knownOpponentHoles[i] non-null once the flip gate clears (FlipCard regression)', async () => {
+    // Regression guard for Task 3's Seat.tsx rewrite (raw CardBack/PlayingCard swap ->
+    // FlipCard): the reveal-click-to-recompute wiring must survive the FlipCard refactor exactly
+    // as it worked in Phase 2. jsdom forces reduced motion (src/test/setup.ts), so FlipCard's own
+    // gate registration never actually arms here — the odds effect's gate clears synchronously,
+    // matching the pre-existing Phase 2 assertion this test mirrors.
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    vi.mocked(simulationService.startSimulation).mockClear();
+
+    await user.click(screen.getByTestId('opponent-seat-2'));
+
+    expect(simulationService.startSimulation).toHaveBeenCalledTimes(1);
+    const lastCall = vi.mocked(simulationService.startSimulation).mock.calls.at(-1)!;
+    const conditioned = lastCall[0] as ConditionedState;
+    expect(conditioned.knownOpponentHoles[2]).not.toBeNull();
+  });
+
   it('reveal on the flop then rewind to pre-flop recomputes with an empty board and the reveal known (D-11)', async () => {
     vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
     const user = userEvent.setup();

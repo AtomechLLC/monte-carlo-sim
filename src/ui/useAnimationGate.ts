@@ -67,3 +67,73 @@ export function useAnimationGate(
 
   return { pending: enabled && pending, complete };
 }
+
+/**
+ * Container-level gate registration for an AnimatePresence exit group (03-04, D-08/D-12).
+ *
+ * Registers ONE animation with the same gate `useAnimationGate` uses whenever `count` drops
+ * below its own previously observed value — i.e. children are about to exit — and never when
+ * `count` rises or stays the same. The returned callback is what the caller passes to
+ * `<AnimatePresence onExitComplete={...}>`; it releases the registration exactly once, is safe
+ * to call more than once (idempotent, same pendingRef guard as `useAnimationGate.complete`), and
+ * is also released automatically on unmount if the exit was interrupted before completing
+ * (mirrors `useAnimationGate`'s own unmount-safety, D-10).
+ *
+ * `resetKey` lets the caller distinguish "count dropped because items are leaving" (a rewind,
+ * which SHOULD hold the gate for the exit transition) from "count dropped because the whole
+ * list was replaced" (a re-deal, which must NOT — UI-SPEC's "Re-deal cancellation" row is an
+ * instant unmount, not an exit; removing old-keyed children under AnimatePresence IS an exit by
+ * default, so without this a re-deal would regress into playing the rewind-exit transition on
+ * the old board). Passing a value that changes exactly when the re-deal happens (`dealNonce`)
+ * re-baselines this hook's internal previous-count tracking WITHOUT registering, even if `count`
+ * also happens to drop in that same render — so the very next drop is measured against the NEW
+ * baseline, not the old one.
+ *
+ * @param count     current item count (e.g. `visibleBoard.length`)
+ * @param enabled   false (e.g. reduced motion) means never register at all
+ * @param resetKey  changing this re-baselines `count` tracking without registering a hold
+ */
+export function useExitGate(count: number, enabled: boolean, resetKey?: string | number): () => void {
+  // Idempotency guard, mirroring useAnimationGate's own pendingRef — the returned release
+  // callback and the unmount cleanup below can never double-release the same registration.
+  const pendingRef = useRef(false);
+  const prevCountRef = useRef(count);
+  const prevResetKeyRef = useRef(resetKey);
+
+  useEffect(() => {
+    if (prevResetKeyRef.current !== resetKey) {
+      // A reset (e.g. a re-deal): re-baseline without registering, even if `count` also
+      // dropped in this same render — that drop is an instant replacement, not an exit.
+      prevResetKeyRef.current = resetKey;
+      prevCountRef.current = count;
+      return;
+    }
+
+    const previous = prevCountRef.current;
+    prevCountRef.current = count;
+
+    if (!enabled) return;
+
+    if (count < previous) {
+      useUiStore.getState().beginAnimation();
+      pendingRef.current = true;
+    }
+  }, [count, enabled, resetKey]);
+
+  useEffect(() => {
+    return () => {
+      // An interrupted exit (unmounted before onExitComplete fired) can never strand the gate.
+      if (pendingRef.current) {
+        pendingRef.current = false;
+        useUiStore.getState().endAnimation();
+      }
+    };
+  }, []);
+
+  return useCallback(() => {
+    if (pendingRef.current) {
+      pendingRef.current = false;
+      useUiStore.getState().endAnimation();
+    }
+  }, []);
+}
