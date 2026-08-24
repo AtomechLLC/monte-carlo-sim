@@ -49,7 +49,11 @@ export function AnimatedCard({ animationKey, origin, dealIndex, className, child
   // a backstop making a stale flag harmless: every card mounted by a REAL navigation action
   // renders with that action's own synchronously-armed unit already > 0 (gameStore.ts arms in
   // the same tick as its set()), so a legitimate deal/advance mount can never be suppressed.
-  const restorePendingNow = useGameModeStore((state) => state.holdemRestorePending);
+  // The read is mode-selected so the SAME protection applies in the blackjack direction
+  // (06-RESEARCH Pattern 5 / Pitfall C) — the Hold'em branch is unchanged by construction.
+  const restorePendingNow = useGameModeStore((state) =>
+    state.mode === 'holdem' ? state.holdemRestorePending : state.blackjackRestorePending,
+  );
   const gateIdleNow = useUiStore((state) => state.pendingAnimationCount === 0);
   const [restoredMount] = useState(restorePendingNow && gateIdleNow);
 
