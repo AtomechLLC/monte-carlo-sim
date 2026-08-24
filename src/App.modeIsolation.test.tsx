@@ -3,14 +3,21 @@ import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import * as simulationService from './state/simulationService';
+import * as blackjackSimulationService from './state/blackjackSimulationService';
 import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
 import { usePickerStore } from './state/pickerStore';
 import { useUiStore } from './state/uiStore';
 import { useGameModeStore } from './state/gameModeStore';
+import { useBlackjackStore } from './state/blackjackStore';
+import { useBlackjackOddsStore } from './state/blackjackOddsStore';
 import { HOLDEM_ONLY_TESTIDS } from './test/holdemTestids';
+import { BLACKJACK_ONLY_TESTIDS } from './test/blackjackTestids';
 import type { ProgressSnapshot } from './worker/protocol';
 import type { ConditionedState } from './engine/equity';
+import type { BlackjackProgressSnapshot } from './worker/blackjackProtocol';
+import type { BlackjackConditionedState } from './engine/blackjackEquity';
+import type { Card } from '@poker-apprentice/types';
 
 // Phase 5 Plan 02 isolation proof (D-04/D-05/D-06/D-07). A failure ANYWHERE in this file means
 // Plan 01's production code (src/App.tsx's mode-scoped odds effect and JSX fork, or
@@ -34,6 +41,15 @@ vi.mock('./state/simulationService', () => ({
   cancelSimulation: vi.fn(),
 }));
 
+// Same explicit-factory rationale, for the blackjack transport (06-07): <App /> now reaches
+// the blackjack service through <BlackjackGame />, and this file's new mirror-image sweep
+// seeds player-turn rounds whose odds effect genuinely starts runs — the factory lists BOTH
+// exports so no real Comlink call (or Worker construction) is ever attempted under jsdom.
+vi.mock('./state/blackjackSimulationService', () => ({
+  startBlackjackSimulation: vi.fn(),
+  cancelBlackjackSimulation: vi.fn(),
+}));
+
 /** Bumped on every mocked `startSimulation` call so each call's streamed snapshot is
  * recognisably distinct (win% climbs by 1 each call) — lets a cache-hit assertion prove "no NEW
  * call happened" rather than merely "the call count didn't change by coincidence". Mirrors
@@ -42,15 +58,33 @@ let callIndex = 0;
 
 function resetStores() {
   useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
-  // Placed AFTER the gameStore reset (mirrors every existing App-level test harness): a reset
+  // The blackjack round store resets alongside the Hold'em one (06-07): back to its exact
+  // initial shape, BEFORE resetAnimations() below for the same reason as gameStore.
+  useBlackjackStore.setState({
+    round: null,
+    playerHand: [] as Card[],
+    dealerPlayoutCards: [] as Card[],
+    roundPhase: 'idle',
+    revealedHole: false,
+    outcome: null,
+    playerNaturalWin: false,
+    deckCount: 1,
+    roundNonce: 0,
+  });
+  // Placed AFTER the store resets (mirrors every existing App-level test harness): a reset
   // must never leave a stale armed count behind from a previous test.
   useUiStore.getState().resetAnimations();
   useOddsStore.getState().reset();
   useOddsStore.getState().clearCache();
+  useBlackjackOddsStore.getState().reset();
+  useBlackjackOddsStore.getState().clearCache();
+  useBlackjackOddsStore.getState().setDisplayedDeckCount(1);
   usePickerStore.getState().clearAll();
   useGameModeStore.setState({ mode: 'holdem' });
   vi.mocked(simulationService.startSimulation).mockReset();
   vi.mocked(simulationService.cancelSimulation).mockReset();
+  vi.mocked(blackjackSimulationService.startBlackjackSimulation).mockReset();
+  vi.mocked(blackjackSimulationService.cancelBlackjackSimulation).mockReset();
   callIndex = 0;
 
   // Records a per-call-distinct win% (climbing by 1 each call) and immediately streams ONE
@@ -65,6 +99,25 @@ function resetStores() {
         requestId: 1,
         categoryCounts: [100, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         outcomes: { win, tie: 0, lose },
+        trialsCompleted: 100,
+        done: true,
+      });
+    },
+  );
+
+  // The blackjack mirror: one settled, internally-consistent snapshot per call (every tally
+  // group sums to trialsCompleted, so the dev-only store consistency guard stays silent).
+  vi.mocked(blackjackSimulationService.startBlackjackSimulation).mockImplementation(
+    async (
+      _conditioned: BlackjackConditionedState,
+      onProgress: (snapshot: BlackjackProgressSnapshot) => void,
+    ) => {
+      onProgress({
+        requestId: 1,
+        dealerOutcomeCounts: [40, 10, 10, 10, 10, 10, 10],
+        bustIfHitCount: 30,
+        standOutcomes: { win: 50, push: 10, lose: 40 },
+        hitOutcomes: { win: 45, push: 5, lose: 50 },
         trialsCompleted: 100,
         done: true,
       });
@@ -198,16 +251,103 @@ describe('DOM-absence sweep — every Hold\'em testid is gone from the DOM once 
     },
   );
 
-  it('the Deal button (no data-testid of its own; queried by accessible name) is present before the switch and absent once mode is blackjack', async () => {
+  it("the untestid'd Hold'em Deal button is present before the switch, and every Deal-named button in Blackjack mode is Blackjack's own", async () => {
+    // RETARGETED (06-07, D-04 -> D-13/BJ-05): Blackjack now legitimately owns a Deal button
+    // with the same accessible name, so "no button named Deal exists" can no longer express
+    // D-04. The Hold'em Deal button is identifiable by its LACK of a data-testid — asserting
+    // every Deal-named button carries the blackjack testid proves the untestid'd Hold'em one
+    // is unmounted, which is exactly what the original assertion pinned.
     const user = userEvent.setup();
     render(<App />);
 
-    expect(screen.getByRole('button', { name: /^deal$/i })).toBeInTheDocument();
+    const holdemDeal = screen.getByRole('button', { name: /^deal$/i });
+    expect(holdemDeal).toBeInTheDocument();
+    expect(holdemDeal).not.toHaveAttribute('data-testid');
 
     await user.click(screen.getByTestId('game-mode-switch-blackjack'));
 
-    expect(screen.queryByRole('button', { name: /^deal$/i })).not.toBeInTheDocument();
+    const dealButtons = screen.getAllByRole('button', { name: /^deal$/i });
+    expect(dealButtons).toHaveLength(1);
+    expect(dealButtons[0]).toHaveAttribute('data-testid', 'blackjack-deal-button');
   });
+});
+
+describe('Mirror-image DOM-absence sweep — every blackjack-* testid is gone from the DOM once mode is holdem (D-04/D-14, BJ-01 symmetry)', () => {
+  beforeEach(() => {
+    resetStores();
+  });
+
+  /** A deterministic mid-round (player-turn) blackjack state, seeded directly BEFORE the
+   * switch to Blackjack so the felt mounts with it (no store action fires, so no gate unit is
+   * armed and BlackjackTable's prevRef release initialises to these values — nothing to
+   * steal). Kh/Qc vs 9d upcard: no natural on either side, so the odds effect genuinely runs
+   * against the mocked service. */
+  function seedPlayerTurn(overrides: Partial<ReturnType<typeof useBlackjackStore.getState>> = {}) {
+    useBlackjackStore.setState({
+      round: { dealerUpcard: '9d' as Card, dealerHole: '6s' as Card },
+      playerHand: ['Kh', 'Qc'] as Card[],
+      dealerPlayoutCards: [] as Card[],
+      roundPhase: 'player-turn',
+      revealedHole: false,
+      outcome: null,
+      playerNaturalWin: false,
+      deckCount: 1,
+      roundNonce: 1,
+      ...overrides,
+    });
+  }
+
+  it.each(BLACKJACK_ONLY_TESTIDS)(
+    "%s is present in Blackjack mode before the switch and absent from the DOM once mode is holdem",
+    async (testid) => {
+      const user = userEvent.setup();
+      render(<App />);
+
+      // Present-then-absent structure mirroring the Hold'em sweep above: each entry's
+      // presence precondition is established first, so no absence check is vacuous.
+      if (testid === 'blackjack-empty-state') {
+        // The one entry whose presence condition requires roundPhase === 'idle' — mutually
+        // exclusive with every seeded-round entry below (the A10 idle block).
+      } else if (testid === 'blackjack-outcome-banner') {
+        // The banner renders only while resolved with the gate clear — a seeded resolved
+        // round (stand-shaped: hole revealed, outcome set) makes it genuinely present.
+        seedPlayerTurn({ roundPhase: 'resolved', revealedHole: true, outcome: 'win' });
+      } else if (testid === 'blackjack-dealer-total') {
+        // The dealer total is DOM-absent while the hole is hidden (A11) — seed a revealed
+        // player-turn round so the span exists.
+        seedPlayerTurn({ revealedHole: true });
+      } else if (testid === 'blackjack-simulation-error' || testid === 'blackjack-simulation-error-detail') {
+        // The error banner requires a failed run: the mocked service reports onError for
+        // this test only, and the seeded player-turn round makes the odds effect start it.
+        vi.mocked(blackjackSimulationService.startBlackjackSimulation).mockImplementation(
+          async (
+            _conditioned: BlackjackConditionedState,
+            _onProgress: (snapshot: BlackjackProgressSnapshot) => void,
+            onError: (message: string) => void,
+          ) => {
+            onError('injected-crash');
+          },
+        );
+        seedPlayerTurn();
+      } else {
+        // Every other entry (scene, areas, cards, labels, controls, panel, all 13 stat
+        // cells, the trial counter, the deck origin, the reveal button, the toggle) is
+        // present for any seeded player-turn round.
+        seedPlayerTurn();
+      }
+
+      await user.click(screen.getByTestId('game-mode-switch-blackjack'));
+
+      expect(
+        screen.getByTestId(testid),
+        `expected ${testid} to be present in Blackjack mode before switching to Hold'em — an absence assertion against a testid that was never present proves nothing`,
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('game-mode-switch-holdem'));
+
+      expect(screen.queryByTestId(testid)).not.toBeInTheDocument();
+    },
+  );
 });
 
 describe("Hold'em state persists across the round trip and settled odds are restored from the cache with no re-simulation (D-07)", () => {

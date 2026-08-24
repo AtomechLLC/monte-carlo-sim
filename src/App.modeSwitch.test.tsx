@@ -27,6 +27,16 @@ vi.mock('./state/simulationService', () => ({
   cancelSimulation: vi.fn(),
 }));
 
+// Same explicit-factory rationale as above, for the OTHER game's transport (06-07): from this
+// plan onward <App /> reaches the blackjack service through <BlackjackGame />, so mounting App
+// with only the poker mock would import the real blackjack service — and, through it,
+// workerClient. 06-03's lazy construction keeps that import side-effect-free, but the mock is
+// still required so no real Comlink call is ever attempted if the blackjack odds effect runs.
+vi.mock('./state/blackjackSimulationService', () => ({
+  startBlackjackSimulation: vi.fn(),
+  cancelBlackjackSimulation: vi.fn(),
+}));
+
 function resetStores() {
   useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
   useUiStore.getState().resetAnimations();
@@ -44,9 +54,12 @@ function resetStores() {
 // here — it is deliberately an absence-only SMOKE sweep of the pre-deal switch path;
 // App.modeIsolation.test.tsx owns the non-vacuous present-then-absent proof for every entry.
 
-const BLACKJACK_HEADING = 'The Blackjack table deals next';
-const BLACKJACK_BODY =
-  "Player hand, dealer upcard, live bust and outcome odds, and Stand-vs-Hit choices land here next. Switch back to Hold'em to keep watching odds converge now.";
+// RETARGETED (06-07, D-03 -> D-13): these constants pinned the Phase 5 placeholder copy; the
+// placeholder is retired, so they now pin the Phase 6 A10 idle block's locked copy (the
+// retained `blackjack-empty-state` testid, new copy and page-level placement per 06-UI-SPEC).
+const BLACKJACK_IDLE_HEADING = 'No round dealt yet';
+const BLACKJACK_IDLE_BODY =
+  'Click Deal to start a round. Switch the shoe between 1 and 2 decks to see the odds shift.';
 
 describe("App mode switch — default mode is Hold'em with the switcher visible (D-01)", () => {
   beforeEach(() => {
@@ -75,12 +88,12 @@ describe("App mode switch — default mode is Hold'em with the switcher visible 
   });
 });
 
-describe('App mode switch — clicking Blackjack mounts the honest placeholder (D-03)', () => {
+describe('App mode switch — clicking Blackjack mounts the real Blackjack tree with the idle state (D-03 -> D-13)', () => {
   beforeEach(() => {
     resetStores();
   });
 
-  it('mounts blackjack-scene and blackjack-empty-state with the exact locked copy', async () => {
+  it('mounts blackjack-scene and the page-level blackjack-empty-state with the exact locked copy', async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -88,6 +101,9 @@ describe('App mode switch — clicking Blackjack mounts the honest placeholder (
 
     const scene = screen.getByTestId('blackjack-scene');
     expect(scene).toBeInTheDocument();
+    // A10 (06-07): the retained testid, its copy and placement replaced — the idle block now
+    // lives page-level (OUTSIDE the felt, in the empty-hand-state document slot), so it is
+    // deliberately NOT queried as a child of the scene any more.
     const emptyState = screen.getByTestId('blackjack-empty-state');
     expect(emptyState).toBeInTheDocument();
 
@@ -95,18 +111,31 @@ describe('App mode switch — clicking Blackjack mounts the honest placeholder (
     const body = emptyState.querySelector('p');
     expect(heading).not.toBeNull();
     expect(body).not.toBeNull();
-    expect(heading?.textContent).toBe(BLACKJACK_HEADING);
-    expect(body?.textContent).toBe(BLACKJACK_BODY);
+    expect(heading?.textContent).toBe(BLACKJACK_IDLE_HEADING);
+    expect(body?.textContent?.replace(/\s+/g, ' ').trim()).toBe(BLACKJACK_IDLE_BODY);
   });
 
-  it('the blackjack-scene subtree contains zero <button> elements', async () => {
+  it('the blackjack-scene subtree contains exactly the Phase 6 controls: one button, the hole reveal', async () => {
+    // RETARGETED, not deleted (06-07, the guard file's standing rule applied to a behavioural
+    // suite): the old zero-<button> assertion encoded Phase 5's D-03 ("the placeholder has no
+    // controls"), which Phase 6's D-13 supersedes BY DESIGN — the real table HAS controls.
+    // The felt subtree itself still contains exactly ONE button (the hole-card reveal that
+    // wraps the hole FlipCard, 06-UI-SPEC Layout inventory); Deal/Hit/Stand and the deck
+    // toggle live in the control bar OUTSIDE the scene, asserted below.
     const user = userEvent.setup();
     render(<App />);
 
     await user.click(screen.getByTestId('game-mode-switch-blackjack'));
 
     const scene = screen.getByTestId('blackjack-scene');
-    expect(scene.querySelectorAll('button')).toHaveLength(0);
+    const sceneButtons = scene.querySelectorAll('button');
+    expect(sceneButtons).toHaveLength(1);
+    expect(sceneButtons[0]).toHaveAttribute('data-testid', 'blackjack-hole-reveal');
+
+    expect(screen.getByTestId('blackjack-deal-button')).toBeInTheDocument();
+    expect(screen.getByTestId('blackjack-hit-button')).toBeInTheDocument();
+    expect(screen.getByTestId('blackjack-stand-button')).toBeInTheDocument();
+    expect(screen.getByTestId('blackjack-deck-toggle')).toBeInTheDocument();
   });
 
   it('the switcher stays visible and aria-pressed flips to Blackjack', async () => {
@@ -137,13 +166,20 @@ describe("App mode switch — every Hold'em testid is DOM-absent in Blackjack mo
     expect(screen.queryByTestId(testid)).not.toBeInTheDocument();
   });
 
-  it('the Deal button (no testid of its own, queried by accessible name) is absent while mode is blackjack', async () => {
+  it("the untestid'd Hold'em Deal button is absent while mode is blackjack — every Deal-named button is Blackjack's own", async () => {
+    // RETARGETED (06-07, D-04 -> D-13/BJ-05): Blackjack now legitimately owns a Deal button
+    // with the same accessible name, so "no button named Deal exists" can no longer express
+    // D-04. The Hold'em Deal button is identifiable by its LACK of a data-testid — asserting
+    // every Deal-named button carries the blackjack testid proves the untestid'd Hold'em one
+    // is unmounted, which is exactly what the original assertion pinned.
     const user = userEvent.setup();
     render(<App />);
 
     await user.click(screen.getByTestId('game-mode-switch-blackjack'));
 
-    expect(screen.queryByRole('button', { name: /^deal$/i })).not.toBeInTheDocument();
+    const dealButtons = screen.getAllByRole('button', { name: /^deal$/i });
+    expect(dealButtons).toHaveLength(1);
+    expect(dealButtons[0]).toHaveAttribute('data-testid', 'blackjack-deal-button');
   });
 });
 
