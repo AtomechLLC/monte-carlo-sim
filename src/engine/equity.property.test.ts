@@ -34,6 +34,9 @@ test.prop([fc.integer({ min: 1, max: 3000 }), fc.integer()])(
     expect(categorySum).toBe(trialCount);
     expect(result.outcomes.win + result.outcomes.tie + result.outcomes.lose).toBe(trialCount);
   },
+  // Up to 3000-trial simulations x 100 fast-check runs: comfortably fast alone (~2.4s) but
+  // can exceed vitest's 5s default under full-suite CPU contention (51 parallel files).
+  30_000,
 );
 
 test.prop([
