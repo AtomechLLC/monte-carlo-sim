@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Odds Loop** - Deal, compute (streaming Monte Carlo), and display live odds in a minimal UI (completed 2026-08-24)
 - [x] **Phase 2: Scenario Construction & Street Navigation** - Manual card picker, street advance/rewind, and opponent reveal (completed 2026-08-24)
-- [ ] **Phase 3: Casino Table UI & Animation** - Full felt-table scene, detailed card art, and dealing/flip/reveal animations
+- [x] **Phase 3: Casino Table UI & Animation** - Full felt-table scene, detailed card art, and dealing/flip/reveal animations (completed 2026-08-24)
 
 ## Phase Details
 
@@ -104,7 +104,7 @@ Plans:
   3. User sees cards animate when dealt, flipped, and revealed (opponent reveal).
   4. User never sees odds numbers contradict or spoil cards that are still mid-animation — odds update only once the corresponding animation has completed.
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 **UI hint**: yes
 
 Plans:
@@ -130,7 +130,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 03-06-PLAN.md — Phase acceptance: human walkthrough of the finished casino table (all)
+- [x] 03-06-PLAN.md — Phase acceptance: human walkthrough of the finished casino table (all)
 
 ## Progress
 
@@ -141,4 +141,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Core Odds Loop | 4/4 | Complete   | 2026-08-24 |
 | 2. Scenario Construction & Street Navigation | 6/6 | Complete   | 2026-08-24 |
-| 3. Casino Table UI & Animation | 5/6 | In Progress|  |
+| 3. Casino Table UI & Animation | 6/6 | Complete   | 2026-08-24 |
