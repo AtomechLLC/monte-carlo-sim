@@ -67,6 +67,9 @@ Recent decisions affecting current work:
 - Phase 1: `@poker-apprentice/hand-evaluator` must be imported via named imports only (`import { evaluateHoldem, compare }`) — the plan-documented default-import pattern breaks the production worker chunk (ESM `module` field has no default export).
 - Phase 1: `pure-rand@8.4.2` requires subpath imports (`pure-rand/generator/xoroshiro128plus`, `pure-rand/distribution/uniformInt`) — no top-level `"."` export.
 - Phase 1: `dealNonce` is the single counter serving as both re-deal trigger and worker `requestId`; worker supersession is generation-tagged in `simulationApi.ts`.
+- Phase 2: The full hand runout is predetermined at deal time; `deriveConditionedState` in `src/engine/conditioning.ts` is the ONLY code allowed to read the raw runout for simulation purposes (D-02 leak guard). Odds condition on visible street + revealedMask only.
+- Phase 2: Settled odds are cached per `street|revealedMask` knowledge key in oddsStore; reveal invalidates by key composition; `deal()` clears the cache.
+- Phase 2: `simulationService.startSimulation(conditioned, onProgress, onError)` owns its own monotonic requestId generation (dealNonce is no longer the requestId).
 
 ### Pending Todos
 
@@ -74,10 +77,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- ⚠️ [Phase 1] Code review WR-01: re-entering `runSimulation` with the same requestId (StrictMode/HMR remount; `App.tsx` effect has no cleanup) can interleave two concurrent worker loops. Advisory; fix via `/gsd:code-review 1 --fix` or fold into Phase 2 work on the simulation service.
-- ⚠️ [Phase 1] Code review WR-02: no error handling anywhere on the worker path — a worker failure silently freezes the odds display.
-- ⚠️ [Phase 1] Security enforcement is enabled but no SECURITY.md exists yet — run `/gsd:secure-phase 1` to close the gate.
-- ⚠️ [Phase 1] Cosmetic: `index.html` title is still "scaffold-tmp"; deferred to Phase 3 (visual polish).
+- ⚠️ [Phase 2] Code review WR-01 (02-REVIEW.md): the `simulation-error` banner is only cleared by a live run's snapshot — the cache-hit navigation path never clears it, so a stale banner can sit over valid cached odds. Advisory.
+- ⚠️ [Phase 2] Code review WR-02 (02-REVIEW.md): hard worker death (script load failure) fires the unsubscribed Worker `error` event and leaves Comlink promises hanging — call-rejection errors are surfaced, but worker-crash errors are not. Advisory.
+- ⚠️ [Phases 1-2] Security enforcement is enabled but no SECURITY.md exists for either phase — `/gsd:secure-phase 1` and `/gsd:secure-phase 2` close the gate (client-only app; low risk).
+- ⚠️ [Phase 1] Cosmetic: `index.html` title is still "scaffold-tmp"; scheduled for Phase 3 (visual polish). (Phase 1's WR-01/WR-02 were fixed in Phase 2 plan 02-01.)
 
 ## Deferred Items
 
