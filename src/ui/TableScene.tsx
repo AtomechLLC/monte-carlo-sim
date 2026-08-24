@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { HandDisplay } from './HandDisplay';
 import { BoardDisplay } from './BoardDisplay';
 import { CardBack } from './CardBack';
@@ -19,14 +19,27 @@ export function TableScene() {
   const street = useGameStore((state) => state.street);
   const revealedMask = useGameStore((state) => state.revealedMask);
 
+  // CR-02 fix (05-REVIEW): release only when the navigation deps actually CHANGED. Phase 5's
+  // mode fork re-mounts this component with a DEALT hand (blackjack -> holdem switch-back),
+  // falsifying the old premise that a mount always happens with pendingAnimationCount === 0 —
+  // an unconditional endAnimation() here stole one of the re-mounting cards' freshly-registered
+  // units (two in dev, where StrictMode double-invokes this cleanup-less effect), opening the
+  // gate while the last cards were still mid-flight. A previous-values ref is StrictMode-safe
+  // by construction: a fresh mount initialises the ref from the current values and skips, and
+  // both StrictMode invocations observe equal values. No cleanup function, deliberately — a
+  // compensating cleanup would introduce a permanent +1 drift on every LATER, real transition
+  // (deal/advance/rewind/reveal), since those are single (non-doubled) cleanup-then-setup
+  // cycles. Every gameStore action that arms the gate also changes one of these three deps in
+  // the same set() tick, so every armed unit still has exactly one release here.
+  const prevRef = useRef({ dealNonce, street, revealedMask });
   useEffect(() => {
+    const prev = prevRef.current;
+    if (prev.dealNonce === dealNonce && prev.street === street && prev.revealedMask === revealedMask) {
+      return; // mount / StrictMode re-invoke / mode switch-back re-mount: no action armed anything
+    }
+    prevRef.current = { dealNonce, street, revealedMask };
     // Releases the one unit gameStore's action armed (beginAnimation) synchronously when it
-    // fired. No cleanup function is needed: React's StrictMode dev-mode mount -> cleanup ->
-    // mount double-invoke only simulates at a component's OWN initial mount, when
-    // pendingAnimationCount is always still 0 (nothing has been dealt yet) — `endAnimation`'s
-    // clamp-at-0 absorbs the extra call harmlessly. A compensating cleanup here would instead
-    // introduce a permanent +1 drift on every LATER, real transition (deal/advance/rewind/
-    // reveal), since those are single (non-doubled) cleanup-then-setup cycles, not phantom ones.
+    // fired alongside the dep change observed above.
     useUiStore.getState().endAnimation();
   }, [dealNonce, street, revealedMask]);
 

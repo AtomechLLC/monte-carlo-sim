@@ -101,14 +101,17 @@ describe('switch-mid-deal race — the animation gate drains to 0 and the in-fli
     // would be vacuous (nothing was ever in flight to cancel).
     expect(vi.mocked(simulationService.startSimulation).mock.calls.length).toBe(1);
 
-    // Guard assertion (BEFORE the switcher click): real AnimatedCard/FlipCard instances actually
-    // registered with the gate. A 0 here means the real-motion mock stopped taking effect, or the
-    // `enabled` derivation in AnimatedCard/FlipCard changed — either way this test would silently
-    // degrade into a vacuous pass without this explicit check.
+    // Guard assertion (BEFORE the switcher click), exact by design (05-REVIEW CR-02): the 8 real
+    // AnimatedCards (2 hero + 6 opponent hole cards; preflop, so no board cards) each registered
+    // one unit, and TableScene's release effect — which fires only on real navigation-dep
+    // changes — took none of them. Pre-CR-02-fix this read 7: TableScene's unconditional
+    // endAnimation() on mount stole one card's unit, opening the gate one card early on every
+    // mount-with-a-dealt-hand. A 0 here means the real-motion mock stopped taking effect and
+    // this test has gone vacuous.
     expect(
       useUiStore.getState().pendingAnimationCount,
-      'expected real card registrations to leave pendingAnimationCount > 0 before switching — a 0 here means the real-motion mock stopped taking effect and this test has gone vacuous',
-    ).toBeGreaterThan(0);
+      'expected exactly 8 real card registrations (2 hero + 6 opponent hole cards) with none stolen by TableScene\'s mount effect (05-REVIEW CR-02) — a 0 here means the real-motion mock stopped taking effect and this test has gone vacuous',
+    ).toBe(8);
 
     const user = userEvent.setup();
     await user.click(screen.getByTestId('game-mode-switch-blackjack'));
