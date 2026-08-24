@@ -92,11 +92,14 @@ export function BlackjackOutcomeBanner() {
                   : OUTCOME_COPY.standEqual;
 
   return (
+    // `x: '-50%'` mirrors the stylesheet's translateX(-50%) centring: Motion writes an
+    // inline `transform` while animating `y`, which would otherwise clobber the CSS
+    // transform and knock the banner off-centre — carrying x here composes both.
     <motion.div
       data-testid="blackjack-outcome-banner"
       role="status"
-      initial={{ opacity: 0, y: BANNER_ENTER_RISE_PX }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, x: '-50%', y: BANNER_ENTER_RISE_PX }}
+      animate={{ opacity: 1, x: '-50%', y: 0 }}
       transition={reduce ? { duration: 0 } : { duration: BANNER_ENTER_DURATION_S, ease: 'easeOut' }}
     >
       <p className="bj-outcome-heading">{row.heading}</p>

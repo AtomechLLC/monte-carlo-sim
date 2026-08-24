@@ -222,12 +222,18 @@ h2 {
 
 /* Disabled controls (used picker cards, boundary-disabled Rewind/Advance,
  * empty Clear buttons, revealed opponent seats): neutral dimming, never the
- * destructive colour — these are not destructive actions. */
+ * destructive colour — these are not destructive actions. Phase 6 (06-05)
+ * extends the list with Hit/Stand (disabled outside player-turn) and the
+ * "1 deck" segment (A3 duplicate guard). blackjack-hole-reveal is DELIBERATELY
+ * absent — its disabled state is cursor-only (A9, see the Phase 6 block). */
 [data-testid^='picker-card-']:disabled,
 [data-testid='rewind-button']:disabled,
 [data-testid='advance-button']:disabled,
 [data-testid^='picker-clear-']:disabled,
-[data-testid^='opponent-seat-']:disabled {
+[data-testid^='opponent-seat-']:disabled,
+[data-testid='blackjack-hit-button']:disabled,
+[data-testid='blackjack-stand-button']:disabled,
+[data-testid='blackjack-deck-toggle-1']:disabled {
   color: var(--text);
   opacity: 0.4;
   cursor: not-allowed;
@@ -611,14 +617,20 @@ h2 {
  * placeholder reuses `.felt` unmodified and adds no new z-index token — it
  * has no animated or overlapping elements.
  * ------------------------------------------------------------------------- */
-[data-testid='game-mode-switcher'] {
+/* Phase 6 (06-05) extends these segmented-control rules with the blackjack
+ * deck toggle (emitted by plan 06-07): identical treatment by A4 — one
+ * selected-state convention app-wide, zero new accent usage — so the toggle
+ * joins these selectors instead of duplicating the declarations. */
+[data-testid='game-mode-switcher'],
+[data-testid='blackjack-deck-toggle'] {
   display: inline-flex;
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
 }
 
-[data-testid^='game-mode-switch-'] {
+[data-testid^='game-mode-switch-'],
+[data-testid^='blackjack-deck-toggle-'] {
   min-width: 44px;
   min-height: 44px;
   padding: 8px 16px;
@@ -631,26 +643,223 @@ h2 {
   border: none;
 }
 
-[data-testid='game-mode-switch-holdem'] {
+[data-testid='game-mode-switch-holdem'],
+[data-testid='blackjack-deck-toggle-1'] {
   border-right: 1px solid var(--border);
 }
 
-[data-testid^='game-mode-switch-'][aria-pressed='true'] {
+[data-testid^='game-mode-switch-'][aria-pressed='true'],
+[data-testid^='blackjack-deck-toggle-'][aria-pressed='true'] {
   background: var(--border);
   color: var(--text-h);
   font-weight: 600;
 }
 
-[data-testid='blackjack-scene'] {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-block: 48px;
+/* RETIRED (06-05): the Phase 5 placeholder rules for `blackjack-scene`
+ * (flex-centering + margin-block — the scene is now the `.felt` root inside
+ * `.table-row`, which owns the vertical rhythm) and `blackjack-empty-state`'s
+ * on-felt centering (it becomes a page-level idle block per UI-SPEC A10,
+ * reusing the shipped `.empty-hand-state`-style document slot). The
+ * placeholder component itself (`BlackjackScene.tsx`) is removed by plan
+ * 06-07; until then it renders visually plain — expected and harmless. */
+
+/* ---------------------------------------------------------------------------
+ * Phase 6 blackjack felt, outcome banner, controls & odds cluster (06-05)
+ *
+ * Every Phase 6 rule lives in this ONE owned block (plus the surgical
+ * selector-list extensions above: the disabled-dimming list and the
+ * segmented-control rules). Plans 06-06 (odds cluster) and 06-07 (controls,
+ * game root) EMIT the class names/testids below but write NO CSS of their
+ * own — the class-name contract is binding in both directions (06-05-PLAN
+ * interfaces). Tokens only: the existing 4-size/2-weight type scale, 4px
+ * spacing scale, zero --accent and zero --destructive anywhere in this block.
+ * ------------------------------------------------------------------------- */
+
+/* Felt geometry (UI-SPEC Blackjack Table Geometry): dealer row top-centre,
+ * player row bottom-centre, both absolutely positioned against `.felt`'s own
+ * box — same anchoring discipline as the Hold'em seats above. */
+.bj-dealer-area {
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-seat);
 }
 
-[data-testid='blackjack-empty-state'] {
-  max-width: 420px;
-  padding: 24px;
-  text-align: center;
+.bj-player-area {
+  position: absolute;
+  bottom: 3%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-seat);
+}
+
+/* Hand rows: xs (4px) gaps, never wrapping. Overflow clause (UI-SPEC Spacing
+ * exceptions): beyond 6 cards (vanishingly rare multi-ace/low-card chains)
+ * later cards overlap earlier ones via negative margin — up to 50% of the
+ * 64px dealer card width (a smaller fraction of the 88px player width) —
+ * card boxes never resize and the row never wraps to a second line. */
+.bj-hand-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+.bj-hand-row > :nth-child(n + 7) {
+  margin-left: calc(var(--card-w-opponent) / -2);
+}
+
+/* Pre-deal dashed slots (Phase 3 A8 pattern) — same dimensions as the cards
+ * they stand in for (the width comes from the co-applied .card-slot--hero/
+ * --opponent class; `.card-slot--hero:empty` is NOT modified). */
+.bj-card-placeholder {
+  aspect-ratio: 5 / 7;
+  border: 2px dashed var(--border);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+/* The hole-card reveal button: pure card chrome — no border/fill, the card
+ * art IS the control. Disabled state is cursor-only, deliberately WITHOUT the
+ * 0.4-opacity dimming rule (A9): a revealed hole card is live game
+ * information the odds now condition on, not an exhausted control — dimming
+ * it would misread as inactive data. 44px hit-area floor kept via min sizes
+ * (the 64px card exceeds it anyway). */
+[data-testid='blackjack-hole-reveal'] {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+[data-testid='blackjack-hole-reveal']:disabled {
+  cursor: not-allowed;
+}
+
+/* Outcome banner (A6): badge tokens, never destructive — losing is an
+ * outcome, not a fault. Centred where Hold'em's community row sits; --z-outcome
+ * keeps it above settled cards/badges and below in-flight cards. The
+ * translateX(-50%) centring is mirrored by the component's Motion x prop so
+ * the enter animation's inline transform composes with (not clobbers) it. */
+[data-testid='blackjack-outcome-banner'] {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-outcome);
+  background: var(--seat-badge-bg);
   color: var(--seat-badge-text);
+  border-radius: 12px;
+  padding: 16px 24px;
+  text-align: center;
+}
+
+/* Banner text: Heading role (20/600/1.2) for the verdict line, Body role
+ * (16/400/1.5) for the totals sentence, xs (4px) between them. */
+.bj-outcome-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.bj-outcome-body {
+  margin: 4px 0 0;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* --- Odds cluster (markup emitted by plan 06-06, which writes no CSS) ----- */
+
+/* Panel: lg (24px) padding, md (16px) gaps between the four internal rows —
+ * mirrors OddsPanel; .odds-stats, the .odds-stat__ label/value pair and
+ * .odds-panel--pending are reused as-is from the shipped rules above. */
+[data-testid='blackjack-odds-panel'] {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bj-odds-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Caption/subtitle: twins of category-table__caption/__subtitle (16/600 and
+ * 14/400), duplicated under bj-* names rather than reusing those classes so
+ * the shipped Hold'em selectors stay untouched. */
+.bj-odds-group__caption {
+  text-align: left;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0 0 4px;
+}
+
+.bj-odds-group__subtitle {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* EV tiles: sm (8px) between the two tiles; each tile 1px --border, 6px
+ * radius (card-radius precedent), md (16px) padding, xs (4px) column gap.
+ * The VALUE takes the Heading role (20/600/1.2, tabular-nums) — the decision-
+ * support headline (A8); label and sub-copy take the Label role. */
+.bj-ev-tiles {
+  display: flex;
+  gap: 8px;
+}
+
+.bj-ev-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.bj-ev-tile__label {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.bj-ev-tile__value {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.bj-ev-tile__sub {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* --- Controls (markup emitted by plan 06-07, which writes no CSS) --------- */
+
+/* Deal/Hit/Stand: Body role labels and the 44px hit-area floor (Spacing
+ * exceptions), testid-scoped so the rule holds wherever 06-07 nests them.
+ * The deck toggle's rules live with the game-mode-switcher block above (A4);
+ * its "1 deck" segment joins the disabled-dimming list above (A3 guard). */
+[data-testid='blackjack-deal-button'],
+[data-testid='blackjack-hit-button'],
+[data-testid='blackjack-stand-button'] {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
 }

@@ -35,6 +35,9 @@
   --z-community: 1; /* board cards sit below every seat — a player's own cards are never occluded */
   --z-seat: 2;
   --z-seat-label: 3;
+  /* Phase 6 (06-05): the blackjack outcome banner — above settled cards (--z-seat: 2) and
+   * badges (--z-seat-label: 3), below any in-flight card (--z-in-flight: 50). */
+  --z-outcome: 4;
   --z-in-flight: 50;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
