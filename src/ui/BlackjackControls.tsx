@@ -7,9 +7,10 @@ const DUPLICATE_GUARD_TITLE = 'The dealt cards include a duplicate — impossibl
 /**
  * The Blackjack control cluster (BJ-05, BJ-07): Deal / Hit / Stand plus the blackjack-local
  * deck-count segmented toggle. Reads ONLY `useBlackjackStore` (D-10) — no Hold'em store, no
- * odds store, and no uiStore: the animation gate is armed by the store actions themselves,
- * never from here. The reveal button deliberately does NOT live here — it wraps the hole
- * card itself inside the dealer area (plan 06-05), because its whole affordance IS the card.
+ * odds store, and no animation-gate store: the gate is armed by the blackjack store's own
+ * actions, never from here (the mode-shell guard pins these absences at source level). The
+ * reveal button deliberately does NOT live here — it wraps the hole card itself inside the
+ * dealer area (plan 06-05), because its whole affordance IS the card.
  */
 export function BlackjackControls() {
   const roundPhase = useBlackjackStore((state) => state.roundPhase);
