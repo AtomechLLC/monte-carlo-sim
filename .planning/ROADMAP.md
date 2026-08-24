@@ -13,7 +13,7 @@ This roadmap delivers the Monte Carlo Poker Simulator as three widening vertical
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Core Odds Loop** - Deal, compute (streaming Monte Carlo), and display live odds in a minimal UI
+- [x] **Phase 1: Core Odds Loop** - Deal, compute (streaming Monte Carlo), and display live odds in a minimal UI (completed 2026-08-24)
 - [ ] **Phase 2: Scenario Construction & Street Navigation** - Manual card picker, street advance/rewind, and opponent reveal
 - [ ] **Phase 3: Casino Table UI & Animation** - Full felt-table scene, detailed card art, and dealing/flip/reveal animations
 
@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can see a full hand-category probability table (high card through royal flush) that sums to ~100% and updates live.
   4. User can watch a visible trial counter climb and percentages visibly settle/converge in real time, with the page staying fully responsive (no freeze) throughout.
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -49,7 +49,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-04-PLAN.md — Validate accuracy against benchmark odds and invariants, then phase acceptance (ENG-04)
+- [x] 01-04-PLAN.md — Validate accuracy against benchmark odds and invariants, then phase acceptance (ENG-04)
 
 ### Phase 2: Scenario Construction & Street Navigation
 
@@ -89,6 +89,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Odds Loop | 3/4 | In Progress|  |
+| 1. Core Odds Loop | 4/4 | Complete   | 2026-08-24 |
 | 2. Scenario Construction & Street Navigation | 0/TBD | Not started | - |
 | 3. Casino Table UI & Animation | 0/TBD | Not started | - |
