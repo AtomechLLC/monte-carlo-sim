@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DealButton } from './ui/DealButton';
+import { CardPicker } from './ui/CardPicker';
 import { StreetControls } from './ui/StreetControls';
 import { HandDisplay } from './ui/HandDisplay';
 import { BoardDisplay } from './ui/BoardDisplay';
@@ -79,6 +80,7 @@ function App() {
         </div>
       )}
       <DealButton />
+      <CardPicker />
       <StreetControls />
       <HandDisplay />
       <BoardDisplay />
