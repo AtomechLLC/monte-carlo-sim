@@ -597,6 +597,59 @@ h2 {
   opacity: 0.6;
 }
 
+/* ---------------------------------------------------------------------------
+ * Tier 1b defects (post-v1.0 IMPROVEMENTS.md items 1b): the win/tie/loss row
+ * previously rendered as one unlabelled run-on string ("200,00080.2%3.1%16.7%"),
+ * and the category table read as "at least" when it is actually an exclusive
+ * final-hand distribution. The rules below add real dt/dd label association
+ * to the stats row and a self-explaining caption to the category table.
+ * Tokens only: Label role (14/400/1.4), Body role (16/400/1.5), xs (4px) and
+ * md (16px) spacing.
+ * ------------------------------------------------------------------------- */
+.odds-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0;
+}
+
+.odds-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* `margin: 0` matters here: the UA stylesheet gives <dd> a 40px inline-start margin. */
+.odds-stat__label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.odds-stat__value {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.category-table__caption {
+  text-align: left;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.category-table__subtitle {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
 /* Main scene row: TableScene + OddsPanel, `xl` (32px) gap side-by-side at
  * >=1024px, collapsing to a column stack below that; `2xl` (48px) vertical
  * margin separates the block from the control bar / page bottom. */
