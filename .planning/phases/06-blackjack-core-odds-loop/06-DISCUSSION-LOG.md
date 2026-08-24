@@ -29,6 +29,13 @@
 | Dealer top (upcard + FlipCard hole), player bottom, Hit/Stand tiles + local deck toggle, odds cluster outside felt | ✓ |
 | Odds on the felt | rejected — Phase 3 precedent (diegetic felt, docked data) |
 
+## Post-research resolutions (2026-08-24, `--auto`)
+| Research flag | Resolution |
+|---------------|-----------|
+| A1: D-03 silent on dealer-only-natural | D-03a — either side's natural resolves immediately at deal (researcher's recommended internally-consistent reading; keeps EV outcomes exactly {−1,0,+1}) |
+| Blackjack manual picker in/out? | D-03b — random-deal-only; BJ-02..07 carry no picker requirement; deferred v2.x |
+| Worker-service file-split granularity | Already planner discretion (no correctness impact) |
+
 ## Claude's Discretion
 Blackjack odds store partitioning, component decomposition, dealer playout pacing, EV tile styling, runner snapshot shape.
 

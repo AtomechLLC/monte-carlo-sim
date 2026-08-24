@@ -18,6 +18,8 @@ Phase 6 delivers the full Blackjack vertical slice (BJ-02..BJ-07): deal a round 
 - **D-01:** At deal, draw player's two cards + dealer upcard face-up and PREDETERMINE the dealer hole card face-down (the BJ-06 reveal mechanic needs it, mirroring Hold'em's predetermine-then-reveal discipline). Hit cards and dealer playout cards are drawn LIVE from the remaining shoe at action time — blackjack has no rewind requirement, so nothing else is predetermined.
 - **D-02:** Odds condition ONLY on visible/known cards (player hand + upcard + any revealed hole + all drawn cards removed from the shoe). The predetermined hole card must never leak into odds while face-down — a `deriveBlackjackConditionedState`-style single-reader guard mirrors Hold'em's D-02 invariant.
 - **D-03:** Naturals resolve immediately at deal per standard rules (player natural without dealer natural pays 3:2; both = push; dealer natural checked after player actions... NO — peek convention: with the fixed S17 shoe game we lock the simple NO-PEEK-free variant: naturals are evaluated at deal — if the player has a natural, the round resolves immediately against the dealer's completed hand). Outcome states: win / lose / push, shown in an outcome banner; a new Deal starts the next round.
+- **D-03a (research A1 resolution, 2026-08-24):** EITHER side's natural resolves the round immediately at deal — including the dealer-only-natural case (dealer natural, player none → immediate loss; the hole is revealed as part of resolution). This is the only internally-consistent reading of D-03: the player-turn phase is reachable ONLY when neither side holds a natural, which is what guarantees EV trial outcomes are exactly {−1, 0, +1} (never +1.5) per 06-RESEARCH.md.
+- **D-03b (research open-question resolution, 2026-08-24):** Blackjack is RANDOM-DEAL-ONLY in Phase 6 — no manual card-construction picker. BJ-02..BJ-07 contain no picker requirement; the milestone FEATURES.md MVP list does not override REQUIREMENTS.md IDs. A blackjack picker is a deferred idea (v2.x).
 - **D-04:** Rules locked (from BJ-04 + STATE flag, an explicit decision, not inferred): dealer STANDS on soft 17; natural pays 3:2; win ±1 unit; push 0; dealer draws to 17+. Hard-coded, no settings UI.
 
 ### EV semantics (explicit, labeled)
@@ -86,7 +88,7 @@ Phase 6 delivers the full Blackjack vertical slice (BJ-02..BJ-07): deal a round 
 <deferred>
 ## Deferred Ideas
 
-- Double/Split/Surrender EV (v2.x, recorded), optimal-continuation Hit EV (v2.x, new), peek/insurance/rule variants (out of scope), cross-game toggle component (Phase 8), visual excellence pass (VISUAL-EXCELLENCE-PLAN.md, pending insertion).
+- Double/Split/Surrender EV (v2.x, recorded), optimal-continuation Hit EV (v2.x, new), peek/insurance/rule variants (out of scope), cross-game toggle component (Phase 8), visual excellence pass (VISUAL-EXCELLENCE-PLAN.md, pending insertion), blackjack manual card picker (v2.x — D-03b).
 
 </deferred>
 
