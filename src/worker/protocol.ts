@@ -1,4 +1,6 @@
-import type { Card } from '@poker-apprentice/types';
+// Type-only import: equity.ts imports the runtime value CATEGORY_COUNT from this module, so a
+// value-level import back here would create a runtime cycle.
+import type { ConditionedState } from '../engine/equity';
 
 /**
  * `HandStrength` has TEN values (HighCard=0 .. StraightFlush=8, RoyalFlush=9).
@@ -42,8 +44,7 @@ export interface SimulationApi {
   cancel(requestId: number): void;
   /** Runs a streaming Monte Carlo simulation, invoking `onProgress` with throttled snapshots. */
   runSimulation(
-    heroHole: [Card, Card],
-    remainingDeck: Card[],
+    conditioned: ConditionedState,
     requestId: number,
     onProgress: (snapshot: ProgressSnapshot) => void | Promise<void>,
   ): Promise<void>;

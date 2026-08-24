@@ -7,8 +7,14 @@ export const FULL_DECK: readonly Card[] = ALL_CARDS;
 /** Fixed number of anonymous opponents at the table. */
 export const OPPONENT_COUNT = 3;
 
-/** Unknown cards drawn per Monte Carlo trial: 5 board + 2 per opponent x 3 opponents. */
-export const CARDS_PER_TRIAL = 11;
+/** Number of community board cards in a complete Hold'em board. */
+export const BOARD_SIZE = 5;
+
+/** Number of hole cards dealt to each player (hero or opponent). */
+export const HOLE_CARDS_PER_PLAYER = 2;
+
+/** Total cards in a fully-dealt hand: hero + all opponents' hole cards, plus the full board. */
+export const CARDS_PER_DEAL = HOLE_CARDS_PER_PLAYER * (1 + OPPONENT_COUNT) + BOARD_SIZE;
 
 /** Returns `FULL_DECK` with every card in `excluded` removed. */
 export function deckWithout(excluded: readonly Card[]): Card[] {

@@ -7,6 +7,7 @@ import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
 import { startSimulation } from './state/simulationService';
 import { deckWithout } from './engine/cards';
+import type { ConditionedState } from './engine/equity';
 
 function App() {
   const heroHole = useGameStore((state) => state.heroHole);
@@ -16,8 +17,19 @@ function App() {
     if (!heroHole) return;
 
     useOddsStore.getState().reset();
-    void startSimulation(heroHole, deckWithout(heroHole), dealNonce, (snapshot) =>
-      useOddsStore.getState().applySnapshot(snapshot),
+    // Preflop-only shape (no known board, no revealed opponents) — this plan's contract layer
+    // only; street navigation and opponent reveal (which vary this ConditionedState) land in
+    // 02-02/02-03.
+    const conditioned: ConditionedState = {
+      heroHole,
+      knownBoard: [],
+      knownOpponentHoles: [null, null, null],
+      remainingDeck: deckWithout(heroHole),
+    };
+    void startSimulation(
+      conditioned,
+      (snapshot) => useOddsStore.getState().applySnapshot(snapshot),
+      (message) => console.error('[simulation]', message),
     );
   }, [heroHole, dealNonce]);
 
