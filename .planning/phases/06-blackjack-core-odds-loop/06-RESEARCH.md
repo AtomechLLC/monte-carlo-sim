@@ -668,12 +668,20 @@ No "old vs. new approach" shift applies here — this is greenfield engine code 
 
 ## Open Questions
 
-1. **Is a Blackjack manual card-construction picker in scope for Phase 6, or deferred?**
+> **Status (annotated 2026-08-24, during phase planning):** BOTH open questions below are now RESOLVED.
+> They are retained verbatim for the audit trail — the resolution is recorded inline under each,
+> pointing at the decision that closed it. Neither is an outstanding blocker on execution.
+
+1. **(RESOLVED — see 06-CONTEXT.md D-03b)** **Is a Blackjack manual card-construction picker in scope for Phase 6, or deferred?**
+   - **Resolution:** DEFERRED. 06-CONTEXT.md D-03b locks Phase 6 as random-deal-only: "BJ-02..BJ-07 contain no picker requirement; the milestone FEATURES.md MVP list does not override REQUIREMENTS.md IDs. A blackjack picker is a deferred idea (v2.x)." This is exactly the recommendation below, confirmed rather than overridden. Plan 06-04 accordingly forbids `blackjackStore` from importing `usePickerStore`.
+
    - What we know: CONTEXT.md's Phase Boundary, Decisions, and Discretion sections for Phase 6 never mention a picker; D-13's UI layout lists "Hit/Stand controls + the blackjack-local deck-count toggle," not a picker/"Set Up Scenario" equivalent. BJ-02's requirement text says only "User can deal a blackjack round," with no mention of manual construction.
    - What's unclear: `.planning/research/FEATURES.md` (milestone-level feature research, written before phase-level CONTEXT.md) lists "Blackjack: random deal + manual picker for player hand and dealer up-card" under its v2.0 "Launch With" MVP list — a broader scope than what CONTEXT.md locked for this specific phase.
    - Recommendation: Treat Phase 6 as **random-deal-only** (matching the more specific, more recently authored CONTEXT.md), and treat a Blackjack picker as an explicit candidate for a LATER phase or a fast-follow, unless the orchestrator/user confirms otherwise before planning. This keeps Phase 6's scope aligned with its own locked decisions rather than a milestone-level document that predates them.
 
-2. **Exact component/store file split for the worker-service layer** (one `simulationService.ts` file with two exported function pairs, vs. ARCHITECTURE.md's suggested 3-file `workerClient.ts` + two per-game services split).
+2. **(RESOLVED — see plan 06-03's "Planner decisions taken under Claude's Discretion")** **Exact component/store file split for the worker-service layer** (one `simulationService.ts` file with two exported function pairs, vs. ARCHITECTURE.md's suggested 3-file `workerClient.ts` + two per-game services split).
+   - **Resolution:** the ARCHITECTURE.md 3-file split, with the singleton constructed LAZILY. Rationale recorded in plan 06-03: seven existing suites mock `./state/simulationService` with an explicit two-export factory, so adding blackjack exports to that module would make each of them throw at import on a missing named export — a separate module leaves them untouched. The laziness is a second, independent requirement found during plan review: at wave 4 `App -> BlackjackGame -> blackjackSimulationService -> workerClient` becomes a second, unmocked import path, and a module-scope `new SimWorker()` would instantiate a real Worker at import time in jsdom.
+
    - What we know: both are functionally equivalent and D-08 only locks the WORKER's exposed shape (`{ poker, blackjack }`), not the main-thread wrapper's file layout.
    - What's unclear: nothing correctness-relevant — this is pure file organization.
    - Recommendation: Claude's Discretion, explicitly granted by CONTEXT.md ("snapshot shape for the blackjack runner config" and general component decomposition). Lean toward the 3-file split for symmetry with the `oddsStore`/`blackjackOddsStore` split already locked by D-10, but either is acceptable.
