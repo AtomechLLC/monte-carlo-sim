@@ -6,6 +6,7 @@ import * as simulationService from './state/simulationService';
 import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
 import type { ProgressSnapshot } from './worker/protocol';
+import { CATEGORY_LABELS } from './ui/categoryLabels';
 
 // Explicit factory (not bare automocking): automocking would still import the real module to
 // introspect its exports, which instantiates a real Worker at module scope — unsupported by
@@ -91,5 +92,42 @@ describe('App — Deal happy path', () => {
     const firstRequestId = calls[0][2];
     const secondRequestId = calls[1][2];
     expect(secondRequestId).toBeGreaterThan(firstRequestId);
+  });
+
+  it('renders a live 10-row hand-category probability table driven by streamed snapshots', async () => {
+    vi.mocked(simulationService.startSimulation).mockImplementation(
+      async (_heroHole, _remainingDeck, requestId, onProgress) => {
+        const snapshot: ProgressSnapshot = {
+          requestId,
+          categoryCounts: [500, 300, 100, 50, 25, 15, 5, 3, 1, 1],
+          outcomes: { win: 600, tie: 100, lose: 300 },
+          trialsCompleted: 1000,
+          done: true,
+        };
+        onProgress(snapshot);
+      },
+    );
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+
+    const table = screen.getByTestId('category-table');
+    expect(table).toBeInTheDocument();
+
+    const rows = table.querySelectorAll('tbody tr');
+    expect(rows).toHaveLength(10);
+
+    const rowLabels = Array.from(rows).map((row) => row.querySelector('th')?.textContent);
+    expect(rowLabels).toEqual([...CATEGORY_LABELS]);
+    expect(rowLabels[rowLabels.length - 1]).toBe('Royal Flush');
+
+    expect(screen.getByTestId('category-pct-0').textContent).toBe('50.0%');
+
+    const totalPct = Array.from({ length: 10 }, (_, i) => {
+      const text = screen.getByTestId(`category-pct-${i}`).textContent ?? '0%';
+      return Number.parseFloat(text.replace('%', ''));
+    }).reduce((a, b) => a + b, 0);
+    expect(Math.abs(totalPct - 100)).toBeLessThan(0.5);
   });
 });
