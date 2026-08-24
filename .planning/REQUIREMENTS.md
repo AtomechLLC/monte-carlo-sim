@@ -24,13 +24,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **DEAL-01**: User can deal a random hand (own hole cards + 3 opponents) with one click, and re-deal at any time
 - [ ] **DEAL-02**: User can manually pick their own hole cards and board cards from a card picker for "what-if" scenario construction
-- [ ] **DEAL-03**: Duplicate card selection is impossible — every card exists exactly once across hands, board, and deck
+- [x] **DEAL-03**: Duplicate card selection is impossible — every card exists exactly once across hands, board, and deck
 
 ### Street Navigation
 
-- [ ] **NAV-01**: User can advance street by street (pre-flop → flop → turn → river) and all odds recompute at each street
+- [x] **NAV-01**: User can advance street by street (pre-flop → flop → turn → river) and all odds recompute at each street
 - [ ] **NAV-02**: User can rewind to earlier streets — odds return to their earlier-street values, and re-advancing shows the same cards (a separate re-deal action reshuffles)
-- [ ] **NAV-03**: User can reveal any opponent's hole cards mid-hand — revealed cards become known information and all odds recalculate to account for them
+- [x] **NAV-03**: User can reveal any opponent's hole cards mid-hand — revealed cards become known information and all odds recalculate to account for them
 
 ### Table Presentation
 
@@ -80,10 +80,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ODDS-03 | Phase 1: Core Odds Loop | Pending |
 | DEAL-01 | Phase 1: Core Odds Loop | Pending |
 | DEAL-02 | Phase 2: Scenario Construction & Street Navigation | Pending |
-| DEAL-03 | Phase 2: Scenario Construction & Street Navigation | Pending |
-| NAV-01 | Phase 2: Scenario Construction & Street Navigation | Pending |
+| DEAL-03 | Phase 2: Scenario Construction & Street Navigation | Complete |
+| NAV-01 | Phase 2: Scenario Construction & Street Navigation | Complete |
 | NAV-02 | Phase 2: Scenario Construction & Street Navigation | Pending |
-| NAV-03 | Phase 2: Scenario Construction & Street Navigation | Pending |
+| NAV-03 | Phase 2: Scenario Construction & Street Navigation | Complete |
 | TBL-01 | Phase 3: Casino Table UI & Animation | Pending |
 | TBL-02 | Phase 3: Casino Table UI & Animation | Pending |
 | TBL-03 | Phase 3: Casino Table UI & Animation | Pending |
