@@ -15,7 +15,9 @@ import type { BlackjackProgressSnapshot } from '../worker/blackjackProtocol';
 // rationale as `simulationService.test.ts`; do not opt this file into the node environment.
 const { workers, pokerRunSimulation, pokerCancel, bjRunSimulation, bjCancel } = vi.hoisted(
   () => ({
-    workers: [] as EventTarget[],
+    // `terminated` tracking added with the 06-REVIEW WR-02 crash-then-restart case below
+    // (additive observability — no prior assertion changed).
+    workers: [] as Array<EventTarget & { terminated: boolean }>,
     pokerRunSimulation: vi.fn(),
     pokerCancel: vi.fn(),
     bjRunSimulation: vi.fn(),
@@ -25,8 +27,11 @@ const { workers, pokerRunSimulation, pokerCancel, bjRunSimulation, bjCancel } = 
 
 vi.mock('../worker/simulation.worker?worker', () => {
   class FakeWorker extends EventTarget {
+    terminated = false;
     postMessage() {}
-    terminate() {}
+    terminate() {
+      this.terminated = true;
+    }
     constructor() {
       super();
       workers.push(this);
@@ -197,6 +202,62 @@ describe('shared worker transport — lazy singleton (T-06-49) + blackjack servi
     // A snapshot from a superseded generation must never reach the caller.
     proxy(makeSnapshot(requestId - 999));
     expect(onProgress).toHaveBeenCalledTimes(1);
+  });
+
+  it('a hard crash invalidates the cached handle: the dead thread is terminated and the NEXT start call constructs a FRESH worker that streams (06-REVIEW WR-02)', async () => {
+    // Extends the lazy-singleton pins above (zero-on-import, one-on-first-call) with the
+    // crash-then-restart case: without invalidation, every post-crash start call routes
+    // through the same dead proxy — runSimulation posts into a void, its promise never
+    // settles, and the banner's "Deal a new round to try again" recovery copy is
+    // unfulfillable (only a full page reload recovers).
+    bjRunSimulation.mockImplementation(() => new Promise(() => {}));
+
+    const onErrorFirst = vi.fn();
+    void startBlackjackSimulation(blackjackFixture, vi.fn(), onErrorFirst);
+    await vi.waitFor(() => expect(bjRunSimulation).toHaveBeenCalled());
+
+    const workersBefore = workers.length;
+    const crashed = workers[workers.length - 1];
+    crashed.dispatchEvent(new ErrorEvent('error', { message: 'hard crash' }));
+    expect(onErrorFirst).toHaveBeenCalledTimes(1);
+    // The dead thread is released, not leaked.
+    expect(crashed.terminated).toBe(true);
+
+    // Restart: a fresh worker is constructed (listeners re-attach inside ensureWorker)
+    // and the new generation's snapshots flow again.
+    const onProgress = vi.fn();
+    void startBlackjackSimulation(blackjackFixture, onProgress, vi.fn());
+    await vi.waitFor(() => expect(bjRunSimulation).toHaveBeenCalledTimes(2));
+    expect(workers).toHaveLength(workersBefore + 1);
+
+    const [, requestId, proxy] = bjRunSimulation.mock.calls[1] as [
+      BlackjackConditionedState,
+      number,
+      (snapshot: BlackjackProgressSnapshot) => void,
+    ];
+    proxy(makeSnapshot(requestId));
+    expect(onProgress).toHaveBeenCalledTimes(1);
+  });
+
+  it('a late crash event from an ALREADY-REPLACED worker never tears down its healthy replacement (06-REVIEW WR-02)', async () => {
+    bjRunSimulation.mockImplementation(() => new Promise(() => {}));
+
+    void startBlackjackSimulation(blackjackFixture, vi.fn(), vi.fn());
+    await vi.waitFor(() => expect(bjRunSimulation).toHaveBeenCalled());
+
+    const stale = workers[0]; // crashed and replaced in earlier cases in this file
+    const current = workers[workers.length - 1];
+    expect(stale).not.toBe(current);
+
+    stale.dispatchEvent(new ErrorEvent('error', { message: 'zombie event from dead worker' }));
+
+    // The current worker survives: no termination, and the next start call reuses the
+    // cached handle rather than constructing yet another worker.
+    expect(current.terminated).toBe(false);
+    const workersBefore = workers.length;
+    void startBlackjackSimulation(blackjackFixture, vi.fn(), vi.fn());
+    await vi.waitFor(() => expect(bjRunSimulation).toHaveBeenCalledTimes(2));
+    expect(workers).toHaveLength(workersBefore);
   });
 
   it('cancelBlackjackSimulation invalidates the main-thread generation and calls api.blackjack.cancel(requestId)', async () => {

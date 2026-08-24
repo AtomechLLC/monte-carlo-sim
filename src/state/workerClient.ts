@@ -48,6 +48,29 @@ interface WorkerHandle {
 
 let handle: WorkerHandle | null = null;
 
+/**
+ * Hard-failure recovery (06-REVIEW WR-02): a hard worker death (script-load failure,
+ * wedged event loop) leaves the cached proxy permanently dead — every later
+ * `runSimulation` posts into a void and its promise never settles (no rejection, no
+ * snapshots, no `finally`), making the error banners' "deal / re-deal to try again"
+ * recovery copy unfulfillable without a full page reload. Invalidating the cache here
+ * means the NEXT `getApi()`/`getWorker()` call constructs a FRESH worker (the crash
+ * listeners re-attach inside `ensureWorker` automatically); each service's generation
+ * invalidation already prevents a stale callback from resurrecting across the restart.
+ *
+ * Guarded by worker identity: only the CURRENT handle's worker may invalidate the cache
+ * — a late zombie event from an already-replaced worker must never tear down its healthy
+ * replacement. The failure fan-out stays unconditional either way (exactly-once-per-
+ * service is owned by the services themselves, not this registry).
+ */
+function onHardFailure(worker: Worker, message: string): void {
+  if (handle?.worker === worker) {
+    handle = null; // next getApi()/getWorker() builds a fresh worker
+  }
+  worker.terminate(); // release the dead thread; harmless if already dead/terminated
+  reportWorkerFailure(message);
+}
+
 function ensureWorker(): WorkerHandle {
   if (handle !== null) {
     return handle;
@@ -55,22 +78,24 @@ function ensureWorker(): WorkerHandle {
 
   const worker = new SimWorker();
 
-  // WR-02 fix (02-REVIEW.md), attached at first construction: call rejections are surfaced
+  // WR-02 fix (02-REVIEW.md), attached at construction: call rejections are surfaced
   // via each service's `catch` block, but a HARD worker death (script-load failure, or an
   // undeserializable `postMessage` payload) never rejects the in-flight Comlink call at all —
   // it fires the Worker's own `error`/`messageerror` event instead. These two listeners route
-  // a hard crash through the exact same `onError` path a call rejection already uses. A crash
-  // can only be observed after a run has started, which is the only time either service has
-  // an `onError` to route it to.
+  // a hard crash through `onHardFailure` above: cache invalidation (06-REVIEW WR-02) plus the
+  // same `onError` fan-out path a call rejection already uses. A crash can only be observed
+  // after a run has started, which is the only time either service has an `onError` to route
+  // it to.
   worker.addEventListener('error', (event) => {
     // Suppress the browser's default "Uncaught error in worker" console spew — the visible
     // banner (driven by each service's `onError`) is the signal, not the console.
     event.preventDefault();
-    reportWorkerFailure(
+    onHardFailure(
+      worker,
       event.message ? `${WORKER_CRASH_MESSAGE}: ${event.message}` : WORKER_CRASH_MESSAGE,
     );
   });
-  worker.addEventListener('messageerror', () => reportWorkerFailure(WORKER_MESSAGE_ERROR));
+  worker.addEventListener('messageerror', () => onHardFailure(worker, WORKER_MESSAGE_ERROR));
 
   handle = { worker, api: Comlink.wrap<WorkerApi>(worker) };
   return handle;
