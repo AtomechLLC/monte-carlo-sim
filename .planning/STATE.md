@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: Blackjack & Multi-Deck
 status: executing
 stopped_at: Phase 6 context gathered
-last_updated: "2026-08-24T21:34:03.605Z"
-last_activity: 2026-08-24 -- Phase 6 planning complete
+last_updated: "2026-08-24T21:34:44.066Z"
+last_activity: 2026-08-24 -- Phase 6 execution started
 progress:
   total_phases: 5
   completed_phases: 2
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-24)
 
 **Core value:** Probability made visible — the user can watch odds converge in real time and see exactly how each new piece of information reshapes the numbers.
-**Current focus:** Phase 6 — blackjack core odds loop
+**Current focus:** Phase 6
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-08-24 -- Phase 6 planning complete
+Phase: 6 — EXECUTING
+Plan: 1 of ?
+Status: Executing Phase 6
+Last activity: 2026-08-24 -- Phase 6 execution started
 
 Progress: [██░░░░░░░░] 20% (1/5 v2.0 phases; 6/6 plans so far)
 
