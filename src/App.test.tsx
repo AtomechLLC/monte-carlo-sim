@@ -43,7 +43,9 @@ describe('App — Deal happy path', () => {
     const heroHole = screen.getByTestId('hero-hole');
     expect(heroHole.children).toHaveLength(2);
     for (const child of Array.from(heroHole.children)) {
-      expect(child.textContent).not.toBe('');
+      const img = child.querySelector('img');
+      expect(img).not.toBeNull();
+      expect(img?.getAttribute('alt')).not.toBe('');
     }
 
     const opponents = screen.getByTestId('opponents');

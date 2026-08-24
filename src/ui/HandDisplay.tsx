@@ -1,6 +1,10 @@
 import { useGameStore } from '../state/gameStore';
 import { OPPONENT_COUNT } from '../engine/cards';
 import { isOpponentRevealed } from '../engine/conditioning';
+import { PlayingCard } from './PlayingCard';
+import { CardBack } from './CardBack';
+
+const HERO_HOLE_SLOTS = [0, 1] as const;
 
 export function HandDisplay() {
   const heroHole = useGameStore((state) => state.runout?.heroHole);
@@ -16,7 +20,14 @@ export function HandDisplay() {
   return (
     <div>
       <div data-testid="hero-hole">
-        {heroHole?.map((card) => <span key={card}>{card}</span>)}
+        {HERO_HOLE_SLOTS.map((slot) => {
+          const card = heroHole?.[slot];
+          return (
+            <span key={slot} className="card-slot card-slot--hero">
+              {card && <PlayingCard card={card} />}
+            </span>
+          );
+        })}
       </div>
       <div data-testid="opponents">
         {Array.from({ length: OPPONENT_COUNT }, (_, i) => {
@@ -32,7 +43,12 @@ export function HandDisplay() {
                 disabled
                 aria-label={`Opponent ${i + 1} hole cards: ${hole[0]} ${hole[1]} (revealed)`}
               >
-                {hole[0]} {hole[1]}
+                <span className="card-slot card-slot--opponent">
+                  <PlayingCard card={hole[0]} decorative />
+                </span>
+                <span className="card-slot card-slot--opponent">
+                  <PlayingCard card={hole[1]} decorative />
+                </span>
               </button>
             );
           }
@@ -47,7 +63,12 @@ export function HandDisplay() {
               aria-label={`Reveal Opponent ${i + 1} hole cards`}
               title="Click to reveal this opponent's hole cards"
             >
-              Hidden
+              <span className="card-slot card-slot--opponent">
+                <CardBack />
+              </span>
+              <span className="card-slot card-slot--opponent">
+                <CardBack />
+              </span>
             </button>
           );
         })}

@@ -1,5 +1,6 @@
 import { useGameStore } from '../state/gameStore';
 import { STREET_BOARD_COUNT } from '../engine/streets';
+import { PlayingCard } from './PlayingCard';
 
 export function BoardDisplay() {
   const street = useGameStore((state) => state.street);
@@ -15,7 +16,9 @@ export function BoardDisplay() {
       ) : (
         <div data-testid="board-cards">
           {visibleBoard.map((card) => (
-            <span key={card}>{card}</span>
+            <span key={card} className="card-slot card-slot--community">
+              <PlayingCard card={card} />
+            </span>
           ))}
         </div>
       )}

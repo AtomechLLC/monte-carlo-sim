@@ -185,7 +185,10 @@ describe(
 
       const seat = screen.getByTestId('opponent-seat-0');
       expect(seat).toBeDisabled();
-      expect(seat.textContent).toBe(`${opponentHole[0]} ${opponentHole[1]}`);
+      expect(seat).toHaveAttribute(
+        'aria-label',
+        `Opponent 1 hole cards: ${opponentHole[0]} ${opponentHole[1]} (revealed)`,
+      );
       expect(capturedStates.at(-1)!.knownOpponentHoles[0]).not.toBeNull();
 
       await user.click(screen.getByTestId('rewind-button')); // -> preflop|1 — never cached before
