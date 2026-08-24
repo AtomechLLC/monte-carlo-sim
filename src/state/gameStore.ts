@@ -7,6 +7,7 @@ import type { Street } from '../engine/streets';
 import { nextStreet, previousStreet } from '../engine/streets';
 import { useOddsStore } from './oddsStore';
 import { usePickerStore, pickedCards } from './pickerStore';
+import { useUiStore } from './uiStore';
 
 interface GameState {
   /** The full predetermined runout for the current hand, or `null` before the first deal (D-01). */
@@ -79,17 +80,40 @@ export const useGameStore = create<GameState>()((set, get) => ({
     const runout: PredeterminedRunout = { heroHole, board, opponentHoles };
 
     set({ runout, street: 'preflop', revealedMask: 0, dealNonce: get().dealNonce + 1 });
+    // Arm the animation gate synchronously alongside the state write above (same synchronous
+    // tick, so React batches both into one render) — deal() always animates, unconditionally
+    // (D-11). Armed BEFORE the odds cache is cleared so a stale odds effect can never observe
+    // an already-open gate before the newly mounted cards register (03-RESEARCH Pitfall 2).
+    useUiStore.getState().beginAnimation();
     // A fresh hand must never serve a previous hand's settled odds (RESEARCH Pitfall 4,
     // option (a) — clear the whole cache on every deal rather than namespacing keys).
     useOddsStore.getState().clearCache();
   },
   advanceStreet: () => {
-    set({ street: nextStreet(get().street) });
+    const current = get().street;
+    const next = nextStreet(current);
+    // Arm CONDITIONALLY — nextStreet clamps at 'river', and arming a no-op would increment a
+    // count that nothing will ever release, deadlocking the odds effect permanently (D-11).
+    if (next !== current) {
+      set({ street: next });
+      useUiStore.getState().beginAnimation();
+    }
   },
   rewindStreet: () => {
-    set({ street: previousStreet(get().street) });
+    const current = get().street;
+    const previous = previousStreet(current);
+    // Same conditional-arming rationale as advanceStreet: previousStreet clamps at 'preflop'.
+    if (previous !== current) {
+      set({ street: previous });
+      useUiStore.getState().beginAnimation();
+    }
   },
   reveal: (opponentIndex) => {
-    set((state) => ({ revealedMask: state.revealedMask | (1 << opponentIndex) }));
+    const alreadyRevealed = (get().revealedMask & (1 << opponentIndex)) !== 0;
+    // Same conditional-arming rationale: reveal() ORs a bit that may already be set.
+    if (!alreadyRevealed) {
+      set((state) => ({ revealedMask: state.revealedMask | (1 << opponentIndex) }));
+      useUiStore.getState().beginAnimation();
+    }
   },
 }));

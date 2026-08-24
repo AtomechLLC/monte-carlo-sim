@@ -23,3 +23,28 @@ if (typeof HTMLDialogElement !== 'undefined') {
     };
   }
 }
+
+// jsdom has no compositor, so real-duration Motion animations would make every existing UI
+// assertion time-dependent and flaky. Forcing `prefers-reduced-motion: reduce` ON for every
+// test keeps the whole harness deterministic (Motion's `useReducedMotion()`/`MotionConfig
+// reducedMotion="user"` collapse every duration to 0) while still exercising the reduced-motion
+// code path itself (D-09). Real-motion behaviour is accepted by the human checkpoint in plan
+// 03-06, not asserted here.
+//
+// Guarded on `typeof window !== 'undefined'` for the same reason as the HTMLDialogElement
+// polyfill above: this setup file also runs for suites under `@vitest-environment node` (no DOM
+// globals at all) — see src/engine/*.test.ts and src/worker/simulationApi.test.ts.
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  window.matchMedia = function (query: string): MediaQueryList {
+    return {
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    } as MediaQueryList;
+  };
+}

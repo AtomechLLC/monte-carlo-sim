@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import * as simulationService from './state/simulationService';
 import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
+import { useUiStore } from './state/uiStore';
 import type { ProgressSnapshot } from './worker/protocol';
 import type { ConditionedState } from './engine/equity';
 import { CATEGORY_LABELS } from './ui/categoryLabels';
@@ -22,6 +23,10 @@ vi.mock('./state/simulationService', () => ({
 
 function resetStores() {
   useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
+  // Placed AFTER the gameStore reset (03-03 test-harness adjustment): a reset must never leave a
+  // stale armed count behind from a previous test — that would incorrectly gate every subsequent
+  // test's odds effect forever, since nothing would ever release it.
+  useUiStore.getState().resetAnimations();
   useOddsStore.getState().reset();
   useOddsStore.getState().clearCache();
   vi.mocked(simulationService.startSimulation).mockReset();
@@ -456,5 +461,136 @@ describe('App — Phase 3 re-skin: control bar, "Set Up Scenario" disclosure, of
 
     expect(screen.getByTestId('odds-panel')).toBeInTheDocument();
     expect(screen.getByTestId('table-scene').contains(screen.getByTestId('odds-panel'))).toBe(false);
+  });
+});
+
+describe('App — animation gate (D-11/D-12): odds never move while a card is in flight', () => {
+  beforeEach(() => {
+    resetStores();
+  });
+
+  it('does not call startSimulation while the gate is armed, and calls it exactly once the gate clears', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    const callsAfterDeal = vi.mocked(simulationService.startSimulation).mock.calls.length;
+
+    // Manually hold the gate open past whatever advanceStreet()'s own arm/TableScene-release
+    // cycle would do on its own (03-PATTERNS: drive the gate through the store, never through
+    // timers — Motion does not run real frames under jsdom).
+    act(() => {
+      useUiStore.getState().beginAnimation();
+    });
+    await user.click(screen.getByTestId('advance-button'));
+
+    expect(vi.mocked(simulationService.startSimulation).mock.calls.length).toBe(callsAfterDeal);
+    expect(screen.getByTestId('win-pct').textContent).toBe('—');
+
+    act(() => {
+      useUiStore.getState().endAnimation();
+    });
+
+    expect(vi.mocked(simulationService.startSimulation).mock.calls.length).toBe(callsAfterDeal + 1);
+  });
+
+  it('a settled cached snapshot is not applied while the gate is armed, and is applied (with no new startSimulation call) once it clears', async () => {
+    vi.mocked(simulationService.startSimulation).mockImplementation(
+      async (conditioned: ConditionedState, onProgress: (snapshot: ProgressSnapshot) => void) => {
+        const isFlop = conditioned.knownBoard.length === 3;
+        onProgress({
+          requestId: 1,
+          categoryCounts: new Array(10).fill(0),
+          outcomes: isFlop ? { win: 60, tie: 10, lose: 30 } : { win: 50, tie: 0, lose: 50 },
+          trialsCompleted: 100,
+          done: true,
+        });
+      },
+    );
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i })); // -> preflop, settles at 50%
+    await user.click(screen.getByTestId('advance-button')); // -> flop, settles at 60%
+    expect(screen.getByTestId('win-pct').textContent).toBe('60.0%');
+
+    act(() => {
+      useUiStore.getState().beginAnimation();
+    });
+    await user.click(screen.getByTestId('rewind-button')); // -> preflop, would be a cache hit
+
+    // Still armed: neither the stale flop value nor the cached preflop value is shown — the
+    // cache-hit branch waits on the same gate a live run does (RESEARCH Pitfall 1).
+    expect(screen.getByTestId('win-pct').textContent).toBe('—');
+    const callsWhileArmed = vi.mocked(simulationService.startSimulation).mock.calls.length;
+
+    act(() => {
+      useUiStore.getState().endAnimation();
+    });
+
+    // No NEW startSimulation call — this was served from the cache, not a live re-run.
+    expect(vi.mocked(simulationService.startSimulation).mock.calls.length).toBe(callsWhileArmed);
+    expect(screen.getByTestId('win-pct').textContent).toBe('50.0%');
+  });
+
+  it('while pending, every odds cell reads the em dash and odds-panel carries aria-busy', async () => {
+    vi.mocked(simulationService.startSimulation).mockImplementation(async (_conditioned, onProgress) => {
+      onProgress({
+        requestId: 1,
+        categoryCounts: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+        outcomes: { win: 60, tie: 10, lose: 30 },
+        trialsCompleted: 100,
+        done: true,
+      });
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+
+    expect(screen.getByTestId('odds-panel')).toHaveAttribute('aria-busy', 'false');
+
+    act(() => {
+      useUiStore.getState().beginAnimation();
+    });
+
+    expect(screen.getByTestId('odds-panel')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('trial-counter').textContent).toBe('—');
+    expect(screen.getByTestId('win-pct').textContent).toBe('—');
+    expect(screen.getByTestId('tie-pct').textContent).toBe('—');
+    expect(screen.getByTestId('lose-pct').textContent).toBe('—');
+    for (let i = 0; i < 10; i++) {
+      expect(screen.getByTestId(`category-pct-${i}`).textContent).toBe('—');
+    }
+
+    act(() => {
+      useUiStore.getState().endAnimation();
+    });
+
+    expect(screen.getByTestId('odds-panel')).toHaveAttribute('aria-busy', 'false');
+    expect(screen.getByTestId('win-pct').textContent).toBe('60.0%');
+  });
+
+  it('a simulation error raised before an animation is not swallowed by the gate clearing (D-13)', async () => {
+    vi.mocked(simulationService.startSimulation).mockImplementationOnce(async (_conditioned, _onProgress, onError) => {
+      onError('worker exploded');
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+
+    const alert = await screen.findByTestId('simulation-error');
+    expect(alert.textContent).toContain('unexpected error');
+
+    act(() => {
+      useUiStore.getState().beginAnimation();
+    });
+    act(() => {
+      useUiStore.getState().endAnimation();
+    });
+
+    expect(screen.getByTestId('simulation-error')).toBeInTheDocument();
   });
 });

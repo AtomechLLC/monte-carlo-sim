@@ -12,11 +12,12 @@ export function HandDisplay() {
   // purely for rendering a seat the user has already clicked to reveal.
   const opponentHoles = useGameStore((state) => state.runout?.opponentHoles);
   const revealedMask = useGameStore((state) => state.revealedMask);
+  const dealNonce = useGameStore((state) => state.dealNonce);
   const reveal = useGameStore((state) => state.reveal);
 
   return (
     <>
-      <Seat variant="hero" heroHole={heroHole} />
+      <Seat variant="hero" heroHole={heroHole} dealNonce={dealNonce} />
       <div data-testid="opponents">
         {Array.from({ length: OPPONENT_COUNT }, (_, i) => {
           const revealed = opponentHoles !== undefined && isOpponentRevealed(revealedMask, i);
@@ -30,6 +31,7 @@ export function HandDisplay() {
               hole={hole}
               revealed={revealed}
               hasHand={opponentHoles !== undefined}
+              dealNonce={dealNonce}
               onReveal={reveal}
             />
           );

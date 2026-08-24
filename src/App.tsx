@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MotionConfig } from 'motion/react';
 import './App.css';
 import { DealButton } from './ui/DealButton';
 import { CardPicker } from './ui/CardPicker';
@@ -7,6 +8,7 @@ import { TableScene } from './ui/TableScene';
 import { OddsPanel } from './ui/OddsPanel';
 import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
+import { useUiStore } from './state/uiStore';
 import { startSimulation, cancelSimulation } from './state/simulationService';
 import { deriveConditionedState } from './engine/conditioning';
 
@@ -20,6 +22,11 @@ function App() {
   const street = useGameStore((state) => state.street);
   const revealedMask = useGameStore((state) => state.revealedMask);
   const dealNonce = useGameStore((state) => state.dealNonce);
+  // Subscribed value only — the effect below must never read this field live off the store's
+  // getState() snapshot. Mixing a subscribed dependency with a live imperative read would let the
+  // dependency value stay unchanged between two renders while the live value flipped, so the
+  // effect would never re-run and the gate would never open (03-RESEARCH).
+  const pendingAnimationCount = useUiStore((state) => state.pendingAnimationCount);
 
   // Transient UI state, not odds data — held here rather than in oddsStore.
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -28,6 +35,13 @@ function App() {
   const [scenarioOpen, setScenarioOpen] = useState(false);
 
   useEffect(() => {
+    // Animation gate (D-11/D-12, TBL-04): checked FIRST, above the cache-hit branch below — a
+    // settled-cache hit has no worker timing dependency today and is the branch most likely to
+    // be left ungated (03-RESEARCH Pitfall 1), so it must wait for animation completion exactly
+    // like a live run does. No odds number may change, and no cached snapshot may be applied,
+    // while any card describing that knowledge state is still mid-flight.
+    if (pendingAnimationCount > 0) return;
+
     if (!runout) return;
 
     // Cache gate (D-10/D-12): consult the settled-odds cache BEFORE ever touching the worker.
@@ -73,10 +87,13 @@ function App() {
       ignore = true;
       void cancelSimulation();
     };
-  }, [runout, street, revealedMask, dealNonce]);
+  }, [runout, street, revealedMask, dealNonce, pendingAnimationCount]);
 
   return (
-    <>
+    // D-09: honours prefers-reduced-motion app-wide (and deterministically in tests, via the
+    // matchMedia polyfill in src/test/setup.ts) — every Motion component under this provider
+    // collapses to zero-duration animations when reduced motion is active.
+    <MotionConfig reducedMotion="user">
       <h1>Monte Carlo Poker Simulator</h1>
       {runout === null && (
         <div className="empty-hand-state" data-testid="empty-hand-state">
@@ -114,7 +131,7 @@ function App() {
         <TableScene />
         <OddsPanel />
       </div>
-    </>
+    </MotionConfig>
   );
 }
 

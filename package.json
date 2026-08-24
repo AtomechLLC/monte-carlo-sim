@@ -13,6 +13,7 @@
   "dependencies": {
     "@poker-apprentice/hand-evaluator": "^4.3.0",
     "comlink": "^4.4.2",
+    "motion": "^13.1.1",
     "pure-rand": "^8.4.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
