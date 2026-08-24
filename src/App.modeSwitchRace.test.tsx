@@ -24,22 +24,22 @@ import type { PredeterminedRunout } from './engine/conditioning';
 // compositor-less jsdom (same stance FlipCard.test.tsx documents). Fake timers are deliberately
 // not used either.
 //
-// To get a genuinely in-flight simulation run to coexist with genuinely in-flight real card
-// animations in one deterministic step — rather than waiting out the deal's real ~900ms 8-card
-// stagger, which is exactly the real-motion-timing dependency this file avoids — the runout is
-// seeded directly via `useGameStore.setState` rather than via a `deal()` click. `deal()`
-// synchronously calls `beginAnimation()` in the SAME tick it sets `runout` (gameStore.ts's own
-// "armed BEFORE the odds cache is cleared" comment), which guarantees the odds effect's first
-// render after a real Deal click always observes pendingAnimationCount > 0 already — correctly
-// preventing a live run from EVER starting while cards are still mid-flight (D-11/D-12, by
-// design; verified empirically while building this file). Bypassing that synchronous coupling
-// for this one test lets the odds effect's first render see pendingAnimationCount === 0 (its own
-// closure-captured value from THIS render, unaffected by the cascade of child
-// AnimatedCard/FlipCard registrations that fire moments later in the SAME passive-effects flush)
-// while `runout` is simultaneously non-null — so a live (mocked, never-resolving) run starts AND,
-// in the very same commit, real cards mount and register under real motion. This reconstructs
-// the exact race D-08 describes (a live run in flight, cards in flight) without waiting on real
-// animation timing or touching fake timers.
+// To construct the closure-vs-registration window in one deterministic step — rather than
+// waiting out the deal's real ~900ms 8-card stagger, which is exactly the real-motion-timing
+// dependency this file avoids — the runout is seeded directly via `useGameStore.setState` rather
+// than via a `deal()` click. `deal()` synchronously calls `beginAnimation()` in the SAME tick it
+// sets `runout` (gameStore.ts's own "armed BEFORE the odds cache is cleared" comment), which
+// guarantees the odds effect's first render after a real Deal click always observes
+// pendingAnimationCount > 0 already. Bypassing that synchronous coupling lets the odds effect's
+// first render see pendingAnimationCount === 0 (its own closure-captured value from THIS render,
+// unaffected by the cascade of child AnimatedCard/FlipCard registrations that fire moments later
+// in the SAME passive-effects flush) while `runout` is simultaneously non-null. That is the
+// EXACT shape the production mode switch-back had before 05-REVIEW CR-01 was fixed (no
+// synchronous arming, cards registering child-first in the same flush) — pre-fix, a live run
+// started here while 8 real cards were mid-flight. Post-fix, the odds effect's SECONDARY live
+// read of the gate (App.tsx — supplementing, never replacing, the subscribed dependency that
+// still drives every re-run) must see those same-flush registrations and refuse to start a run
+// while any card is in flight (D-11/D-12).
 vi.mock('motion/react', async () => {
   const actual = await vi.importActual<typeof import('motion/react')>('motion/react');
   return {
@@ -79,14 +79,14 @@ const FAKE_RUNOUT: PredeterminedRunout = {
   ],
 };
 
-describe('switch-mid-deal race — the animation gate drains to 0 and the in-flight run is cancelled (D-07/D-08)', () => {
+describe('switch-mid-deal race — the animation gate blocks the odds effect and drains to 0 on switch-away (D-07/D-08, 05-REVIEW CR-01/CR-02)', () => {
   beforeEach(() => {
     resetStores();
   });
 
-  it('a live (never-resolving) run starts, real cards register with the gate, and switching to Blackjack drains the gate to 0 and cancels the run exactly once', async () => {
-    // Never streams a `done` snapshot (05-02-PLAN Task 2 action) — Task 1's settled-snapshot
-    // mock (App.modeIsolation.test.tsx) would complete instantly and leave nothing to cancel.
+  it('cards registering in the same flush block the odds effect (CR-01 live-read guard), and switching to Blackjack drains the gate to exactly 0', async () => {
+    // Never streams a `done` snapshot (05-02-PLAN Task 2 action) — the settled-snapshot mock
+    // (App.modeIsolation.test.tsx) would complete instantly and leave nothing in flight.
     vi.mocked(simulationService.startSimulation).mockImplementation(() => new Promise(() => {}));
 
     act(() => {
@@ -95,11 +95,12 @@ describe('switch-mid-deal race — the animation gate drains to 0 and the in-fli
 
     render(<App />);
 
-    // Guard: a real run genuinely started — the odds effect's own first render saw
-    // pendingAnimationCount === 0 (see the top-of-file comment for why), before the cascade of
-    // card registrations below landed. Otherwise the cancellation assertion after the switch
-    // would be vacuous (nothing was ever in flight to cancel).
-    expect(vi.mocked(simulationService.startSimulation).mock.calls.length).toBe(1);
+    // CR-01 (05-REVIEW): the odds effect's own first render saw pendingAnimationCount === 0
+    // (see the top-of-file comment for why), but the 8 card registrations landed in the SAME
+    // passive-effects flush, child-first, BEFORE the effect ran — the live-read secondary guard
+    // must therefore refuse to start a run. Pre-fix this was 1: a live run launched while every
+    // card was still mid-flight (the exact production switch-back bug, D-11/D-12 violation).
+    expect(vi.mocked(simulationService.startSimulation)).not.toHaveBeenCalled();
 
     // Guard assertion (BEFORE the switcher click), exact by design (05-REVIEW CR-02): the 8 real
     // AnimatedCards (2 hero + 6 opponent hole cards; preflop, so no board cards) each registered
@@ -120,11 +121,12 @@ describe('switch-mid-deal race — the animation gate drains to 0 and the in-fli
     // no production resetAnimations() call is involved anywhere in this flow.
     expect(useUiStore.getState().pendingAnimationCount).toBe(0);
 
-    // The in-flight run was cancelled through the SAME mechanism D-07 already relies on: `mode`
-    // joining the odds effect's dependency array tears down the previous effect instance's
-    // ignore-flag cleanup, which calls cancelSimulation() — no second cancellation call site
-    // exists anywhere in the production code for this.
-    expect(vi.mocked(simulationService.cancelSimulation).mock.calls.length).toBe(1);
+    // No run ever started (the live-read guard blocked it above), so there is nothing to
+    // cancel — an effect instance that early-returns registers no cleanup. Cancellation of a
+    // GENUINELY live run on switch-away stays owned by the one cancelSimulation call site (the
+    // odds effect's ignore-flag cleanup torn down by `mode` in its dependency array, D-07 —
+    // pinned by App.modeShell.guard.test.ts).
+    expect(vi.mocked(simulationService.cancelSimulation)).not.toHaveBeenCalled();
 
     // The drain happened via a real unmount, not a CSS-hidden subtree still present in the DOM
     // (D-04's own DOM-absence contract, reused here as evidence the drain is real).

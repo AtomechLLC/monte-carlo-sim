@@ -25,10 +25,12 @@ function App() {
   const street = useGameStore((state) => state.street);
   const revealedMask = useGameStore((state) => state.revealedMask);
   const dealNonce = useGameStore((state) => state.dealNonce);
-  // Subscribed value only — the effect below must never read this field live off the store's
-  // getState() snapshot. Mixing a subscribed dependency with a live imperative read would let the
-  // dependency value stay unchanged between two renders while the live value flipped, so the
-  // effect would never re-run and the gate would never open (03-RESEARCH).
+  // Subscribed value — this dependency-array entry is what re-runs the effect on every gate
+  // drain step, so the gate can always re-open. The 03-RESEARCH deadlock (dependency unchanged
+  // between renders while the live value flipped, effect never re-running) only applies when a
+  // live getState() read REPLACES this subscription; the effect below additionally does one live
+  // read as a SECONDARY guard (05-REVIEW CR-01 fix) that supplements — never replaces — this
+  // subscribed dependency.
   const pendingAnimationCount = useUiStore((state) => state.pendingAnimationCount);
   // Subscribed value, same discipline as pendingAnimationCount above (D-05): the odds effect
   // below reads this from its dependency array, never via a live getState() call.
@@ -48,12 +50,21 @@ function App() {
     // what delivers D-07's cancellation for free — no second cancellation call site is added.
     if (mode !== 'holdem') return;
 
-    // Animation gate (D-11/D-12, TBL-04): checked FIRST, above the cache-hit branch below — a
+    // Animation gate (D-11/D-12, TBL-04): checked before the cache-hit branch below — a
     // settled-cache hit has no worker timing dependency today and is the branch most likely to
     // be left ungated (03-RESEARCH Pitfall 1), so it must wait for animation completion exactly
     // like a live run does. No odds number may change, and no cached snapshot may be applied,
     // while any card describing that knowledge state is still mid-flight.
-    if (pendingAnimationCount > 0) return;
+    //
+    // CR-01 fix (05-REVIEW): the live read is a SECONDARY guard for the one commit where cards
+    // that mounted in THIS render flush registered with the gate AFTER the render closure
+    // captured 0 but BEFORE this effect ran (passive effects flush child-first) — the shape a
+    // mode switch-back re-mount has, where no gameStore action armed the gate synchronously
+    // pre-render the way deal/advance/reveal do. The subscribed dependency above still drives
+    // every re-run, so the 03-RESEARCH deadlock (which only applies when a live read REPLACES
+    // the subscription) cannot recur: any skip here is always followed by a dependency-driven
+    // re-run when the subscribed count next changes, including its final drain step to 0.
+    if (pendingAnimationCount > 0 || useUiStore.getState().pendingAnimationCount > 0) return;
 
     if (!runout) return;
 
