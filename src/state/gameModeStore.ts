@@ -24,6 +24,17 @@ interface GameModeState {
    */
   holdemRestorePending: boolean;
   /**
+   * True from the instant of a holdem -> blackjack switch until the restored Blackjack tree
+   * commits (the Blackjack game root acknowledges via `ackBlackjackRestore` in that commit's
+   * effect phase). Consumed at render time by the animation layer (captured once at mount) so
+   * a switch-back re-mount renders the exact table left behind instantly — no deal-choreography
+   * replay, no animation-gate arming (06-RESEARCH Pattern 5, Pitfall C). This is cross-game
+   * SHELL state (which mount is a mode restore), not game state — it reads nothing from any
+   * game-owned store. Note: the blackjack-local deck count does NOT belong in this file — it
+   * lives in blackjackStore per D-10, and the mode-shell guard's token sweep enforces that.
+   */
+  blackjackRestorePending: boolean;
+  /**
    * Switches the active game. Setting the mode to its current value is a harmless no-op (UI-SPEC
    * A5: clicking the already-active switcher button must not be an error path) — `set` still
    * fires, but the resulting state is unchanged.
@@ -31,11 +42,14 @@ interface GameModeState {
   setMode: (mode: GameMode) => void;
   /** Clears the restore flag once the restored tree has committed. Idempotent. */
   ackHoldemRestore: () => void;
+  /** Clears the blackjack restore flag once the restored tree has committed. Idempotent. */
+  ackBlackjackRestore: () => void;
 }
 
 export const useGameModeStore = create<GameModeState>()((set) => ({
   mode: 'holdem',
   holdemRestorePending: false,
+  blackjackRestorePending: false,
   setMode: (mode) =>
     set((state) => ({
       mode,
@@ -43,6 +57,11 @@ export const useGameModeStore = create<GameModeState>()((set) => ({
       // any other call (switch-away, A5 no-op click) clears it, so a stale flag can never
       // outlive the transition that justified it.
       holdemRestorePending: state.mode === 'blackjack' && mode === 'holdem',
+      // Symmetric for the other direction (06-RESEARCH Pattern 5, Pitfall C): exactly a
+      // holdem -> blackjack transition marks a Blackjack restore, recomputed on every call
+      // in this same set so neither flag can ever go stale.
+      blackjackRestorePending: state.mode === 'holdem' && mode === 'blackjack',
     })),
   ackHoldemRestore: () => set({ holdemRestorePending: false }),
+  ackBlackjackRestore: () => set({ blackjackRestorePending: false }),
 }));
