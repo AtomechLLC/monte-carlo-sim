@@ -1,7 +1,7 @@
 import type { Card } from '@poker-apprentice/types';
-import { FULL_DECK } from './cards';
 import type { Street } from './streets';
 import { STREET_BOARD_COUNT } from './streets';
+import { shoeWithout, type DeckCount } from './shoe';
 
 /**
  * The full hand, predetermined at deal time (D-01): hero hole, all 5 board cards, and all
@@ -28,26 +28,34 @@ export function isOpponentRevealed(revealedMask: number, index: number): boolean
  * that needs conditioned odds input must call this function rather than slicing the raw
  * runout itself — that is what keeps hidden board cards and hidden opponent holes out of the
  * odds computation. Hidden cards remain in `remainingDeck` (the unknown pool), never dropped.
+ * `remainingDeck` is derived by count-aware subtraction over a `deckCount`-sized shoe (D-04):
+ * at 2 decks a value the hero (or any known card) holds legitimately remains in the unknown
+ * pool once, since only one physical copy — not both — has been removed.
  */
-export function deriveConditionedState(runout: PredeterminedRunout, street: Street, revealedMask: number) {
+export function deriveConditionedState(
+  runout: PredeterminedRunout,
+  street: Street,
+  revealedMask: number,
+  deckCount: DeckCount = 1,
+) {
   const knownBoard: Card[] = runout.board.slice(0, STREET_BOARD_COUNT[street]);
   const knownOpponentHoles: (readonly [Card, Card] | null)[] = runout.opponentHoles.map((hole, index) =>
     isOpponentRevealed(revealedMask, index) ? hole : null,
   );
 
-  const knownCards = new Set<Card>([runout.heroHole[0], runout.heroHole[1], ...knownBoard]);
+  const knownCards: Card[] = [runout.heroHole[0], runout.heroHole[1], ...knownBoard];
   for (const hole of knownOpponentHoles) {
     if (hole !== null) {
-      knownCards.add(hole[0]);
-      knownCards.add(hole[1]);
+      knownCards.push(hole[0], hole[1]);
     }
   }
-  const remainingDeck = FULL_DECK.filter((card) => !knownCards.has(card));
+  const remainingDeck = shoeWithout(deckCount, knownCards);
 
   return {
     heroHole: runout.heroHole,
     knownBoard,
     knownOpponentHoles,
     remainingDeck,
+    deckCount,
   };
 }
