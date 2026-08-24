@@ -77,10 +77,6 @@
     --felt-dark: #081f14;
     --felt-rail: #241509;
   }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
 }
 
 #root {
