@@ -120,6 +120,17 @@ function App() {
     };
   }, [runout, street, revealedMask, dealNonce, pendingAnimationCount, mode]);
 
+  // WR-01 fix (05-REVIEW): leaving Hold'em cancels the run the banner was describing, so the
+  // error no longer describes anything on screen — clear it, or it re-mounts (and re-announces
+  // via role="alert") the instant the user switches back, sitting stale for the whole re-mount.
+  // Same "banner no longer describes what's on screen" class as 02-REVIEW WR-01. Deferred via a
+  // microtask, mirroring the cache-hit branch's setState discipline above
+  // (react-hooks/set-state-in-effect flags a setState reachable from the effect's own
+  // synchronous scope).
+  useEffect(() => {
+    if (mode !== 'holdem') queueMicrotask(() => setErrorMessage(null));
+  }, [mode]);
+
   return (
     // D-09: honours prefers-reduced-motion app-wide (and deterministically in tests, via the
     // matchMedia polyfill in src/test/setup.ts) — every Motion component under this provider
