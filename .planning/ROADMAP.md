@@ -32,12 +32,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can see a full hand-category probability table (high card through royal flush) that sums to ~100% and updates live.
   4. User can watch a visible trial counter climb and percentages visibly settle/converge in real time, with the page staying fully responsive (no freeze) throughout.
 
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Scaffold the Vite/React/TS project and deliver one-click random dealing (DEAL-01)
+- [x] 01-01-PLAN.md — Scaffold the Vite/React/TS project and deliver one-click random dealing (DEAL-01)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -89,6 +89,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Odds Loop | 0/4 | Planned | - |
+| 1. Core Odds Loop | 1/4 | In Progress|  |
 | 2. Scenario Construction & Street Navigation | 0/TBD | Not started | - |
 | 3. Casino Table UI & Animation | 0/TBD | Not started | - |
