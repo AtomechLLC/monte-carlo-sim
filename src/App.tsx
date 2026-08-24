@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import './App.css';
 import { DealButton } from './ui/DealButton';
 import { CardPicker } from './ui/CardPicker';
 import { StreetControls } from './ui/StreetControls';
@@ -74,18 +75,37 @@ function App() {
   return (
     <>
       <h1>Monte Carlo Poker Simulator</h1>
+      {runout === null && (
+        <div className="empty-hand-state" data-testid="empty-hand-state">
+          <h2>No hand dealt yet</h2>
+          <p>
+            Click Deal to draw a random hand, or use the card picker below to set up your own
+            scenario, then click Deal.
+          </p>
+        </div>
+      )}
       {errorMessage !== null && (
-        <div data-testid="simulation-error" role="alert">
+        <div className="simulation-error" data-testid="simulation-error" role="alert">
           {SIMULATION_ERROR_MESSAGE}
         </div>
       )}
       <DealButton />
-      <CardPicker />
-      <StreetControls />
-      <HandDisplay />
-      <BoardDisplay />
-      <WinTieLossDisplay />
-      <OddsTable />
+      <div className="phase2-section">
+        <CardPicker />
+      </div>
+      <div className="phase2-section">
+        <StreetControls />
+      </div>
+      <div className="phase2-section">
+        <HandDisplay />
+      </div>
+      <div className="phase2-section">
+        <BoardDisplay />
+      </div>
+      <div className="phase2-section">
+        <WinTieLossDisplay />
+        <OddsTable />
+      </div>
     </>
   );
 }

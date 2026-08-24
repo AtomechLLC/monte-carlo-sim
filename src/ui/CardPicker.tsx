@@ -50,7 +50,7 @@ export function CardPicker() {
         const value = picks[slot];
         return (
           <span key={slot}>
-            <button type="button" data-testid={`picker-slot-${slot}`} onClick={() => openPanel(slot)}>
+            <button type="button" data-testid={`picker-slot-${slot}`} className={value !== null ? 'picker-slot-filled' : undefined} onClick={() => openPanel(slot)}>
               {SLOT_LABEL[slot]}: {value ?? '—'}
             </button>
             <button

@@ -182,3 +182,141 @@
     border-right-color: var(--border);
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 2 UI-SPEC conformance pass (02-05)
+ *
+ * Everything below styles the plain-semantic-HTML controls introduced across
+ * 02-01..02-04 (card picker, street controls, board display, opponent reveal)
+ * per 02-UI-SPEC.md. Nothing above this comment is touched — the Phase 1
+ * scaffold selectors (.counter, .hero, #next-steps, etc.) are left exactly as
+ * they were, unused dead code and all.
+ * ------------------------------------------------------------------------- */
+
+/* Vertical rhythm: 16px between each top-level page section (card picker,
+ * street, hand, board, odds blocks). */
+.phase2-section {
+  margin-top: 16px;
+}
+
+/* Heading role (20px/600/1.2). Every <h2> in this app is a Phase 2 addition
+ * (Card Picker / Street / Board / the picker panel's "Pick a card for..." /
+ * the empty-hand-state heading below) — h1 is deliberately untouched, Phase 3
+ * owns that redesign. */
+h2 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.empty-hand-state {
+  margin-top: 16px;
+  padding: 8px 12px;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* Destructive is reserved for exactly one thing: the simulation-error
+ * banner's text and left border. Never used for the neutral "disabled"/
+ * "used" dimming below — that is opacity on --text, not this colour. */
+.simulation-error {
+  margin-top: 16px;
+  padding: 8px 12px;
+  border-left: 4px solid var(--destructive);
+  color: var(--destructive);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* Accent is reserved for exactly three things: the current street-name
+ * label, a filled picker slot's text, and the Advance button's label while
+ * it is the enabled/actionable next step. Never a background fill, never on
+ * the Deal button. */
+.picker-slot-filled,
+[data-testid='street-label'],
+[data-testid='advance-button']:not(:disabled) {
+  color: var(--accent);
+}
+
+/* Minimum 44x44px hit area (an accessibility touch-target floor, not a
+ * visual design choice) on every interactive control introduced this phase,
+ * achieved via padding rather than enlarging visible text. */
+[data-testid^='picker-slot-'],
+[data-testid^='picker-clear-'],
+[data-testid^='picker-card-'],
+[data-testid^='opponent-seat-'],
+[data-testid='rewind-button'],
+[data-testid='advance-button'],
+[data-testid='picker-panel'] > button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-weight: 400;
+}
+
+/* Borders (the 30% secondary role) on picker slot buttons, the panel
+ * container, opponent seat buttons and board card cells. */
+[data-testid^='picker-slot-'],
+[data-testid='picker-panel'],
+[data-testid^='opponent-seat-'],
+[data-testid='board-cards'] span {
+  border: 1px solid var(--border);
+}
+
+[data-testid='board-cards'] span {
+  display: inline-block;
+  padding: 4px 8px;
+}
+
+/* 24px padding inside the card-picker <dialog> panel (Spacing Scale "lg"). */
+[data-testid='picker-panel'] {
+  padding: 24px;
+}
+
+/* 8px gap between a picker slot button and its adjacent Clear button, and
+ * between Rewind / street label / Advance. */
+[data-testid^='picker-slot-'] + [data-testid^='picker-clear-'] {
+  margin-left: 8px;
+}
+[data-testid='street-label'] {
+  margin-inline: 8px;
+}
+
+/* 4px gap between rank buttons within a suit group in the 52-card panel —
+ * resets naturally at each new suit group since the first rank button's
+ * preceding sibling there is an <h3>, not another picker-card button. */
+[data-testid='picker-panel'] button[data-testid^='picker-card-'] + button[data-testid^='picker-card-'] {
+  margin-left: 4px;
+}
+
+/* Disabled controls (used picker cards, boundary-disabled Rewind/Advance,
+ * empty Clear buttons, revealed opponent seats): neutral dimming, never the
+ * destructive colour — these are not destructive actions. */
+[data-testid^='picker-card-']:disabled,
+[data-testid='rewind-button']:disabled,
+[data-testid='advance-button']:disabled,
+[data-testid^='picker-clear-']:disabled,
+[data-testid^='opponent-seat-']:disabled {
+  color: var(--text);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Body role (16px/400/1.5) for new plain-text elements. */
+[data-testid^='picker-slot-'],
+[data-testid^='opponent-seat-'],
+[data-testid='board-cards'] span,
+[data-testid='street-label'] {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* Label role (14px/400/1.4) for the per-slot Clear buttons. */
+[data-testid^='picker-clear-'] {
+  font-size: 14px;
+  line-height: 1.4;
+}
