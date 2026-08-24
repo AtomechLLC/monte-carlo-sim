@@ -258,17 +258,14 @@ h2 {
 }
 
 /* Borders (the 30% secondary role) on picker slot buttons, the panel
- * container, opponent seat buttons and board card cells. */
+ * container and opponent seat buttons. Board card cells no longer take this
+ * border (Phase 3, 03-01): the vendored .playing-card art now draws its own
+ * card-shaped border/shadow (see the card-presentation section below), and a
+ * second border on the wrapping span would double-border the card. */
 [data-testid^='picker-slot-'],
 [data-testid='picker-panel'],
-[data-testid^='opponent-seat-'],
-[data-testid='board-cards'] span {
+[data-testid^='opponent-seat-'] {
   border: 1px solid var(--border);
-}
-
-[data-testid='board-cards'] span {
-  display: inline-block;
-  padding: 4px 8px;
 }
 
 /* 24px padding inside the card-picker <dialog> panel (Spacing Scale "lg"). */
@@ -319,4 +316,42 @@ h2 {
 [data-testid^='picker-clear-'] {
   font-size: 14px;
   line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+ * Phase 3 card presentation (03-01)
+ *
+ * The shared card-shaped box treatment applied to every rendered PlayingCard/
+ * CardBack image, plus the .card-slot wrappers that own each card position's
+ * width. The slot (not the image) owns width so a face-up <-> face-down swap
+ * on reveal never changes box dimensions (UI-SPEC Table Geometry & Card
+ * Dimensions) — the image just fills whatever box its slot declares.
+ * ------------------------------------------------------------------------- */
+.playing-card {
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  display: block;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.card-back {
+  filter: var(--card-back-filter);
+}
+
+.card-slot {
+  display: inline-block;
+}
+
+.card-slot--hero {
+  width: var(--card-w-hero);
+}
+
+.card-slot--opponent {
+  width: var(--card-w-opponent);
+}
+
+.card-slot--community {
+  width: var(--card-w-community);
 }
