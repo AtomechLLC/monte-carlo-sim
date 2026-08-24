@@ -47,7 +47,11 @@ status: complete
 
 ## Defects Found
 
-None. No gaps recorded. One prior-flagged limitation stands as documented scope (03-04-SUMMARY: a full flop→pre-flop rewind may skip its graceful fade in real browsers — cosmetic, partial rewinds unaffected).
+None found by the walkthrough itself — but see the post-checkpoint addendum below.
+
+## Post-Checkpoint Addendum (same day)
+
+The subsequent code review (03-REVIEW.md) found 3 CRITICAL exit-gate deadlocks the walkthrough missed (its rewind test used River→Turn, never Flop→Pre-Flop; the automated suite forces reduced motion, disabling the affected path). The orchestrator empirically CONFIRMED CR-01 in a real browser: Deal → Advance → Rewind froze the odds panel permanently, with re-deal unable to recover it. All three were fixed the same day (commits `aff5672`, `d1e7ac4`, `e0512f3`; hold lifecycle now closed by construction with 5 documented release paths; 5 new enabled-path hook tests; suite 208/208). The orchestrator then re-verified in a real browser: all three deadlock sequences recover to settled odds, D-12 cached-rewind and D-08 instant re-deal semantics intact, zero console errors. The former 03-04 "may skip its graceful fade" limitation was in fact the CR-01 deadlock and is resolved by the same fix.
 
 ## Deviations
 
