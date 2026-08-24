@@ -41,29 +41,27 @@ describe('App — Deal happy path', () => {
   });
 
   it('shows a climbing trial counter and win/tie/lose percentages driven by streamed snapshots', async () => {
-    vi.mocked(simulationService.startSimulation).mockImplementation(
-      async (_heroHole, _remainingDeck, requestId, onProgress) => {
-        const snapshots: ProgressSnapshot[] = [
-          {
-            requestId,
-            categoryCounts: new Array(10).fill(0),
-            outcomes: { win: 30, tie: 5, lose: 15 },
-            trialsCompleted: 50,
-            done: false,
-          },
-          {
-            requestId,
-            categoryCounts: new Array(10).fill(0),
-            outcomes: { win: 60, tie: 10, lose: 30 },
-            trialsCompleted: 100,
-            done: true,
-          },
-        ];
-        for (const snapshot of snapshots) {
-          onProgress(snapshot);
-        }
-      },
-    );
+    vi.mocked(simulationService.startSimulation).mockImplementation(async (_conditioned, onProgress) => {
+      const snapshots: ProgressSnapshot[] = [
+        {
+          requestId: 1,
+          categoryCounts: new Array(10).fill(0),
+          outcomes: { win: 30, tie: 5, lose: 15 },
+          trialsCompleted: 50,
+          done: false,
+        },
+        {
+          requestId: 1,
+          categoryCounts: new Array(10).fill(0),
+          outcomes: { win: 60, tie: 10, lose: 30 },
+          trialsCompleted: 100,
+          done: true,
+        },
+      ];
+      for (const snapshot of snapshots) {
+        onProgress(snapshot);
+      }
+    });
 
     const user = userEvent.setup();
     render(<App />);
@@ -75,11 +73,9 @@ describe('App — Deal happy path', () => {
     expect(screen.getByTestId('lose-pct').textContent).toBe('30.0%');
 
     expect(simulationService.startSimulation).toHaveBeenCalledTimes(1);
-    const firstCallArgs = vi.mocked(simulationService.startSimulation).mock.calls[0];
-    expect(firstCallArgs[2]).toBe(useGameStore.getState().dealNonce);
   });
 
-  it('resets and calls startSimulation again with a higher requestId when Deal is clicked a second time', async () => {
+  it('resets and calls startSimulation again when Deal is clicked a second time', async () => {
     vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
 
     const user = userEvent.setup();
@@ -87,26 +83,23 @@ describe('App — Deal happy path', () => {
     await user.click(screen.getByRole('button', { name: /^deal$/i }));
     await user.click(screen.getByRole('button', { name: /^deal$/i }));
 
+    // requestId is now allocated internally by simulationService (D-13, service-owned
+    // generation counter), so this regression guard asserts the effect re-fires on a new
+    // dealNonce rather than inspecting a requestId argument that no longer exists.
     expect(simulationService.startSimulation).toHaveBeenCalledTimes(2);
-    const calls = vi.mocked(simulationService.startSimulation).mock.calls;
-    const firstRequestId = calls[0][2];
-    const secondRequestId = calls[1][2];
-    expect(secondRequestId).toBeGreaterThan(firstRequestId);
   });
 
   it('renders a live 10-row hand-category probability table driven by streamed snapshots', async () => {
-    vi.mocked(simulationService.startSimulation).mockImplementation(
-      async (_heroHole, _remainingDeck, requestId, onProgress) => {
-        const snapshot: ProgressSnapshot = {
-          requestId,
-          categoryCounts: [500, 300, 100, 50, 25, 15, 5, 3, 1, 1],
-          outcomes: { win: 600, tie: 100, lose: 300 },
-          trialsCompleted: 1000,
-          done: true,
-        };
-        onProgress(snapshot);
-      },
-    );
+    vi.mocked(simulationService.startSimulation).mockImplementation(async (_conditioned, onProgress) => {
+      const snapshot: ProgressSnapshot = {
+        requestId: 1,
+        categoryCounts: [500, 300, 100, 50, 25, 15, 5, 3, 1, 1],
+        outcomes: { win: 600, tie: 100, lose: 300 },
+        trialsCompleted: 1000,
+        done: true,
+      };
+      onProgress(snapshot);
+    });
 
     const user = userEvent.setup();
     render(<App />);
