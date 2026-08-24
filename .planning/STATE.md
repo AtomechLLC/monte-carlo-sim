@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
+milestone_name: MVP
 status: Awaiting next milestone
-stopped_at: Milestone v1.0 complete — all 3 phases verified (16/16 plans, 208/208 tests)
-last_updated: "2026-08-24T15:11:33.711Z"
+stopped_at: "Quick task 260824-biv complete: post-v1.0 hardening (216/216 tests)"
+last_updated: "2026-08-24T15:46:42.755Z"
 last_activity: 2026-08-24 — Milestone v1.0 completed and archived
 progress:
   total_phases: 3
@@ -76,9 +76,15 @@ None yet.
 
 ### Blockers/Concerns
 
-- ⚠️ [Phase 2] Code review WR-02 (02-REVIEW.md): hard worker death (script load failure) fires the unsubscribed Worker `error` event and leaves Comlink promises hanging — call-rejection errors are surfaced, but worker-crash errors are not. Advisory. (WR-01, the stale error banner on cache hits, was FIXED in Phase 3 plan 03-05.)
 - ⚠️ [Phases 1-3] Security enforcement is enabled but no SECURITY.md exists for any phase — `/gsd:secure-phase 1|2|3` closes the gate (client-only app; low risk).
+- (Resolved) WR-02 worker-crash surfacing — FIXED in quick task 260824-biv (Worker error/messageerror listeners now route into the error banner).
 - (Resolved) Phase 1 cosmetic debt (scaffold-tmp title, default favicon, dead scaffold assets) — closed in Phase 3 plan 03-05 (D-14).
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260824-biv | Post-v1.0 hardening: WR-02 worker-crash surfacing, explicit TS strict, odds-panel labels, category-table semantics + locked-in indicator, formatPct dedupe, dead CSS, matchMedia hardening, error detail | 2026-08-24 | e39ade6 | [260824-biv](./quick/260824-biv-fix-core-post-v1-0-problems-wr-02-worker/) |
 
 ## Deferred Items
 
@@ -92,8 +98,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-24
-Stopped at: Milestone v1.0 complete — all 3 phases verified (16/16 plans, 208/208 tests)
+Last session: 2026-08-24T15:46:42.744Z
+Stopped at: Quick task 260824-biv complete: post-v1.0 hardening (216/216 tests)
 Resume file: None
 
 ## Operator Next Steps
