@@ -574,12 +574,12 @@ None applicable at meaningful severity — no network requests, no user-supplied
 
 **All other claims in this document were verified via direct package inspection, executed code, live npm registry queries, Context7-sourced official documentation, or reproduced failure/success scenarios in a sandbox** — no claim above those two carries meaningful unverified risk.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should Phase 1 include a Playwright smoke test, or defer all E2E to a later phase?**
    - What we know: `STACK.md` lists Playwright as part of the testing stack; no Phase 1 requirement ID explicitly demands E2E coverage.
    - What's unclear: Whether `nyquist_validation` being disabled in `config.json` (it is — `false`) plus `code_review: true`/`code_review_depth: standard` already provides enough of a safety net for a phase this thin, or whether one smoke test ("click Deal, verify the trial counter increases and win% is not NaN") is cheap enough to include regardless.
-   - Recommendation: Leave as planner's discretion; not required by any locked requirement.
+   - RESOLVED: deferred at planner's discretion — no Playwright in Phase 1; decision recorded in SKELETON.md ("Playwright E2E. Deferred; no Phase 1 requirement demands cross-boundary E2E coverage").
 
 ## Sources
 
