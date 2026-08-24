@@ -64,7 +64,7 @@ function resetStores() {
   useUiStore.getState().resetAnimations();
   useOddsStore.getState().reset();
   useOddsStore.getState().clearCache();
-  useGameModeStore.setState({ mode: 'holdem' });
+  useGameModeStore.setState({ mode: 'holdem', holdemRestorePending: false });
   vi.mocked(simulationService.startSimulation).mockReset();
   vi.mocked(simulationService.cancelSimulation).mockReset();
 }
@@ -113,6 +113,9 @@ describe('switch-mid-deal race — the animation gate blocks the odds effect and
       useUiStore.getState().pendingAnimationCount,
       'expected exactly 8 real card registrations (2 hero + 6 opponent hole cards) with none stolen by TableScene\'s mount effect (05-REVIEW CR-02) — a 0 here means the real-motion mock stopped taking effect and this test has gone vacuous',
     ).toBe(8);
+    // Non-vacuousness anchor for the instant-restore assertions later: gate-registered cards
+    // visibly carry the in-flight marker class while animating.
+    expect(document.querySelectorAll('.card-in-flight')).toHaveLength(8);
 
     const user = userEvent.setup();
     await user.click(screen.getByTestId('game-mode-switch-blackjack'));
@@ -133,23 +136,93 @@ describe('switch-mid-deal race — the animation gate blocks the odds effect and
     expect(screen.getByTestId('blackjack-empty-state')).toBeInTheDocument();
     expect(screen.queryByTestId('table-scene')).not.toBeInTheDocument();
 
-    // Switching back re-mounts the Hold'em subtree fresh: the same runout/dealNonce still holds
-    // (D-07 persistence, proven separately in App.modeIsolation.test.tsx), so the same real cards
-    // mount again and register again under real motion — a legitimate, freshly-owned non-zero
-    // count, not a stranded leftover from the earlier switch (which already proved a clean drain
-    // to exactly 0 above). Asserting only "finite and non-negative" here (not a wait for it to
-    // hit 0 via real animation completion) keeps this file's no-real-motion-timing rule intact.
+    // Switching back re-mounts the Hold'em subtree fresh with the same runout/dealNonce (D-07
+    // persistence, proven separately in App.modeIsolation.test.tsx). WR-02 (05-REVIEW): this is
+    // a RESTORE mount — 05-UI-SPEC locks the switch as "an instant DOM swap... no new
+    // animation" and D-07 as "returning shows the exact table left behind" — so the re-mounting
+    // cards must render directly in their slots: no deal-choreography replay, no gate arming
+    // (pre-fix this count read 8: every card re-registered and re-flew from the deck), and no
+    // in-flight marker. TIGHTENED from the pre-fix "finite and non-negative" tolerance.
     await user.click(screen.getByTestId('game-mode-switch-holdem'));
-    const afterReturn = useUiStore.getState().pendingAnimationCount;
-    expect(afterReturn).toBeGreaterThanOrEqual(0);
-    expect(Number.isFinite(afterReturn)).toBe(true);
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+    expect(document.querySelectorAll('.card-in-flight')).toHaveLength(0);
+    // The exact table left behind IS on screen, immediately.
+    expect(screen.getByTestId('hero-hole').children).toHaveLength(2);
+    expect(screen.getByTestId('opponents').children).toHaveLength(3);
 
-    // Proves the drain mechanism is repeatable, not a one-shot fluke — a genuinely stranded gate
-    // (T-05-03: a stuck counter would permanently freeze every future odds update) would fail to
-    // return to 0 on a SECOND switch-away just as it would on the first. This is the concrete
-    // "a rapid round trip cannot permanently freeze future odds updates" check, without waiting
-    // on real Motion animation-completion timing.
+    // D-07's "recomputed if the run was cancelled mid-flight": the gate is untouched (nothing
+    // registered) and no settled cache exists (the pre-switch window never started a run), so
+    // the odds effect starts the live recompute IMMEDIATELY on the restore commit — no odds
+    // interruption, no start/cancel churn (this stays the FIRST and only start).
+    expect(vi.mocked(simulationService.startSimulation)).toHaveBeenCalledTimes(1);
+
+    // Second switch-away: the restarted live run is cancelled through the one existing
+    // cancellation mechanism (`mode` in the odds effect's dependency array tearing down the
+    // ignore-flag cleanup — the single cancelSimulation call site, D-07), and the drain
+    // mechanism is repeatable, not a one-shot fluke (T-05-03: a stuck counter would permanently
+    // freeze every future odds update).
     await user.click(screen.getByTestId('game-mode-switch-blackjack'));
     expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+    expect(vi.mocked(simulationService.cancelSimulation)).toHaveBeenCalledTimes(1);
+  });
+
+  it('a fresh Deal after a switch-back restore animates normally — the restore suppression is scoped to the restore commit alone (WR-02)', async () => {
+    vi.mocked(simulationService.startSimulation).mockImplementation(() => new Promise(() => {}));
+
+    act(() => {
+      useGameStore.setState({ runout: FAKE_RUNOUT, street: 'preflop', revealedMask: 0, dealNonce: 1 });
+    });
+    render(<App />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId('game-mode-switch-blackjack'));
+    await user.click(screen.getByTestId('game-mode-switch-holdem'));
+    // Restore mount: nothing armed, nothing flying (the WR-02 contract, proven above).
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+    const callsAfterRestore = vi.mocked(simulationService.startSimulation).mock.calls.length;
+
+    // A real Deal must be a byte-identical Phase 3 deal: synchronous arming, 8 fresh cards
+    // registering under real motion, TableScene releasing exactly the action's unit — the
+    // restore flag must not leak past its own commit and suppress this.
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    expect(useUiStore.getState().pendingAnimationCount).toBe(8);
+    expect(document.querySelectorAll('.card-in-flight')).toHaveLength(8);
+    // And the gate blocks the odds effect for the new deal exactly as designed — no new run
+    // starts while the fresh cards are mid-flight.
+    expect(vi.mocked(simulationService.startSimulation).mock.calls.length).toBe(callsAfterRestore);
+  });
+
+  it('a revealed seat restore-mounts already face-up: no flip replay registration, and the face is on screen instantly (WR-02/D-07)', async () => {
+    vi.mocked(simulationService.startSimulation).mockImplementation(() => new Promise(() => {}));
+
+    act(() => {
+      useGameStore.setState({ runout: FAKE_RUNOUT, street: 'preflop', revealedMask: 0b1, dealNonce: 1 });
+    });
+    render(<App />);
+
+    // Exactly the 8 AnimatedCards register — a FlipCard mounting ALREADY face-up has no
+    // hidden -> face-up transition to animate, so it must not arm the gate (pre-fix this read
+    // 10: opponent 0's two already-revealed FlipCards each registered a unit at mount that only
+    // Motion's mount-replay of the flip would release).
+    expect(useUiStore.getState().pendingAnimationCount).toBe(8);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId('game-mode-switch-blackjack'));
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+
+    await user.click(screen.getByTestId('game-mode-switch-holdem'));
+    // Restore mount: neither the fly-ins nor the revealed flips replay or register.
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+    expect(document.querySelectorAll('.card-in-flight')).toHaveLength(0);
+
+    // The revealed seat is back exactly as left: disabled, revealed aria-label, both face
+    // images present immediately (not mid-flip, not face-down).
+    const seat = screen.getByTestId('opponent-seat-0');
+    expect(seat).toBeDisabled();
+    expect(seat).toHaveAttribute('aria-label', 'Opponent 1 hole cards: 7h 8h (revealed)');
+    const faceImages = Array.from(seat.querySelectorAll('img')).filter(
+      (img) => img.getAttribute('src') !== '/cards/back.svg',
+    );
+    expect(faceImages).toHaveLength(2);
   });
 });

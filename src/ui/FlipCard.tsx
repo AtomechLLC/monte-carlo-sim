@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Card } from '@poker-apprentice/types';
 import { motion, useReducedMotion } from 'motion/react';
 import { PlayingCard } from './PlayingCard';
@@ -35,10 +36,19 @@ interface FlipCardProps {
 export function FlipCard({ card, faceUp, flipKey }: FlipCardProps) {
   const reduce = useReducedMotion();
   const enabled = !reduce;
-  // Registers only for the transition into face-up (`enabled && faceUp`) — mounting or staying
-  // hidden never arms the gate; a hidden-to-face-up transition arms exactly one unit, released
-  // by onAnimationComplete below (or on unmount, via useAnimationGate's own unmount-safety net).
-  const { complete } = useAnimationGate(flipKey, enabled && faceUp);
+  // WR-02/D-07 fix (05-REVIEW): captured ONCE at mount. Registration is for exactly the
+  // hidden -> face-up TRANSITION — a FlipCard that mounts ALREADY face-up (only possible when a
+  // mode switch-back re-mounts a revealed seat, or a test seeds a revealed mask before first
+  // render; every dealt seat starts face-down because deal() resets revealedMask) has no
+  // transition to animate: it renders instantly at rotateY 180 (`initial={false}` below, the
+  // "exact table left behind") and must not arm the gate — a registration with no flip left to
+  // complete would strand the unit until unmount.
+  const [mountedFaceUp] = useState(faceUp);
+  // Registers only for the transition into face-up — mounting (hidden OR already face-up) and
+  // staying hidden never arm the gate; a hidden-to-face-up transition arms exactly one unit,
+  // released by onAnimationComplete below (or on unmount, via useAnimationGate's own
+  // unmount-safety net).
+  const { complete } = useAnimationGate(flipKey, enabled && faceUp && !mountedFaceUp);
 
   const transition = enabled ? { duration: FLIP_DURATION_S, ease: 'easeInOut' as const } : { duration: 0 };
 
@@ -47,6 +57,10 @@ export function FlipCard({ card, faceUp, flipKey }: FlipCardProps) {
       <motion.span
         className="flip-card-inner"
         style={{ transformStyle: 'preserve-3d', position: 'relative', display: 'inline-block' }}
+        // Mount directly at the current `animate` pose: a face-down mount starts at rotateY 0
+        // exactly as before, and an already-face-up (restore) mount starts at rotateY 180 with
+        // no mount-replay of the flip. Later faceUp CHANGES still animate normally.
+        initial={false}
         animate={{ rotateY: faceUp ? 180 : 0 }}
         transition={transition}
         onAnimationComplete={complete}

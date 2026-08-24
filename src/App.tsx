@@ -131,6 +131,17 @@ function App() {
     if (mode !== 'holdem') queueMicrotask(() => setErrorMessage(null));
   }, [mode]);
 
+  // WR-02 fix (05-REVIEW): a blackjack -> holdem switch marks holdemRestorePending, which the
+  // re-mounting card layer consumes at RENDER time (AnimatedCard captures it once at mount) to
+  // restore the exact table left behind instantly — no deal-choreography replay, no gate arming
+  // (D-07, 05-UI-SPEC "instant DOM swap"). Acknowledged here, in the same commit's effect phase
+  // — after every restored card has already captured it — so a later Deal mounts fresh cards
+  // with the flag down and animates normally. Idempotent and StrictMode-safe (a double-invoked
+  // ack is just a second no-op write).
+  useEffect(() => {
+    if (mode === 'holdem') useGameModeStore.getState().ackHoldemRestore();
+  }, [mode]);
+
   return (
     // D-09: honours prefers-reduced-motion app-wide (and deterministically in tests, via the
     // matchMedia polyfill in src/test/setup.ts) — every Motion component under this provider
