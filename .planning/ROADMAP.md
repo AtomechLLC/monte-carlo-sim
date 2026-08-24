@@ -28,7 +28,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can see live win/tie/lose probability against the 3 opponents, computed by Monte Carlo simulation, that updates as trials accumulate.
   3. User can see a full hand-category probability table (high card through royal flush) that sums to ~100% and updates live.
   4. User can watch a visible trial counter climb and percentages visibly settle/converge in real time, with the page staying fully responsive (no freeze) throughout.
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Scaffold the Vite/React/TS project and deliver one-click random dealing (DEAL-01)
+- [ ] 01-02-PLAN.md — Stream Monte Carlo trials from a Web Worker to a live trial counter (ENG-03, ODDS-03)
+- [ ] 01-03-PLAN.md — Replace the stub with real hand evaluation and add the 10-row category table (ENG-01, ENG-02, ODDS-01, ODDS-02)
+- [ ] 01-04-PLAN.md — Validate accuracy against benchmark odds and invariants, then phase acceptance (ENG-04)
 
 ### Phase 2: Scenario Construction & Street Navigation
 **Goal**: Users can construct their own "what-if" scenarios and navigate a hand street by street — advancing, rewinding, and revealing opponents — with odds correctly recalculating at every step, still on the minimal UI proven in Phase 1.
@@ -62,6 +68,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Odds Loop | 0/TBD | Not started | - |
+| 1. Core Odds Loop | 0/4 | Planned | - |
 | 2. Scenario Construction & Street Navigation | 0/TBD | Not started | - |
 | 3. Casino Table UI & Animation | 0/TBD | Not started | - |
