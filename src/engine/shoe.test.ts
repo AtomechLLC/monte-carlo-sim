@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { buildShoe, shoeSize, cardCounts, shoeWithout } from './shoe';
+import { test, fc } from '@fast-check/vitest';
+import { buildShoe, shoeSize, cardCounts, shoeWithout, type DeckCount } from './shoe';
 import { FULL_DECK, deckWithout } from './cards';
 
 describe('buildShoe — count-aware shoe construction (D-01, D-03)', () => {
@@ -99,4 +100,56 @@ describe('shoeWithout(1, x) v1 parity — exact-value sanity check against deckW
     const excluded: (typeof FULL_DECK)[number][] = ['As', 'Kd', '2c'];
     expect(shoeWithout(1, excluded)).toEqual(deckWithout(excluded));
   });
+});
+
+describe('shoeWithout property tests — v1 parity and multiset closure (D-08, D-01, D-10)', () => {
+  test.prop([fc.uniqueArray(fc.integer({ min: 0, max: 51 }), { minLength: 0, maxLength: 13 })])(
+    'D-08 v1-parity: shoeWithout(1, x) is array-identical to the untouched v1 deckWithout(x) for any excluded set — a mismatch here means the count-aware rewrite has drifted from v1 single-deck behaviour',
+    (indices) => {
+      const excluded = indices.map((i) => FULL_DECK[i]);
+      expect(shoeWithout(1, excluded)).toEqual(deckWithout(excluded));
+    },
+  );
+
+  test.prop([fc.array(fc.integer({ min: 0, max: 51 }), { maxLength: 13 })])(
+    'D-08 v1-parity holds even when the excluded indices contain duplicate values at deckCount=1',
+    (indices) => {
+      const excluded = indices.map((i) => FULL_DECK[i]);
+      expect(shoeWithout(1, excluded)).toEqual(deckWithout(excluded));
+    },
+  );
+
+  // D-01: this assertion is deliberately COUNT-shaped, never set-membership-shaped. The 1-deck
+  // sibling invariant — "every (street, revealedMask) combination reconstitutes exactly the
+  // 52-card FULL_DECK with no duplicates", asserted via a dedup-then-measure-length idiom —
+  // lives untouched at conditioning.test.ts line 111 (D-10: that property stays a 1-deck-only
+  // invariant and is not modified here). At deckCount=2, that same dedup-then-measure-length
+  // assertion would be not merely weaker but FALSE for correct output, since two legitimate
+  // physical copies of the same value must both be present (PITFALLS.md Pitfall 12) — so
+  // closure here is proven by reading exact occurrence counts out of a Map instead.
+  test.prop([fc.constantFrom(1, 2), fc.array(fc.integer({ min: 0, max: 51 }), { maxLength: 20 })])(
+    'multiset closure: shoeWithout(deckCount, excluded) plus excluded always reconstructs exactly deckCount copies of every FULL_DECK value',
+    (deckCount, rawIndices) => {
+      // Clamp so no card value is requested more than `deckCount` times — that is the only
+      // shape of `excluded` a real caller could ever produce from a `deckCount`-sized shoe.
+      const seen = new Map<number, number>();
+      const clampedIndices: number[] = [];
+      for (const index of rawIndices) {
+        const occurrences = seen.get(index) ?? 0;
+        if (occurrences < deckCount) {
+          seen.set(index, occurrences + 1);
+          clampedIndices.push(index);
+        }
+      }
+      const excluded = clampedIndices.map((i) => FULL_DECK[i]);
+
+      const result = shoeWithout(deckCount as DeckCount, excluded);
+      expect(result.length).toBe(shoeSize(deckCount as DeckCount) - excluded.length);
+
+      const combinedCounts = cardCounts([...result, ...excluded]);
+      for (const card of FULL_DECK) {
+        expect(combinedCounts.get(card)).toBe(deckCount);
+      }
+    },
+  );
 });
