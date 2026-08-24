@@ -1,12 +1,24 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from './gameStore';
 import { useOddsStore } from './oddsStore';
+import { usePickerStore } from './pickerStore';
 import { FULL_DECK } from '../engine/cards';
 import type { ProgressSnapshot } from '../worker/protocol';
+
+const EMPTY_PICKS = {
+  'hero-0': null,
+  'hero-1': null,
+  'flop-0': null,
+  'flop-1': null,
+  'flop-2': null,
+  turn: null,
+  river: null,
+} as const;
 
 describe('gameStore — predetermined runout and street pointer', () => {
   beforeEach(() => {
     useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
+    usePickerStore.setState({ picks: { ...EMPTY_PICKS } });
   });
 
   it('starts with no runout, preflop street, no reveals, and dealNonce 0', () => {
@@ -161,5 +173,119 @@ describe('gameStore — predetermined runout and street pointer', () => {
     useGameStore.getState().deal();
 
     expect(useOddsStore.getState().settledCache.size).toBe(0);
+  });
+});
+
+describe('gameStore — merge-on-deal (picker draft honoured, unset slots randomly filled)', () => {
+  beforeEach(() => {
+    useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
+    usePickerStore.setState({ picks: { ...EMPTY_PICKS } });
+  });
+
+  it('with no picks set, deal() still produces 13 distinct random cards (unchanged 02-02 behavior)', () => {
+    useGameStore.getState().deal();
+    const { runout } = useGameStore.getState();
+    const allCards = [
+      ...runout!.heroHole,
+      ...runout!.board,
+      ...runout!.opponentHoles[0],
+      ...runout!.opponentHoles[1],
+      ...runout!.opponentHoles[2],
+    ];
+    expect(new Set(allCards).size).toBe(13);
+  });
+
+  it('honours hero picks: heroHole deep-equals the picks and neither card appears elsewhere', () => {
+    usePickerStore.getState().setPick('hero-0', 'As');
+    usePickerStore.getState().setPick('hero-1', 'Ah');
+
+    useGameStore.getState().deal();
+    const { runout } = useGameStore.getState();
+
+    expect(runout!.heroHole).toEqual(['As', 'Ah']);
+    const rest = [
+      ...runout!.board,
+      ...runout!.opponentHoles[0],
+      ...runout!.opponentHoles[1],
+      ...runout!.opponentHoles[2],
+    ];
+    expect(rest).not.toContain('As');
+    expect(rest).not.toContain('Ah');
+  });
+
+  it('honours flop picks: board[0..2] equal the picks in order, board[3..4] random', () => {
+    usePickerStore.getState().setPick('flop-0', '2c');
+    usePickerStore.getState().setPick('flop-1', '3c');
+    usePickerStore.getState().setPick('flop-2', '4c');
+
+    useGameStore.getState().deal();
+    const { runout } = useGameStore.getState();
+
+    expect(runout!.board.slice(0, 3)).toEqual(['2c', '3c', '4c']);
+    expect(runout!.board[3]).not.toBe('2c');
+    expect(runout!.board[4]).not.toBe('2c');
+  });
+
+  it('honours turn/river picks with the flop unset: board[3..4] equal the picks, board[0..2] random', () => {
+    usePickerStore.getState().setPick('turn', '5c');
+    usePickerStore.getState().setPick('river', '6c');
+
+    useGameStore.getState().deal();
+    const { runout } = useGameStore.getState();
+
+    expect(runout!.board[3]).toBe('5c');
+    expect(runout!.board[4]).toBe('6c');
+    expect(runout!.board.slice(0, 3)).not.toContain('5c');
+    expect(runout!.board.slice(0, 3)).not.toContain('6c');
+  });
+
+  it('opponent hole cards are always random and never taken from the picks (D-07)', () => {
+    usePickerStore.getState().setPick('hero-0', 'As');
+    usePickerStore.getState().setPick('hero-1', 'Ah');
+    usePickerStore.getState().setPick('flop-0', '2c');
+    usePickerStore.getState().setPick('flop-1', '3c');
+    usePickerStore.getState().setPick('flop-2', '4c');
+    usePickerStore.getState().setPick('turn', '5c');
+    usePickerStore.getState().setPick('river', '6c');
+
+    useGameStore.getState().deal();
+    const { runout } = useGameStore.getState();
+
+    const picked = ['As', 'Ah', '2c', '3c', '4c', '5c', '6c'];
+    for (const hole of runout!.opponentHoles) {
+      expect(picked).not.toContain(hole[0]);
+      expect(picked).not.toContain(hole[1]);
+    }
+  });
+
+  it('across 200 consecutive deals with a partial draft, every runout has 13 distinct cards (Pitfall 5)', () => {
+    usePickerStore.getState().setPick('hero-0', 'As');
+    usePickerStore.getState().setPick('turn', '5c');
+
+    for (let i = 0; i < 200; i++) {
+      useGameStore.getState().deal();
+      const { runout } = useGameStore.getState();
+      const allCards = [
+        ...runout!.heroHole,
+        ...runout!.board,
+        ...runout!.opponentHoles[0],
+        ...runout!.opponentHoles[1],
+        ...runout!.opponentHoles[2],
+      ];
+      expect(new Set(allCards).size).toBe(13);
+    }
+  });
+
+  it('picks persist after deal() — the draft is unchanged and a second deal() honours the same picks again', () => {
+    usePickerStore.getState().setPick('hero-0', 'As');
+    usePickerStore.getState().setPick('hero-1', 'Ah');
+
+    useGameStore.getState().deal();
+    expect(usePickerStore.getState().picks['hero-0']).toBe('As');
+    expect(usePickerStore.getState().picks['hero-1']).toBe('Ah');
+
+    useGameStore.getState().deal();
+    const { runout } = useGameStore.getState();
+    expect(runout!.heroHole).toEqual(['As', 'Ah']);
   });
 });
