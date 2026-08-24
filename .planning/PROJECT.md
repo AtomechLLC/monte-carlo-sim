@@ -19,14 +19,17 @@ Validated in Phase 1: core-odds-loop (2026-08-24):
 - [x] Live convergence: percentages visibly settle in real time as simulation trials accumulate (200,000 trials streamed off the main thread)
 - [x] Random dealing with a re-deal button (default mode)
 
+Validated in Phase 2: scenario-construction-street-navigation (2026-08-24):
+
+- [x] Advance street by street (pre-flop → flop → turn → river) and watch odds change
+- [x] Rewind to earlier streets to re-examine — odds update in both directions (settled odds cached per knowledge state; re-advance shows the same cards)
+- [x] Manual card picker: set specific hole cards and board cards for "what if" scenario exploration (duplicates visibly blocked)
+- [x] Reveal any opponent's hole cards — revealed cards become known information and all odds recalculate to account for them (including already-visited streets)
+
 ### Active
 
 - [ ] Full poker table scene in the browser: felt table, user's seat, three anonymous opponent seats, community card area
 - [ ] Detailed playing card visuals (proper pips and court cards) with dealing, flipping, and reveal animations
-- [ ] Advance street by street (pre-flop → flop → turn → river) and watch odds change
-- [ ] Rewind to earlier streets to re-examine — odds update in both directions
-- [ ] Manual card picker: set specific hole cards and board cards for "what if" scenario exploration
-- [ ] Reveal any opponent's hole cards — revealed cards become known information and all odds recalculate to account for them
 
 ### Out of Scope
 
@@ -80,4 +83,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-24 — Phase 1 (core-odds-loop) complete: walking skeleton with live Monte Carlo odds*
+*Last updated: 2026-08-24 — Phase 2 (scenario construction & street navigation) complete: full interaction loop on the minimal UI; Phase 3 (casino table UI & animation) is next*
