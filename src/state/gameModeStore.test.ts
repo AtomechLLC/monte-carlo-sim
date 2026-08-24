@@ -57,3 +57,58 @@ describe('gameModeStore — holdemRestorePending marks exactly a blackjack -> ho
     expect(useGameModeStore.getState().holdemRestorePending).toBe(false);
   });
 });
+
+describe('gameModeStore — blackjackRestorePending marks exactly a holdem -> blackjack switch (06-RESEARCH Pattern 5, Pitfall C)', () => {
+  beforeEach(() => {
+    useGameModeStore.setState({
+      mode: 'holdem',
+      holdemRestorePending: false,
+      blackjackRestorePending: false,
+    });
+  });
+
+  it('starts false — an initial Blackjack mount is not a restore', () => {
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+  });
+
+  it('a holdem -> blackjack transition sets it and clears holdemRestorePending', () => {
+    useGameModeStore.getState().setMode('blackjack');
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(true);
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(false);
+  });
+
+  it('a blackjack -> holdem transition sets holdemRestorePending and clears blackjackRestorePending', () => {
+    useGameModeStore.getState().setMode('blackjack');
+    useGameModeStore.getState().setMode('holdem');
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(true);
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+  });
+
+  it('a redundant setMode("blackjack") while already in blackjack clears BOTH flags (A5 no-op click, recomputed on every call)', () => {
+    useGameModeStore.getState().setMode('blackjack');
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(true);
+
+    useGameModeStore.getState().setMode('blackjack');
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(false);
+  });
+
+  it('ackBlackjackRestore clears the flag and is idempotent (StrictMode-safe)', () => {
+    useGameModeStore.getState().setMode('blackjack');
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(true);
+
+    useGameModeStore.getState().ackBlackjackRestore();
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+    useGameModeStore.getState().ackBlackjackRestore();
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+  });
+
+  it('ackBlackjackRestore clears ONLY blackjackRestorePending, never the holdem flag', () => {
+    useGameModeStore.setState({ holdemRestorePending: true, blackjackRestorePending: true });
+
+    useGameModeStore.getState().ackBlackjackRestore();
+
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(true);
+  });
+});
