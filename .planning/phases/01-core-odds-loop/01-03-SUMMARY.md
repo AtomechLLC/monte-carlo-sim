@@ -135,7 +135,7 @@ No browser-automation tool was available to this executor to perform a live `npm
 
 ## Self-Check: PASSED
 
-Verified all created files exist and all three task commits are present in git history (see below).
+Verified all created/modified files exist on disk (evaluator.ts, evaluator.test.ts, equity.ts, equity.test.ts, categoryLabels.ts, OddsTable.tsx, App.tsx, App.test.tsx, this SUMMARY.md) and all four commits (`2cdb326`, `c3a9ba3`, `d31bc80`, `53e3f38`) are present in git history.
 
 ---
 *Phase: 01-core-odds-loop*
