@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useAnimationGate } from './useAnimationGate';
+import { useAnimationGate, useExitGate } from './useAnimationGate';
 import { useUiStore } from '../state/uiStore';
 
 describe('useAnimationGate — registration/completion/unmount-safe gate participation', () => {
@@ -59,5 +59,85 @@ describe('useAnimationGate — registration/completion/unmount-safe gate partici
 
     unmount();
     expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+});
+
+describe('useExitGate — container-level gate registration for an AnimatePresence exit group', () => {
+  beforeEach(() => {
+    useUiStore.getState().resetAnimations();
+  });
+
+  it('a count drop (enabled: true) registers one animation; the returned callback releases it once; a second call is a no-op', () => {
+    const { result, rerender } = renderHook(({ count }: { count: number }) => useExitGate(count, true), {
+      initialProps: { count: 3 },
+    });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+
+    rerender({ count: 0 });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    act(() => {
+      result.current();
+    });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+
+    act(() => {
+      result.current();
+    });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
+  it('a count rise (growing) never registers', () => {
+    const { rerender } = renderHook(({ count }: { count: number }) => useExitGate(count, true), {
+      initialProps: { count: 0 },
+    });
+
+    rerender({ count: 3 });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
+  it('unmounting while a registration is pending releases it — an interrupted exit cannot strand the gate', () => {
+    const { rerender, unmount } = renderHook(({ count }: { count: number }) => useExitGate(count, true), {
+      initialProps: { count: 3 },
+    });
+
+    rerender({ count: 0 });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    unmount();
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
+  it('enabled: false never registers, for any count transition', () => {
+    const { rerender, unmount } = renderHook(({ count }: { count: number }) => useExitGate(count, false), {
+      initialProps: { count: 3 },
+    });
+
+    rerender({ count: 0 });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+
+    rerender({ count: 3 });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+
+    unmount();
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
+  it('a count drop accompanied by a reset-key change (simulating a re-deal) does not register a hold', () => {
+    const { rerender } = renderHook(
+      ({ count, resetKey }: { count: number; resetKey: string }) => useExitGate(count, true, resetKey),
+      { initialProps: { count: 3, resetKey: 'deal-1' } },
+    );
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+
+    // Simulates a re-deal: count drops to 0 (new hand has no board yet at this street) AND the
+    // reset key changes in the same render — this must re-baseline, not register a hold.
+    rerender({ count: 0, resetKey: 'deal-2' });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+
+    // A genuine subsequent drop under the NEW baseline still registers normally.
+    rerender({ count: 3, resetKey: 'deal-2' });
+    rerender({ count: 0, resetKey: 'deal-2' });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
   });
 });
