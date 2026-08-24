@@ -43,9 +43,17 @@ Validated in Phase 3: casino-table-ui-animation (2026-08-24):
 - [x] Full poker table scene in the browser: felt table, user's seat, three anonymous opponent seats, community card area
 - [x] Detailed playing card visuals (proper pips and court cards) with dealing, flipping, and reveal animations (vendored CC0 SVG deck; Motion choreography; odds gated on animation completion so numbers never spoil mid-flight cards)
 
-### Active
+Validated in Phase 4: multiset-deck-streaming-foundation (2026-08-24, v2.0):
 
-(None — all v1 requirements validated. v2 candidates are tracked in STATE.md Deferred Items: EDU-01/02/03.)
+- [x] Physical-card-identity shoe model for 1-2 decks — count-aware, no value-collapse, proven byte-identical to v1.0 at deckCount=1 (DECK-01)
+- [x] Without-replacement sampling from the finite shoe, property-guarded (DECK-03)
+- [x] Count-aware picker duplicate-blocking with remaining-copy state (DECK-04)
+
+### Active (v2.0, in progress)
+
+- [ ] BJ-01..07 — Blackjack game (Phases 5-6)
+- [ ] HE2-01..03 — 2-deck Hold'em variant (Phase 7)
+- [ ] DECK-02 — Cross-game deck-count toggle (Phase 8)
 
 ### Out of Scope
 
