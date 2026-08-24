@@ -69,6 +69,11 @@ describe(
       const user = userEvent.setup();
       render(<App />);
 
+      // Re-skin adjustment (03-02): the card picker now sits behind the "Set Up Scenario"
+      // disclosure (D-06/A4) instead of always being visible — open it before the first
+      // picker-slot interaction.
+      await user.click(screen.getByTestId('set-up-scenario-button'));
+
       await user.click(screen.getByTestId('picker-slot-hero-0'));
       await user.click(screen.getByTestId('picker-card-As'));
 
