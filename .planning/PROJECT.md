@@ -8,6 +8,18 @@ A graphical Monte Carlo simulator for Texas Hold'em, running in the browser as a
 
 Probability made visible — the user can watch odds converge in real time and see exactly how each new piece of information (a dealt street, a revealed opponent) reshapes the numbers.
 
+## Current Milestone: v2.0 Blackjack & Multi-Deck
+
+**Goal:** Add Blackjack as a second game and make deck count a first-class probability variable across both games.
+
+**Target features:**
+- Blackjack with Monte Carlo odds (bust probability, dealer outcome distribution, EV) on the existing worker/odds architecture
+- 1-deck / 2-deck shoe support for Blackjack — deck count visibly changes the odds
+- 2-deck Hold'em variant mode: duplicate cards possible, custom evaluation layer (five of a kind, duplicate-rank comparison)
+- Deck-count toggle spanning both games
+
+**Explicitly excluded:** EDU-01/02/03 education layer (queued for v3).
+
 ## Requirements
 
 ### Validated
@@ -87,4 +99,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-24 — Milestone v1.0 COMPLETE: all 3 phases shipped (core odds loop, scenario construction & street navigation, casino table UI & animation); 16/16 plans, 208/208 tests*
+*Last updated: 2026-08-24 — Milestone v2.0 (Blackjack & Multi-Deck) started*

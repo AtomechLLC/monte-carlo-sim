@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: MVP
-status: Awaiting next milestone
-stopped_at: "Quick task 260824-biv complete: post-v1.0 hardening (216/216 tests)"
-last_updated: "2026-08-24T15:46:42.755Z"
-last_activity: 2026-08-24 — Milestone v1.0 completed and archived
+milestone: v2.0
+milestone_name: Blackjack & Multi-Deck
+status: planning
+last_updated: "2026-08-24T16:00:45.887Z"
+last_activity: 2026-08-24
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-08-24)
 
 ## Current Position
 
-Phase: Milestone v1.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-08-24 — Milestone v1.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-08-24 — Milestone v2.0 started
 
 ## Performance Metrics
 
