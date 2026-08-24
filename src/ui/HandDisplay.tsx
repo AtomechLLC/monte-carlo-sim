@@ -2,7 +2,7 @@ import { useGameStore } from '../state/gameStore';
 import { OPPONENT_COUNT } from '../engine/cards';
 
 export function HandDisplay() {
-  const heroHole = useGameStore((state) => state.heroHole);
+  const heroHole = useGameStore((state) => state.runout?.heroHole);
 
   return (
     <div>
