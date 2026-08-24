@@ -10,7 +10,12 @@ import { formatPct } from './formatPct';
  * bars, sparklines or highlight markers this phase (deferred to the visual-excellence pass).
  */
 export function DealerDistributionDisplay() {
-  const { dealerOutcomeCounts, trialsCompleted, displayedDeckCount } = useBlackjackOddsStore();
+  // Per-field selectors (06-REVIEW IN-01): the codebase-wide store discipline — a
+  // selector-less subscription re-renders on EVERY store write, including settledCache
+  // copy-on-write Map replacements and clearCache() calls that change nothing shown here.
+  const dealerOutcomeCounts = useBlackjackOddsStore((state) => state.dealerOutcomeCounts);
+  const trialsCompleted = useBlackjackOddsStore((state) => state.trialsCompleted);
+  const displayedDeckCount = useBlackjackOddsStore((state) => state.displayedDeckCount);
   const pending = useUiStore((state) => state.pendingAnimationCount > 0);
 
   // A3 snapshot rule (checker FLAG 1): the subtitle names the shoe the DISPLAYED run was

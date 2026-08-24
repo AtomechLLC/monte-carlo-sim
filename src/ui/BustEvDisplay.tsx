@@ -34,7 +34,13 @@ const HIT_TILE_SUBCOPY = 'hit once, then stand';
  * defined by plan 06-05 — this file emits them and writes no CSS.
  */
 export function BustEvDisplay() {
-  const { trialsCompleted, bustIfHitCount, standOutcomes, hitOutcomes } = useBlackjackOddsStore();
+  // Per-field selectors (06-REVIEW IN-01): the codebase-wide store discipline — a
+  // selector-less subscription re-renders on EVERY store write, including settledCache
+  // copy-on-write Map replacements and clearCache() calls that change nothing shown here.
+  const trialsCompleted = useBlackjackOddsStore((state) => state.trialsCompleted);
+  const bustIfHitCount = useBlackjackOddsStore((state) => state.bustIfHitCount);
+  const standOutcomes = useBlackjackOddsStore((state) => state.standOutcomes);
+  const hitOutcomes = useBlackjackOddsStore((state) => state.hitOutcomes);
   const pending = useUiStore((state) => state.pendingAnimationCount > 0);
 
   return (
