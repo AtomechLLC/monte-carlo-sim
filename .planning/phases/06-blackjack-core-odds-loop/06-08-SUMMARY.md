@@ -278,3 +278,17 @@ None — no new security-relevant surface (no source changes). T-06-42..48 dispo
 - All referenced phase commits verified in `git log`: wave bases `7b9ca13`/`a79c80f`/`d2bb22c`/`ea6779b`, task commits `5318c8b`/`bbae8c0`/`0563836`/`d297960`/`4551bb9`/`00370fb`/`fa3dc1f`/`0de1880`/`7db513d`/`e799c28`/`a6a19d9`/`2efbad8`/`c972ae1`/`c3dd128`/`62e288f`/`0635f5a`/`d662fc2`/`078e827`/`7acfdf1`/`25fc388`/`9a3d5b2`/`732829a`, orchestrator `054bd22`, HEAD `4b764f0`.
 - Gates re-confirmed at HEAD: 51 files / 679 tests green, 0 skipped; lint exit 0; build exit 0.
 - Working tree clean before this SUMMARY; no dev/preview server left running (port check); STATE.md and ROADMAP.md untouched.
+
+## Post-Merge Live-Browser Addendum (orchestrator, same day)
+
+After all 8 plans merged to master, the orchestrating agent drove the real dev server (port 5199, real Chromium via the in-app browser) and upgraded several checkpoint steps from automated-only to LIVE evidence. Environmental constraint unchanged from Phases 4/5: the browser pane reports `visibilityState: "hidden"` with 0 rAF ticks/900ms even when fronted, so Motion callbacks stay suspended and frame-dependent choreography (card landings, gate release, odds convergence display) cannot complete live.
+
+**Verified LIVE in real Chromium (frame-independent):**
+1. Blackjack scene mounts with the exact locked empty-state copy; all 8 controls present with the correct idle disabled-matrix (Deal enabled; Hit/Stand/hole-reveal disabled); dealer table + EV tiles + always-visible "hit once, then stand" sub-copy present; zero Hold'em testids in the DOM.
+2. **A3 idle-snapshot rule (checker FLAG 1 / plan BLOCKER 2 behavior):** idle toggle 1→2 flipped `aria-pressed` but the dealer-table caption kept reading "· 1-deck shoe" — pending selection never retitles the displayed state.
+3. **TBL-04 synchronous half:** clicking Deal instantly produced `aria-busy="true"`, pending class, em-dash trial counter and stats, mounted player cards, and enabled Hit/Stand/reveal.
+4. **FLAG 2 mid-flight masking:** mid-player-turn toggle 2→1 flipped the segment while the panel stayed fully masked (all sampled stats "—", aria-busy held) — the pending display wins over any streamed values while the gate holds.
+5. **Isolation round-trip with state retention:** → Hold'em (odds-panel present, ALL blackjack testids absent) → back to Blackjack (panel restored, the dealt round retained with Hit still enabled, ALL Hold'em testids absent).
+6. Fresh hard-reload loads clean and functional; the only console errors are two pre-reload Vite HMR artifacts from the merge deleting `BlackjackScene.tsx` while the long-running dev server had it hot-loaded (restart clears them; not an app defect).
+
+**Still NOT live-verified (rAF-suspended, automated evidence only):** odds convergence display after gate release, hit/stand dealer-playout outcomes, hole-reveal flip animation, and the full BJ-07 blank→climb→different-numbers arc. Attribution caveat (verbatim): Verification performed by the orchestrating Claude agent under the user's standing no-operator-input directive; a human did not personally observe. Re-verify anytime with npm run dev.
