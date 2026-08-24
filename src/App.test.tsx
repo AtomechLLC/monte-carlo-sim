@@ -6,21 +6,30 @@ import * as simulationService from './state/simulationService';
 import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
 import type { ProgressSnapshot } from './worker/protocol';
+import type { ConditionedState } from './engine/equity';
 import { CATEGORY_LABELS } from './ui/categoryLabels';
 
 // Explicit factory (not bare automocking): automocking would still import the real module to
 // introspect its exports, which instantiates a real Worker at module scope — unsupported by
 // jsdom. A factory sidesteps that entirely, per this test's purpose (UI wiring, not the worker
 // boundary — that's covered by simulationApi.test.ts and the phase acceptance checkpoint).
+// cancelSimulation is now exported too, since App's effect cleanup (02-02) calls it on every
+// street/deal change.
 vi.mock('./state/simulationService', () => ({
   startSimulation: vi.fn(),
+  cancelSimulation: vi.fn(),
 }));
+
+function resetStores() {
+  useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
+  useOddsStore.getState().reset();
+  vi.mocked(simulationService.startSimulation).mockReset();
+  vi.mocked(simulationService.cancelSimulation).mockReset();
+}
 
 describe('App — Deal happy path', () => {
   beforeEach(() => {
-    useGameStore.setState({ heroHole: null, dealNonce: 0 });
-    useOddsStore.getState().reset();
-    vi.mocked(simulationService.startSimulation).mockReset();
+    resetStores();
   });
 
   it('deals a hero hand and shows three hidden opponents when Deal is clicked', async () => {
@@ -122,5 +131,168 @@ describe('App — Deal happy path', () => {
       return Number.parseFloat(text.replace('%', ''));
     }).reduce((a, b) => a + b, 0);
     expect(Math.abs(totalPct - 100)).toBeLessThan(0.5);
+  });
+});
+
+describe('App — street navigation drives conditioned recomputation', () => {
+  beforeEach(() => {
+    resetStores();
+  });
+
+  it('Deal calls startSimulation once with an empty known board and all opponents hidden', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+
+    expect(simulationService.startSimulation).toHaveBeenCalledTimes(1);
+    const conditioned = vi.mocked(simulationService.startSimulation).mock.calls[0][0] as ConditionedState;
+    expect(conditioned.knownBoard).toEqual([]);
+    expect(conditioned.knownOpponentHoles).toEqual([null, null, null]);
+  });
+
+  it('Deal produces a remainingDeck that still contains every hidden board and opponent card (D-02 leak guard)', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+
+    const conditioned = vi.mocked(simulationService.startSimulation).mock.calls[0][0] as ConditionedState;
+    const { runout } = useGameStore.getState();
+    expect(runout).not.toBeNull();
+    for (const boardCard of runout!.board) {
+      expect(conditioned.remainingDeck).toContain(boardCard);
+    }
+    for (const hole of runout!.opponentHoles) {
+      expect(conditioned.remainingDeck).toContain(hole[0]);
+      expect(conditioned.remainingDeck).toContain(hole[1]);
+    }
+  });
+
+  it('Advance calls startSimulation again with the first 3 board cards known', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    await user.click(screen.getByTestId('advance-button'));
+
+    expect(simulationService.startSimulation).toHaveBeenCalledTimes(2);
+    const conditioned = vi.mocked(simulationService.startSimulation).mock.calls[1][0] as ConditionedState;
+    const { runout } = useGameStore.getState();
+    expect(conditioned.knownBoard).toHaveLength(3);
+    expect(conditioned.knownBoard).toEqual(runout!.board.slice(0, 3));
+  });
+
+  it('advancing twice more yields a known board of 4 then 5 cards', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    await user.click(screen.getByTestId('advance-button'));
+    await user.click(screen.getByTestId('advance-button'));
+    await user.click(screen.getByTestId('advance-button'));
+
+    expect(simulationService.startSimulation).toHaveBeenCalledTimes(4);
+    const calls = vi.mocked(simulationService.startSimulation).mock.calls;
+    expect((calls[2][0] as ConditionedState).knownBoard).toHaveLength(4);
+    expect((calls[3][0] as ConditionedState).knownBoard).toHaveLength(5);
+  });
+
+  it('Rewind after reaching the flop calls startSimulation again with an empty known board', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    await user.click(screen.getByTestId('advance-button'));
+    await user.click(screen.getByTestId('rewind-button'));
+
+    expect(simulationService.startSimulation).toHaveBeenCalledTimes(3);
+    const conditioned = vi.mocked(simulationService.startSimulation).mock.calls[2][0] as ConditionedState;
+    expect(conditioned.knownBoard).toHaveLength(0);
+  });
+
+  it('calls cancelSimulation on every street change', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    vi.mocked(simulationService.cancelSimulation).mockClear();
+
+    await user.click(screen.getByTestId('advance-button'));
+
+    expect(simulationService.cancelSimulation).toHaveBeenCalled();
+  });
+
+  it('unmounting the app triggers cancelSimulation', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    const { unmount } = render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    vi.mocked(simulationService.cancelSimulation).mockClear();
+
+    unmount();
+
+    expect(simulationService.cancelSimulation).toHaveBeenCalled();
+  });
+
+  it('ignores a stale snapshot delivered after the effect has been cleaned up by a street change', async () => {
+    // Ref-object (not a raw `let`) sidesteps a TS control-flow-narrowing limitation across the
+    // closure boundary of `mockImplementation`'s callback.
+    const captured: { onProgress: ((snapshot: ProgressSnapshot) => void) | null } = { onProgress: null };
+    vi.mocked(simulationService.startSimulation).mockImplementation(async (_conditioned, onProgress) => {
+      if (!captured.onProgress) captured.onProgress = onProgress;
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    await user.click(screen.getByTestId('advance-button'));
+
+    // Late-arriving snapshot from the superseded (pre-Advance) run — must not reach the display.
+    captured.onProgress?.({
+      requestId: 1,
+      categoryCounts: new Array(10).fill(0),
+      outcomes: { win: 999, tie: 999, lose: 999 },
+      trialsCompleted: 999,
+      done: true,
+    });
+
+    expect(screen.queryByTestId('trial-counter')?.textContent).not.toBe('999');
+  });
+
+  it('shows a simulation-error alert when startSimulation invokes onError, and it disappears on the next successful run', async () => {
+    vi.mocked(simulationService.startSimulation).mockImplementationOnce(async (_conditioned, _onProgress, onError) => {
+      onError('worker exploded');
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+
+    const alert = await screen.findByTestId('simulation-error');
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(alert.textContent).toBe(
+      'The simulation hit an unexpected error and stopped updating. Re-deal, or navigate to another street, to try again.',
+    );
+
+    vi.mocked(simulationService.startSimulation).mockImplementationOnce(async (_conditioned, onProgress) => {
+      onProgress({
+        requestId: 1,
+        categoryCounts: new Array(10).fill(0),
+        outcomes: { win: 1, tie: 0, lose: 0 },
+        trialsCompleted: 1,
+        done: false,
+      });
+    });
+    await user.click(screen.getByTestId('advance-button'));
+
+    expect(screen.queryByTestId('simulation-error')).not.toBeInTheDocument();
   });
 });
