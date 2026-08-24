@@ -280,6 +280,42 @@ describe('createBlackjackSimulationApi — a config on the shared runner, not a 
       expect(snapshots[snapshots.length - 1].done).toBe(true);
     });
 
+    it('counts a present knownDealerHole against the remainingDeck copy budget, naming the card (06-REVIEW CR-01)', async () => {
+      // A revealed hole is a KNOWN card: a pool that still holds its copy (at deckCount=1)
+      // is exactly the overlap corruption the budget check exists to reject.
+      const api = createBlackjackSimulationApi();
+      const hole = FULL_DECK[3];
+      const badState: BlackjackConditionedState = {
+        ...makeState(1),
+        knownDealerHole: hole,
+        // Deliberately built WITHOUT excluding the hole — its copy is over budget.
+        remainingDeck: shoeWithout(1, knownCards),
+      };
+      await expect(api.runSimulation(badState, 1, () => {})).rejects.toThrow(
+        `runSimulation: remainingDeck overlaps known cards: ${hole}`,
+      );
+    });
+
+    it('accepts a revealed-hole state whose pool correctly excludes the hole, and streams to done (06-REVIEW CR-01)', async () => {
+      const api = createBlackjackSimulationApi({
+        maxTrials: 1000,
+        batchSize: 500,
+        progressIntervalMs: 0,
+        seed: SEED,
+      });
+      const hole = FULL_DECK[3];
+      const state: BlackjackConditionedState = {
+        ...makeState(1),
+        knownDealerHole: hole,
+        remainingDeck: shoeWithout(1, [...knownCards, hole]),
+      };
+      const snapshots: BlackjackProgressSnapshot[] = [];
+      await api.runSimulation(state, 1, (s) => {
+        snapshots.push(s);
+      });
+      expect(snapshots[snapshots.length - 1].done).toBe(true);
+    });
+
     it('rejects a THIRD copy of a known value at deckCount=2 (budget exceeded)', async () => {
       const api = createBlackjackSimulationApi();
       const base = makeState(2);

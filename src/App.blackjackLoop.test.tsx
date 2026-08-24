@@ -366,6 +366,11 @@ describe('BJ-06: revealing the hole card early reconditions every odds display o
     // observed end to end.
     expect(startBlackjack.mock.calls[0][0].remainingDeck).toHaveLength(49);
     expect(startBlackjack.mock.calls[1][0].remainingDeck).toHaveLength(48);
+    // 06-REVIEW CR-01: pool exclusion alone is NOT reconditioning — the revealed hole's
+    // IDENTITY must reach the worker so every trial pins the dealer's hole to the real
+    // card, not to "anything but the card face-up on the table".
+    expect(startBlackjack.mock.calls[0][0].knownDealerHole).toBeUndefined();
+    expect(startBlackjack.mock.calls[1][0].knownDealerHole).toBe('6s');
     // The reveal button is one-way per round: disabled after the reveal (A9).
     expect(screen.getByTestId('blackjack-hole-reveal')).toBeDisabled();
     // Fresh run, not cache: the per-call-distinct win% climbed.

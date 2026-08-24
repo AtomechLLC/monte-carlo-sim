@@ -60,9 +60,14 @@ export interface NaturalResolution {
  * itself — that is what keeps the face-down hole card out of the odds computation. While
  * hidden, the hole card REMAINS in `remainingDeck` (the unknown pool) and is never
  * dropped: dropping it would silently narrow the trial sample space (the first failure
- * mode in the module header). `remainingDeck` is derived by count-aware subtraction over
- * a `deckCount`-sized shoe, so at 2 decks a sibling copy of any known card legitimately
- * remains in the pool.
+ * mode in the module header). Once REVEALED, the hole's IDENTITY travels to the trial
+ * loop as `knownDealerHole` (and its copy leaves `remainingDeck`): pool exclusion alone
+ * would condition every statistic on "the hole is anything BUT the revealed card" — the
+ * contradiction of what the user can see (BJ-06 reconditioning, 06-REVIEW CR-01). Both
+ * halves of that reveal transition live HERE, inside the sole reader — no other module
+ * may derive either from the raw round. `remainingDeck` is derived by count-aware
+ * subtraction over a `deckCount`-sized shoe, so at 2 decks a sibling copy of any known
+ * card legitimately remains in the pool.
  *
  * `deckCount` is REQUIRED — deliberately unlike `deriveConditionedState`'s `= 1`
  * back-compat default, which exists only for Hold'em's legacy callers. Blackjack has
@@ -83,6 +88,9 @@ export function deriveBlackjackConditionedState(
   return {
     playerHand: [...playerCardsSoFar],
     dealerUpcard: round.dealerUpcard,
+    // Present ONLY once revealed (06-REVIEW CR-01): the trial loop pins the dealer's
+    // hole to this exact card instead of resampling a hypothetical one from the pool.
+    ...(revealedHole ? { knownDealerHole: round.dealerHole } : {}),
     remainingDeck: shoeWithout(deckCount, knownCards),
     deckCount,
   };

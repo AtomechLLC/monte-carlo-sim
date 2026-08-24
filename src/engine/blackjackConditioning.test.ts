@@ -38,6 +38,17 @@ describe('deriveBlackjackConditionedState — the odds-conditioning reader (D-02
     expect(revealed.remainingDeck).toHaveLength(hidden.remainingDeck.length - 1);
   });
 
+  it('carries the revealed hole card IDENTITY as knownDealerHole — absent while hidden, the exact card once revealed (06-REVIEW CR-01, BJ-06)', () => {
+    // Pool exclusion alone conditions on "the hole is some card OTHER than the revealed
+    // one" — the contradiction of what the user can see. The revealed hole must travel
+    // to the trial loop as the dealer's ACTUAL hole, not merely leave the pool.
+    const hidden = deriveBlackjackConditionedState(round, playerHand, false, 1);
+    expect(hidden.knownDealerHole).toBeUndefined();
+
+    const revealed = deriveBlackjackConditionedState(round, playerHand, true, 1);
+    expect(revealed.knownDealerHole).toBe(round.dealerHole);
+  });
+
   it('at deckCount=2 the sibling copy of a card the player AND the hole both hold legitimately remains (count-aware subtraction, not value-collapse)', () => {
     const sharedValueRound: PredeterminedBlackjackRound = { dealerUpcard: '5d', dealerHole: 'As' };
     const sharedValueHand: Card[] = ['As', '7c'];

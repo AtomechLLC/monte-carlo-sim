@@ -175,6 +175,90 @@ it('(g) a hypothetical 2-card dealer 21 lands in the natural bucket, not the 21 
   expect(result.bustIfHitCount).toBe(0);
 });
 
+it('(i) a revealed hole (knownDealerHole) IS the dealer\'s hole in every trial — never resampled, and the drawn prefix shifts by one slot (06-REVIEW CR-01, BJ-06)', () => {
+  // Player [Th,9h] = 19, upcard 6d, REVEALED hole Td — the dealer is pinned at hard 16.
+  // Scripted trial: drawn[0] is now the dealer's FIRST HIT (5c -> 21, 3 cards, bucket '21'),
+  // and the hit hypothetical is drawn[1] = 2c -> player 21, push vs 21. A loop that still
+  // consumed drawn[0] as a resampled hole would play dealer 6d+5c=11 instead — a totally
+  // different tally — and a loop that ignored knownDealerHole would recondition on "the
+  // hole is anything BUT the Td face-up on the table".
+  const state: BlackjackConditionedState = {
+    playerHand: ['Th', '9h'],
+    dealerUpcard: '6d',
+    knownDealerHole: 'Td',
+    remainingDeck: shoeWithout(1, ['Th', '9h', '6d', 'Td']),
+    deckCount: 1,
+  };
+  const drawn: Card[] = ['5c', '2c', '3c', '4c', '8c', '9c', 'Jc', 'Qc', 'Kc', '6s', '7s', '8s'];
+
+  const result = runBlackjackTrials(state, 1, scriptedDraw(drawn));
+
+  expect(result.dealerOutcomeCounts[BUCKET_INDEX['21']]).toBe(1);
+  expect(result.standOutcomes).toEqual({ win: 0, push: 0, lose: 1 }); // 19 vs 21
+  expect(result.bustIfHitCount).toBe(0);
+  expect(result.hitOutcomes).toEqual({ win: 0, push: 1, lose: 0 }); // 21 vs 21
+});
+
+it('(j) with a revealed non-ten hole under an ace upcard, the Natural bucket is EXACTLY zero across every trial (06-REVIEW CR-01)', () => {
+  // Upcard Ah, revealed hole 5d: the user can SEE the dealer has no natural. Resampling a
+  // hypothetical hole from the pool (which still holds 16 ten-values) would show a ~30%
+  // Natural bucket beside two face-up cards that contradict it.
+  const playerHand: Card[] = ['9h', '9c'];
+  const state: BlackjackConditionedState = {
+    playerHand,
+    dealerUpcard: 'Ah',
+    knownDealerHole: '5d',
+    remainingDeck: shoeWithout(1, [...playerHand, 'Ah', '5d']),
+    deckCount: 1,
+  };
+  const drawUnknown = createDrawer(createRng(20260824), state.remainingDeck, unknownCardsPerTrial(state));
+
+  const result = runBlackjackTrials(state, 2000, drawUnknown);
+
+  expect(result.dealerOutcomeCounts[BUCKET_INDEX.natural]).toBe(0);
+  expect(result.trialsCompleted).toBe(2000);
+});
+
+it('(k) revealing a ten under a 6 upcard moves dealer bust% from the upcard-6 marginal to the hard-16 conditional (06-REVIEW CR-01, seeded direction check)', () => {
+  // Pre-reveal: upcard 6, hole unknown -> marginal bust ~42-44%. Post-reveal: hole Th known
+  // -> dealer pinned at hard 16, busts iff the one forced draw is 6+ (28 of the 48 unseen
+  // cards ~ 58%). The pre/post gap (~15pp) dwarfs seeded sampling noise at 4000 trials.
+  const playerHand: Card[] = ['9h', '9c'];
+  const trials = 4000;
+
+  const preState: BlackjackConditionedState = {
+    playerHand,
+    dealerUpcard: '6d',
+    remainingDeck: shoeWithout(1, [...playerHand, '6d']),
+    deckCount: 1,
+  };
+  const postState: BlackjackConditionedState = {
+    playerHand,
+    dealerUpcard: '6d',
+    knownDealerHole: 'Th',
+    remainingDeck: shoeWithout(1, [...playerHand, '6d', 'Th']),
+    deckCount: 1,
+  };
+
+  const pre = runBlackjackTrials(
+    preState,
+    trials,
+    createDrawer(createRng(2026), preState.remainingDeck, unknownCardsPerTrial(preState)),
+  );
+  const post = runBlackjackTrials(
+    postState,
+    trials,
+    createDrawer(createRng(2026), postState.remainingDeck, unknownCardsPerTrial(postState)),
+  );
+
+  const preBust = pre.dealerOutcomeCounts[BUCKET_INDEX.bust] / trials;
+  const postBust = post.dealerOutcomeCounts[BUCKET_INDEX.bust] / trials;
+
+  expect(preBust).toBeLessThan(0.5);
+  expect(postBust).toBeGreaterThan(0.55);
+  expect(postBust).toBeGreaterThan(preBust + 0.1);
+});
+
 it('(h) the trial loop delegates its dealer playout to playDealerHand — a multi-ace demotion chain tallies exactly the bucket playDealerHand itself produces', () => {
   // Upcard 5h, hole Ah (soft 16) -> hit Ac -> 5+11+11=27 -> demote -> SOFT 17 -> S17
   // stands. An inline hit-loop re-implementation with a naive total (aces always 11 or

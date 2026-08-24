@@ -21,6 +21,16 @@ export interface BlackjackConditionedState {
   /** The dealer's face-up card — always known from deal time. */
   dealerUpcard: Card;
   /**
+   * Present iff the hole has been revealed — the dealer's ACTUAL hole card (D-02,
+   * 06-REVIEW CR-01). When present, every trial uses it as the dealer's hole instead of
+   * resampling a hypothetical one from `remainingDeck`: pool exclusion alone would
+   * condition every statistic on "the hole is some card OTHER than the one face-up on
+   * the table" — the contradiction of what was revealed. Set exclusively by
+   * `deriveBlackjackConditionedState` (the sole reader); when present the card is also
+   * excluded from `remainingDeck`.
+   */
+  knownDealerHole?: Card;
+  /**
    * Every physical card not visible/known: the full shoe minus the player's hand, the
    * upcard, the revealed hole (if revealed) and any live-drawn cards. While the hole is
    * hidden its physical card deliberately REMAINS in this pool (D-02).
@@ -42,7 +52,9 @@ export interface BlackjackConditionedState {
  * shoe physically holds. Reserving unused slots is nearly free (`createDrawer`'s partial
  * Fisher-Yates costs O(budget) swaps regardless of pool size), and any prefix of a
  * uniform without-replacement sample is itself a valid without-replacement sample, so
- * consuming a cursor-based prefix introduces no bias.
+ * consuming a cursor-based prefix introduces no bias. When `knownDealerHole` is present
+ * (post-reveal, 06-REVIEW CR-01) each trial consumes one FEWER slot — the hole is not
+ * drawn — so the same fixed budget remains sufficient in both modes.
  */
 export const BLACKJACK_TRIAL_CARD_BUDGET = 12;
 
@@ -115,12 +127,15 @@ export function runBlackjackTrials(
     const drawn = drawUnknown();
     let cursor = 0;
 
-    // 1. Hypothetical dealer hole — the one hypothetical draw the Stand-path and
-    //    Hit-path comparisons share. This is common random numbers, a variance-reduction
-    //    technique, not a bias: dealer play under a fixed rule is independent of the
-    //    player's choice, so reusing one valid dealer sample to answer both counterfactual
-    //    questions only reduces variance in their difference.
-    const dealerHole = drawn[cursor++];
+    // 1. Dealer hole. REVEALED (BJ-06, 06-REVIEW CR-01): the known card IS the hole in
+    //    every trial — the trial consumes one FEWER drawn slot, so the fixed 12-card
+    //    budget stays sufficient (worst case drops from 11 to 10 consumed). HIDDEN: one
+    //    hypothetical draw shared by the Stand-path and Hit-path comparisons. That
+    //    sharing is common random numbers, a variance-reduction technique, not a bias:
+    //    dealer play under a fixed rule is independent of the player's choice, so
+    //    reusing one valid dealer sample to answer both counterfactual questions only
+    //    reduces variance in their difference.
+    const dealerHole = state.knownDealerHole ?? drawn[cursor++];
 
     // 2. Dealer playout — MUST be Task 1's playDealerHand with a drawNext closure over
     //    the same cursor, never an inline hit-loop copy. An inline copy would be a second

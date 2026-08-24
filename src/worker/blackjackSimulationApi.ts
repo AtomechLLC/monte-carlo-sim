@@ -59,8 +59,14 @@ function validateBlackjackConditionedState(conditioned: BlackjackConditionedStat
   // more copies of a card VALUE than the shoe physically contains once its known-card copies
   // are spent — a per-value copy BUDGET (knownCount + seenSoFar <= deckCount), not a
   // zero-overlap assertion. At deckCount=2 a value the player holds once may legitimately
-  // still have its sibling physical copy sitting in remainingDeck.
-  const knownCards: Card[] = [...playerHand, dealerUpcard];
+  // still have its sibling physical copy sitting in remainingDeck. A present
+  // `knownDealerHole` (post-reveal, 06-REVIEW CR-01) is a known card like any other: its
+  // copy must already be spent from the pool, so it joins the budget here.
+  const knownCards: Card[] = [
+    ...playerHand,
+    dealerUpcard,
+    ...(conditioned.knownDealerHole ? [conditioned.knownDealerHole] : []),
+  ];
   const knownCounts = cardCounts(knownCards);
 
   const seenCounts = new Map<Card, number>();
