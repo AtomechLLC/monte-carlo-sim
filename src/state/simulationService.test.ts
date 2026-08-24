@@ -31,9 +31,13 @@ vi.mock('../worker/simulation.worker?worker', () => {
 
 // The real `Comlink.wrap` would try to speak its message protocol to the fake worker and
 // hang forever waiting for a handshake reply — replace it with a trivial passthrough that
-// exposes the same `runSimulation`/`cancel` surface `simulationService` calls.
+// exposes the NAMESPACED `{ poker, blackjack }` surface the transport wraps (06-03: the
+// worker exposes both games; this file only exercises the poker half).
 vi.mock('comlink', () => ({
-  wrap: () => ({ runSimulation, cancel }),
+  wrap: () => ({
+    poker: { runSimulation, cancel },
+    blackjack: { runSimulation: vi.fn(), cancel: vi.fn() },
+  }),
   proxy: <T,>(cb: T) => cb,
 }));
 
@@ -51,8 +55,9 @@ const preflopFixture: ConditionedState = {
 };
 
 describe('simulationService — hard worker crash routing (WR-02)', () => {
-  // Clears mock.calls/results (NOT `workers` — the fake worker is a module-scope singleton
-  // constructed once at import time, so it must persist across tests) between tests. Without
+  // Clears mock.calls/results (NOT `workers` — the fake worker is a module-cached singleton
+  // constructed once on the FIRST service call (lazy, 06-03), so it must persist across
+  // tests) between tests. Without
   // this, `runSimulation`'s call count from a prior test would already be non-zero, so the
   // `vi.waitFor` below would resolve on its very first (already-satisfied) check — racing
   // ahead of the `await cancelSimulation()` tick that assigns `currentOnError` for THIS test.
