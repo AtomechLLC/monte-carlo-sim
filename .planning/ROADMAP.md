@@ -64,7 +64,7 @@ Plans:
   3. User can rewind to an earlier street and see odds return to their earlier-street values; re-advancing shows the same cards unless a separate re-deal action is taken.
   4. User can reveal any opponent's hole cards mid-hand and see all odds recalculate to account for the newly known cards.
 
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 Plans:
 **Wave 1**
@@ -73,7 +73,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — Predetermined runout, street advance/rewind, board display, and effect rewiring (NAV-01, NAV-02)
+- [x] 02-02-PLAN.md — Predetermined runout, street advance/rewind, board display, and effect rewiring (NAV-01, NAV-02)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -115,5 +115,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Odds Loop | 4/4 | Complete   | 2026-08-24 |
-| 2. Scenario Construction & Street Navigation | 1/6 | In Progress|  |
+| 2. Scenario Construction & Street Navigation | 2/6 | In Progress|  |
 | 3. Casino Table UI & Animation | 0/TBD | Not started | - |
