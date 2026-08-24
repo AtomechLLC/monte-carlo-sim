@@ -25,6 +25,11 @@ interface GameState {
   advanceStreet: () => void;
   /** Moves the visible street backward one step; no-op at `'preflop'`. Never redraws cards. */
   rewindStreet: () => void;
+  /**
+   * Reveals opponent `opponentIndex`'s hole cards. Monotonic (D-08): OR-in a bit, never clear
+   * one — there is deliberately no un-reveal/toggle action exposed anywhere in this store.
+   */
+  reveal: (opponentIndex: number) => void;
 }
 
 export const useGameStore = create<GameState>()((set, get) => ({
@@ -58,5 +63,8 @@ export const useGameStore = create<GameState>()((set, get) => ({
   },
   rewindStreet: () => {
     set({ street: previousStreet(get().street) });
+  },
+  reveal: (opponentIndex) => {
+    set((state) => ({ revealedMask: state.revealedMask | (1 << opponentIndex) }));
   },
 }));
