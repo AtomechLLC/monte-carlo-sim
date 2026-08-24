@@ -1,11 +1,17 @@
 import type { Card } from '@poker-apprentice/types';
 import { HandStrength } from '@poker-apprentice/types';
-// The library is published as CJS with an ESM build and no `exports` map — named ESM
-// imports throw. Use a default import and destructure. This is the ONLY module in the
-// codebase permitted to import `@poker-apprentice/hand-evaluator` directly.
-import pkg from '@poker-apprentice/hand-evaluator';
-
-const { evaluateHoldem, compare } = pkg;
+// DEVIATION from the plan's documented "default import + destructure" guidance (Rule 1 —
+// the documented pattern breaks the production build). The plan's `<interfaces>` block
+// specified `import pkg from '@poker-apprentice/hand-evaluator'; const { evaluateHoldem,
+// compare } = pkg;` based on a raw-Node scratch-directory verification. That does NOT hold
+// for this project's actual toolchain: Vite/Rolldown resolves this dependency's `module`
+// field (a genuine ESM build with only named exports, no default) for the production worker
+// chunk, so a default import fails at build time with MISSING_EXPORT "default". Plain named
+// imports resolve correctly in both Vitest (which also goes through Vite's ESM-first
+// resolver, not a raw Node loader) and the production `vite build` — verified by running
+// both. This is the ONLY module in the codebase permitted to import
+// `@poker-apprentice/hand-evaluator` directly.
+import { evaluateHoldem, compare } from '@poker-apprentice/hand-evaluator';
 
 export { HandStrength };
 
