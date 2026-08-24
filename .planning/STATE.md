@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-08-24T16:00:45.887Z"
 last_activity: 2026-08-24
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-24)
 
 **Core value:** Probability made visible — the user can watch odds converge in real time and see exactly how each new piece of information reshapes the numbers.
-**Current focus:** Milestone complete
+**Current focus:** Phase 4 — Multiset Deck & Streaming Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-08-24 — Milestone v2.0 started
+Phase: 4 of 8 (Multiset Deck & Streaming Foundation)
+Plan: — (not yet planned)
+Status: Roadmap created, ready to plan
+Last activity: 2026-08-24 — Roadmap created for milestone v2.0 (5 phases: 4-8)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -59,15 +61,14 @@ Last activity: 2026-08-24 — Milestone v2.0 started
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Roadmap: Engine-first correctness (evaluator, deck conditioning, streaming worker) folded into Phase 1 as a thin-but-complete vertical slice (deal + compute + display, minimal UI) rather than a separate headless engine phase — reconciles research's "engine before pixels" guidance with MVP vertical-slice mode.
-- Roadmap: Full casino-table visual (felt table, card art, animation) deferred to Phase 3, built only after the odds engine and full interaction loop (street nav, rewind, reveal, manual picker) are proven correct on a minimal UI in Phases 1-2.
-- Research: Always run Monte Carlo sampling (never silently switch to exact enumeration when few cards remain unknown) — visible convergence is the core educational value; mitigate jitter via throttled display updates and a visible trial counter, not algorithm switching.
+- Roadmap (v2.0): 5-phase build sequence, dependency-ordered per research — multiset deck foundation + worker protocol generalization merged into one engine-only phase (Phase 4, observable via regression/property tests and a dev-guard, mirroring v1 Phase 1's engine-first precedent), then game-mode shell (Phase 5), Blackjack vertical slice (Phase 6), 2-deck Hold'em evaluation (Phase 7), and a cross-game deck-count toggle UI last (Phase 8).
+- Roadmap (v2.0): Blackjack-before-2-deck-poker is deliberate — the 2-deck poker evaluator is the milestone's single highest-correctness-risk item, so the multiset-deck plumbing gets proven against a real, working, non-error-path consumer (Blackjack) first.
+- Research: `evaluateHoldem` throws `TypeError: C is not iterable` on ANY duplicate rank+suit co-occurrence (not just five-of-a-kind) — Phase 7's duplicate-detection gate must cover every duplicate shape, not just rank-count ≥5.
+- Research: Zero new runtime dependencies for v2.0 — Blackjack rules engine, multiset shoe, and 2-deck evaluation wrapper are all hand-written TypeScript on the existing v1.0 stack (Comlink, pure-rand, `@poker-apprentice/hand-evaluator`, Zustand, Motion).
 - Phase 1: `@poker-apprentice/hand-evaluator` must be imported via named imports only (`import { evaluateHoldem, compare }`) — the plan-documented default-import pattern breaks the production worker chunk (ESM `module` field has no default export).
 - Phase 1: `pure-rand@8.4.2` requires subpath imports (`pure-rand/generator/xoroshiro128plus`, `pure-rand/distribution/uniformInt`) — no top-level `"."` export.
-- Phase 1: `dealNonce` is the single counter serving as both re-deal trigger and worker `requestId`; worker supersession is generation-tagged in `simulationApi.ts`.
 - Phase 2: The full hand runout is predetermined at deal time; `deriveConditionedState` in `src/engine/conditioning.ts` is the ONLY code allowed to read the raw runout for simulation purposes (D-02 leak guard). Odds condition on visible street + revealedMask only.
 - Phase 2: Settled odds are cached per `street|revealedMask` knowledge key in oddsStore; reveal invalidates by key composition; `deal()` clears the cache.
-- Phase 2: `simulationService.startSimulation(conditioned, onProgress, onError)` owns its own monotonic requestId generation (dealNonce is no longer the requestId).
 
 ### Pending Todos
 
@@ -76,6 +77,8 @@ None yet.
 ### Blockers/Concerns
 
 - ⚠️ [Phases 1-3] Security enforcement is enabled but no SECURITY.md exists for any phase — `/gsd:secure-phase 1|2|3` closes the gate (client-only app; low risk).
+- ⚠️ [Phase 7 flag] 2-deck poker hand-ranking convention (Five of a Kind above Royal Flush) is single-sourced from a community forum thread, not an official rulebook — treat as working convention, revisit if a more authoritative source surfaces.
+- ⚠️ [Phase 6 flag] Blackjack EV payout model (3:2 natural, 1:1 win, push at 0, per-1-unit labeling) must be an explicit documented decision before implementation, not inferred while coding.
 - (Resolved) WR-02 worker-crash surfacing — FIXED in quick task 260824-biv (Worker error/messageerror listeners now route into the error banner).
 - (Resolved) Phase 1 cosmetic debt (scaffold-tmp title, default favicon, dead scaffold assets) — closed in Phase 3 plan 03-05 (D-14).
 
@@ -94,13 +97,16 @@ Items acknowledged and carried forward from previous milestone close:
 | v2 requirement | EDU-01: Outs/draw callouts | Deferred | Requirements definition |
 | v2 requirement | EDU-02: Educational annotations | Deferred | Requirements definition |
 | v2 requirement | EDU-03: Shareable scenario permalinks | Deferred | Requirements definition |
+| v2.x requirement | Blackjack Double/Split/Surrender EV | Deferred | v2.0 requirements definition |
+| v2.x requirement | Deck counts beyond 2 (4/6/8-deck shoes) | Deferred | v2.0 requirements definition |
+| v2.x requirement | Deck-count delta callout UI | Deferred | v2.0 requirements definition |
 
 ## Session Continuity
 
-Last session: 2026-08-24T15:46:42.744Z
-Stopped at: Quick task 260824-biv complete: post-v1.0 hardening (216/216 tests)
+Last session: 2026-08-24T16:00:45.887Z
+Stopped at: ROADMAP.md created for milestone v2.0 (Phases 4-8), REQUIREMENTS.md traceability updated
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan Phase 4 with `/gsd:plan-phase 4`

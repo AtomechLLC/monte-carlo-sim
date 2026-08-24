@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-3 (shipped 2026-08-24) — [archive](milestones/v1.0-ROADMAP.md)
-- 📋 **v2.0** — Not yet scoped (`/gsd-new-milestone`; EDU-01/02/03 candidates in STATE.md Deferred Items)
+- 🚧 **v2.0 Blackjack & Multi-Deck** — Phases 4-8 (in progress)
 
 ## Phases
 
@@ -20,10 +20,109 @@ Audit: [milestones/v1.0-MILESTONE-AUDIT.md](milestones/v1.0-MILESTONE-AUDIT.md)
 
 </details>
 
+### 🚧 v2.0 Blackjack & Multi-Deck (In Progress)
+
+**Milestone Goal:** Add Blackjack as a second game and make deck count (1 or 2 decks) a first-class, explorable probability variable across both games.
+
+- [ ] **Phase 4: Multiset Deck & Streaming Foundation** - Physical-card-identity deck model (1 or 2 decks, no dedup collapse) and a generalized streaming worker runner, proven behavior-identical to v1.0 at deckCount=1
+- [ ] **Phase 5: Game-Mode Shell & Store Separation** - Users can switch between Hold'em and Blackjack, each with fully independent state and odds
+- [ ] **Phase 6: Blackjack Core Odds Loop** - Full Blackjack vertical slice: deal, bust/dealer-outcome odds, Stand/Hit EV, hit/stand play, dealer reveal, deck toggle
+- [ ] **Phase 7: 2-Deck Hold'em Evaluation Layer** - Hold'em over a 104-card shoe with correct duplicate-card evaluation and a Five of a Kind category
+- [ ] **Phase 8: Cross-Game Deck-Count Toggle UI** - One shared deck-count control spanning both games
+
+## Phase Details
+
+### Phase 4: Multiset Deck & Streaming Foundation
+
+**Goal**: The deck/shoe model correctly represents 1 or 2 physical decks — two copies of the same card are distinct, trackable objects that never collapse via value-based dedup — and the simulation streaming pipeline is generalized to serve any game, with zero behavioral drift from v1.0 at deckCount=1.
+**Mode:** mvp
+**Depends on**: Phase 3
+**Requirements**: DECK-01, DECK-03, DECK-04
+**Success Criteria** (what must be TRUE):
+
+  1. Regression tests prove that at `deckCount=1`, shoe/draw/conditioning/picker behavior is byte-identical to shipped v1.0 — no silent behavior drift from the refactor.
+  2. Property tests confirm 2-deck multiset invariants: two physical copies of the same card coexist as distinct trackable objects, are drawn without replacement from the correct `52 × deckCount`-card shoe, and never collapse via value-based `Set`/`Map` dedup anywhere in the shoe path.
+  3. The card picker's duplicate-blocking is verified count-aware: a card is blocked after 1 pick at 1 deck, and only after 2 picks at 2 decks, with remaining-copy state exposed for the UI to consume.
+  4. The generalized streaming runner passes the full existing Hold'em `simulationApi` test suite unchanged, proving the worker-protocol refactor is behavior-preserving before any new game rides on it.
+
+**Plans**: TBD
+
+### Phase 5: Game-Mode Shell & Store Separation
+
+**Goal**: Users can switch between Hold'em and Blackjack via a mode switcher, with each game maintaining fully independent state and odds so neither leaks into or corrupts the other.
+**Mode:** mvp
+**Depends on**: Phase 4
+**Requirements**: BJ-01
+**Success Criteria** (what must be TRUE):
+
+  1. User can switch between Hold'em and Blackjack via a mode switcher component on screen.
+  2. Hold'em's full existing interaction loop (deal, street nav, rewind, reveal, picker) works identically after the refactor, verified by the full existing acceptance suite passing unchanged.
+  3. Switching to Blackjack shows an independent game screen/state that shares no store fields or odds-cache keys with Hold'em, verified by a store-isolation test.
+  4. Switching modes mid-simulation cleanly cancels any in-flight worker run for the game being left, so no stale odds bleed across modes.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 6: Blackjack Core Odds Loop
+
+**Goal**: Users can play a full Blackjack round on its own table screen — deal, watch live bust/dealer-outcome/EV odds converge, hit or stand, reveal the dealer's hole card, and see deck count change the odds — mirroring Hold'em's live-convergence experience.
+**Mode:** mvp
+**Depends on**: Phase 5
+**Requirements**: BJ-02, BJ-03, BJ-04, BJ-05, BJ-06, BJ-07
+**Success Criteria** (what must be TRUE):
+
+  1. User can deal a Blackjack round (player hand + dealer upcard face-up, hole card face-down) and watch live win/push/lose, bust-if-hit, and dealer-outcome-distribution odds converge over streamed worker trials with a visible trial counter.
+  2. User sees per-unit EV for Stand vs. Hit at the current decision point, computed under fixed conventions (dealer stands on soft 17, natural pays 3:2).
+  3. User can Hit or Stand; hitting updates the hand and recomputes odds live, and standing plays the dealer out per the fixed rules and shows the round outcome.
+  4. User can reveal the dealer's hole card early and watch all odds recondition on the newly known card.
+  5. Toggling deck count (1 vs. 2) for Blackjack visibly changes the odds (e.g., natural-blackjack frequency ~4.83% → ~4.78%), verifiable in-app.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 7: 2-Deck Hold'em Evaluation Layer
+
+**Goal**: Users can play Hold'em over a 104-card (2-deck) shoe with correct, crash-free evaluation of duplicate-card hands, a new Five of a Kind category, and legible duplicate cards on the felt.
+**Mode:** mvp
+**Depends on**: Phase 6
+**Requirements**: HE2-01, HE2-02, HE2-03
+**Success Criteria** (what must be TRUE):
+
+  1. User can enable 2-deck Hold'em; dealing, the card picker, street navigation, and opponent reveal all work correctly over the 104-card shoe.
+  2. Hands containing duplicate cards evaluate correctly and never crash — a duplicate-detection gate routes any duplicate-containing hand away from the stock evaluator before it's called.
+  3. Five of a Kind appears as its own row in the odds table in 2-deck mode, ranked above Royal Flush, with a correct probability.
+  4. Two copies of the same card are visually distinguishable on the felt via a visible copy-cue UI badge, so a duplicate never reads as a rendering glitch.
+
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 8: Cross-Game Deck-Count Toggle UI
+
+**Goal**: Users control deck count for either game through one consistent, shared control component that immediately cancels and recomputes odds under the new shoe.
+**Mode:** mvp
+**Depends on**: Phase 6, Phase 7
+**Requirements**: DECK-02
+**Success Criteria** (what must be TRUE):
+
+  1. A single shared deck-count control component appears in both Hold'em's and Blackjack's control bar, always reflecting the active game's current deck count.
+  2. Changing deck count in either game immediately cancels any in-flight simulation and recomputes all odds under the new shoe size, with no stale numbers left on screen.
+  3. The control follows the same "takes effect on next deal" discipline already established for the card picker — no disruptive mid-hand mutation.
+
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Core Odds Loop | v1.0 | 4/4 | Complete | 2026-08-24 |
 | 2. Scenario Construction & Street Navigation | v1.0 | 6/6 | Complete | 2026-08-24 |
 | 3. Casino Table UI & Animation | v1.0 | 6/6 | Complete | 2026-08-24 |
+| 4. Multiset Deck & Streaming Foundation | v2.0 | 0/TBD | Not started | - |
+| 5. Game-Mode Shell & Store Separation | v2.0 | 0/TBD | Not started | - |
+| 6. Blackjack Core Odds Loop | v2.0 | 0/TBD | Not started | - |
+| 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 0/TBD | Not started | - |
+| 8. Cross-Game Deck-Count Toggle UI | v2.0 | 0/TBD | Not started | - |

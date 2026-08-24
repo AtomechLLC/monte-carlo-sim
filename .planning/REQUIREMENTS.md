@@ -45,17 +45,17 @@ Defined 2026-08-24 from the confirmed milestone scope (Blackjack + 1/2-deck shoe
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| DECK-01 | TBD | Pending |
-| DECK-02 | TBD | Pending |
-| DECK-03 | TBD | Pending |
-| DECK-04 | TBD | Pending |
-| BJ-01 | TBD | Pending |
-| BJ-02 | TBD | Pending |
-| BJ-03 | TBD | Pending |
-| BJ-04 | TBD | Pending |
-| BJ-05 | TBD | Pending |
-| BJ-06 | TBD | Pending |
-| BJ-07 | TBD | Pending |
-| HE2-01 | TBD | Pending |
-| HE2-02 | TBD | Pending |
-| HE2-03 | TBD | Pending |
+| DECK-01 | Phase 4 | Pending |
+| DECK-02 | Phase 8 | Pending |
+| DECK-03 | Phase 4 | Pending |
+| DECK-04 | Phase 4 | Pending |
+| BJ-01 | Phase 5 | Pending |
+| BJ-02 | Phase 6 | Pending |
+| BJ-03 | Phase 6 | Pending |
+| BJ-04 | Phase 6 | Pending |
+| BJ-05 | Phase 6 | Pending |
+| BJ-06 | Phase 6 | Pending |
+| BJ-07 | Phase 6 | Pending |
+| HE2-01 | Phase 7 | Pending |
+| HE2-02 | Phase 7 | Pending |
+| HE2-03 | Phase 7 | Pending |
