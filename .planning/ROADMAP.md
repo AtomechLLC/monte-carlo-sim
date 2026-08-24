@@ -112,8 +112,32 @@ Plans:
   4. User can reveal the dealer's hole card early and watch all odds recondition on the newly known card.
   5. Toggling deck count (1 vs. 2) for Blackjack visibly changes the odds (e.g., natural-blackjack frequency ~4.83% → ~4.78%), verifiable in-app.
 
-**Plans**: TBD
+**Plans:** 8 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — Blackjack rules engine, cursor-based trial loop and the D-12 natural-frequency anchor
+- [ ] 06-02-PLAN.md — D-07 HoldemGame extraction, mode-shell guard retarget, testid consolidation
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 06-03-PLAN.md — Namespaced { poker, blackjack } worker surface, WR-02 deckCount validation, shared transport
+- [ ] 06-04-PLAN.md — Blackjack round and odds stores, symmetric restore-mount signal
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 06-05-PLAN.md — Blackjack felt: composition root, dealer/player areas, outcome banner, all Phase 6 CSS
+- [ ] 06-06-PLAN.md — Blackjack odds cluster: bust/trials, stand outcomes, EV tiles, 7-bucket dealer table
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 06-07-PLAN.md — Controls, BlackjackGame odds effect, App fork, placeholder retirement, BJ-02..07 loop suite
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 06-08-PLAN.md — Full regression sweep, multi-source coverage audit, browser acceptance checkpoint
 
 ### Phase 7: 2-Deck Hold'em Evaluation Layer
 
@@ -158,6 +182,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Casino Table UI & Animation | v1.0 | 6/6 | Complete | 2026-08-24 |
 | 4. Multiset Deck & Streaming Foundation | v2.0 | 6/6 | Complete   | 2026-08-24 |
 | 5. Game-Mode Shell & Store Separation | v2.0 | 3/3 | Complete   | 2026-08-24 |
-| 6. Blackjack Core Odds Loop | v2.0 | 0/TBD | Not started | - |
+| 6. Blackjack Core Odds Loop | v2.0 | 0/8 | Planned | - |
 | 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 0/TBD | Not started | - |
 | 8. Cross-Game Deck-Count Toggle UI | v2.0 | 0/TBD | Not started | - |
