@@ -342,6 +342,12 @@ h2 {
 
 .card-slot {
   display: inline-block;
+  /* Settled (at-rest) baseline stacking order (UI-SPEC Table Geometry z-index scale). Motion
+   * applies a `transform`/`opacity` inline style to every AnimatedCard-rendered slot (03-03),
+   * which establishes its own stacking context, so this z-index takes effect even though
+   * `.card-slot` itself is not explicitly positioned. `.card-in-flight` (below) overrides this
+   * while a card is mid-animation, so it is never occluded by a settled slot. */
+  z-index: var(--z-seat);
 }
 
 .card-slot--hero {
@@ -484,6 +490,14 @@ h2 {
   border: 2px dashed var(--border);
   border-radius: 6px;
   box-sizing: border-box;
+}
+
+/* Phase 3 deal choreography (03-03): a card mid-flight (from the deck to its slot) must never
+ * be visually occluded by a settled seat/board card or another settled slot — UI-SPEC Table
+ * Geometry z-index scale, --z-in-flight (50) exceeds every settled --z-* value. Applied by
+ * AnimatedCard while its `useAnimationGate` reports `pending`. */
+.card-in-flight {
+  z-index: var(--z-in-flight);
 }
 
 /* Deck-origin stack: 2-3 overlapping backs with a 2px stagger offset

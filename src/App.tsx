@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MotionConfig } from 'motion/react';
 import './App.css';
 import { DealButton } from './ui/DealButton';
 import { CardPicker } from './ui/CardPicker';
@@ -76,7 +77,10 @@ function App() {
   }, [runout, street, revealedMask, dealNonce]);
 
   return (
-    <>
+    // D-09: honours prefers-reduced-motion app-wide (and deterministically in tests, via the
+    // matchMedia polyfill in src/test/setup.ts) — every Motion component under this provider
+    // collapses to zero-duration animations when reduced motion is active.
+    <MotionConfig reducedMotion="user">
       <h1>Monte Carlo Poker Simulator</h1>
       {runout === null && (
         <div className="empty-hand-state" data-testid="empty-hand-state">
@@ -114,7 +118,7 @@ function App() {
         <TableScene />
         <OddsPanel />
       </div>
-    </>
+    </MotionConfig>
   );
 }
 
