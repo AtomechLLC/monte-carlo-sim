@@ -26,10 +26,14 @@ Validated in Phase 2: scenario-construction-street-navigation (2026-08-24):
 - [x] Manual card picker: set specific hole cards and board cards for "what if" scenario exploration (duplicates visibly blocked)
 - [x] Reveal any opponent's hole cards — revealed cards become known information and all odds recalculate to account for them (including already-visited streets)
 
+Validated in Phase 3: casino-table-ui-animation (2026-08-24):
+
+- [x] Full poker table scene in the browser: felt table, user's seat, three anonymous opponent seats, community card area
+- [x] Detailed playing card visuals (proper pips and court cards) with dealing, flipping, and reveal animations (vendored CC0 SVG deck; Motion choreography; odds gated on animation completion so numbers never spoil mid-flight cards)
+
 ### Active
 
-- [ ] Full poker table scene in the browser: felt table, user's seat, three anonymous opponent seats, community card area
-- [ ] Detailed playing card visuals (proper pips and court cards) with dealing, flipping, and reveal animations
+(None — all v1 requirements validated. v2 candidates are tracked in STATE.md Deferred Items: EDU-01/02/03.)
 
 ### Out of Scope
 
@@ -83,4 +87,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-24 — Phase 2 (scenario construction & street navigation) complete: full interaction loop on the minimal UI; Phase 3 (casino table UI & animation) is next*
+*Last updated: 2026-08-24 — Milestone v1.0 COMPLETE: all 3 phases shipped (core odds loop, scenario construction & street navigation, casino table UI & animation); 16/16 plans, 208/208 tests*
