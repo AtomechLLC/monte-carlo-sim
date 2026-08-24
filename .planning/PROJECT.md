@@ -51,7 +51,7 @@ Validated in Phase 3: casino-table-ui-animation (2026-08-24):
 
 - Betting, chips, pot management — this is an odds explorer, not a playable poker game; betting adds complexity without serving the learning goal
 - Multiplayer / networked play — single-user learning tool
-- Poker variants beyond Texas Hold'em (Omaha, Stud, etc.) — flop/turn/river structure is the target; variants can come later if the tool proves valuable
+- Poker variants beyond Texas Hold'em (Omaha, Stud, etc.) — flop/turn/river structure is the target. (Superseded in part by v2.0: Blackjack added as a second *game*, and a 2-deck Hold'em *mode* — still no other poker variants.)
 - AI opponent behavior/strategy — opponents are card holders for equity calculation, not decision-making agents
 - Server backend — simulation runs client-side in the browser; no install, easy to share
 
@@ -79,7 +79,8 @@ Validated in Phase 3: casino-table-ui-animation (2026-08-24):
 | Both random deal and manual picker | Random for playing out hands, manual for constructing "what if" scenarios | — Pending |
 | Forward + rewind street navigation | Re-examining earlier streets shows how information changed the odds | — Pending |
 | No betting mechanics | Odds explorer, not a poker game — betting doesn't serve the probability-learning goal | — Pending |
-| Client-side only, no backend | Simplicity, shareability; browser is fast enough for Monte Carlo poker equity | — Pending |
+| Client-side only, no backend | Simplicity, shareability; browser is fast enough for Monte Carlo poker equity | ✓ Good (v1.0: 200k trials in ~2s) |
+| v2.0: Deck count as a probability variable | Multi-deck shoes (Blackjack) and a 2-deck Hold'em variant make deck composition itself an explorable parameter — direct extension of "probability made visible" | — Pending |
 
 ## Evolution
 
