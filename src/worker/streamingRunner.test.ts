@@ -317,12 +317,13 @@ describe('createStreamingRunner — generic streaming Monte Carlo machinery (D-0
 
     await api.runSimulation(conditioned, 1, (s) => {
       received.push(s);
-      // Mutate the array field the instant it's received — a shared-reference bug would
-      // leak this mutation into every subsequent snapshot's history.
-      s.history.push(-1);
     });
 
     expect(received.length).toBe(3);
+    // Mutate the first received snapshot's array field after the fact — a shared-reference
+    // bug would mean every snapshot's `history` is the SAME array, so this mutation would
+    // leak into the later snapshots too.
+    received[0].history.push(-1);
     expect(received[1].history).toEqual([100, 100]);
     expect(received[2].history).toEqual([100, 100, 100]);
   });
