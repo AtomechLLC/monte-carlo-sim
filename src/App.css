@@ -554,6 +554,13 @@ h2 {
   font-weight: 400;
 }
 
+/* Pending state (03-03, UI-SPEC A9): the whole OddsPanel dims while `pendingAnimationCount > 0`
+ * — em dashes are rendered by WinTieLossDisplay/OddsTable themselves; this is the visual "mid-
+ * update" cue paired with the `aria-busy` attribute for assistive tech. */
+.odds-panel--pending {
+  opacity: 0.6;
+}
+
 /* Main scene row: TableScene + OddsPanel, `xl` (32px) gap side-by-side at
  * >=1024px, collapsing to a column stack below that; `2xl` (48px) vertical
  * margin separates the block from the control bar / page bottom. */

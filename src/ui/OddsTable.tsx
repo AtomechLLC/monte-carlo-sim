@@ -1,13 +1,17 @@
 import { useOddsStore } from '../state/oddsStore';
+import { useUiStore } from '../state/uiStore';
 import { CATEGORY_LABELS } from './categoryLabels';
 
-function formatPct(count: number, trialsCompleted: number): string {
-  if (trialsCompleted === 0) return '—';
+/** `pending` short-circuits to the SAME em dash already used for zero trials (UI-SPEC A9) —
+ * reusing this literal rather than introducing a second dash constant elsewhere. */
+function formatPct(count: number, trialsCompleted: number, pending: boolean): string {
+  if (pending || trialsCompleted === 0) return '—';
   return `${((count / trialsCompleted) * 100).toFixed(1)}%`;
 }
 
 export function OddsTable() {
   const { categoryCounts, trialsCompleted } = useOddsStore();
+  const pending = useUiStore((state) => state.pendingAnimationCount > 0);
 
   return (
     <table data-testid="category-table">
@@ -24,7 +28,7 @@ export function OddsTable() {
           <tr key={label}>
             <th scope="row">{label}</th>
             <td data-testid={`category-pct-${index}`}>
-              {formatPct(categoryCounts[index] ?? 0, trialsCompleted)}
+              {formatPct(categoryCounts[index] ?? 0, trialsCompleted, pending)}
             </td>
           </tr>
         ))}
