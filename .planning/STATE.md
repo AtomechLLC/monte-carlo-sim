@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: Blackjack & Multi-Deck
 status: executing
 stopped_at: Phase 4 context gathered
-last_updated: "2026-08-24T17:01:46.987Z"
-last_activity: 2026-08-24 -- Phase 04 planning complete
+last_updated: "2026-08-24T17:02:03.009Z"
+last_activity: 2026-08-24 -- Phase 04 execution started
 progress:
   total_phases: 5
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-24)
 
 **Core value:** Probability made visible — the user can watch odds converge in real time and see exactly how each new piece of information reshapes the numbers.
-**Current focus:** Phase 4 — Multiset Deck & Streaming Foundation
+**Current focus:** Phase 04 — multiset-deck-streaming-foundation
 
 ## Current Position
 
-Phase: 4 of 8 (Multiset Deck & Streaming Foundation)
-Plan: — (not yet planned)
-Status: Ready to execute
-Last activity: 2026-08-24 -- Phase 04 planning complete
+Phase: 04 (multiset-deck-streaming-foundation) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 04
+Last activity: 2026-08-24 -- Phase 04 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
