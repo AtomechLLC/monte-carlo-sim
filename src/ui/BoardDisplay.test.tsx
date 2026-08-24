@@ -92,7 +92,8 @@ describe('BoardDisplay — street-advance enter (only newly visible cards animat
 // NOTE (03-04 Task 2): rewind-exit and re-deal-cancellation DOM-timing behavior is not
 // re-asserted here as a NEW test. src/test/setup.ts forces `prefers-reduced-motion: reduce` for
 // every test (jsdom has no compositor), which zeroes every AnimatedCard/useExitGate transition
-// duration and disables gate registration (`enabled = !reduce`) identically whether or not
+// duration and disables gate registration (`enabled = !reduce && visibleBoard.length > 0`,
+// where `!reduce` is always false under the polyfill) identically whether or not
 // <AnimatePresence>/useExitGate are wired in — so no BoardDisplay-level DOM assertion can ever
 // be RED against the pre-Task-2 implementation for this behavior. The real behavior (departing
 // cards fade+slide before board-empty-state appears; a re-deal is instant with no fade) is

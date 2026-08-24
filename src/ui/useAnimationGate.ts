@@ -96,8 +96,20 @@ export function useAnimationGate(
  * (03-REVIEW CR-02b): the re-keyed presence tree discards its old exiting children, so their
  * `onExitComplete` can never fire.
  *
+ * Hold lifecycle — closed under every count trajectory (03-REVIEW CR-01/02/03). At most one
+ * hold is armed at a time, and every armed hold has exactly one of these release paths, so the
+ * gate is un-strandable by construction:
+ *   1. the returned callback (`onExitComplete`) — the normal path: the exit set drained;
+ *   2. a `count` RISE while pending — the exit was superseded by re-entry (CR-03);
+ *   3. a `resetKey` change while pending — the re-keyed tree discarded its exiting children (CR-02b);
+ *   4. `enabled` flipping false while pending — the caller's presence container can no longer
+ *      complete exits, e.g. it unmounts because the list emptied (CR-01);
+ *   5. unmount of the calling component itself (D-10).
+ *
  * @param count     current item count (e.g. `visibleBoard.length`)
- * @param enabled   false (e.g. reduced motion) means never register at all
+ * @param enabled   false (e.g. reduced motion, or the caller's presence container is gone) means
+ *                  never register — and releases any pending hold, since a disabled container's
+ *                  exits can never complete
  * @param resetKey  changing this re-baselines `count` tracking without registering a hold
  */
 export function useExitGate(count: number, enabled: boolean, resetKey?: string | number): () => void {
@@ -141,7 +153,18 @@ export function useExitGate(count: number, enabled: boolean, resetKey?: string |
       return;
     }
 
-    if (!enabled) return;
+    if (!enabled) {
+      // CR-01 (03-REVIEW): `enabled` flipping false means the caller's presence container can
+      // no longer complete exits — either reduced motion turned on, or the caller is unmounting
+      // its <AnimatePresence> in this very commit (BoardDisplay's board-empty ternary when a
+      // rewind empties the board), destroying any still-exiting children before their
+      // onExitComplete can fire. A pending hold's only remaining release path is here.
+      if (pendingRef.current) {
+        pendingRef.current = false;
+        useUiStore.getState().endAnimation();
+      }
+      return;
+    }
 
     // CR-02a (03-REVIEW): arm AT MOST ONE hold at a time. A second drop while a hold is pending
     // (an overlapping rewind inside the exit window) adds children to the SAME AnimatePresence

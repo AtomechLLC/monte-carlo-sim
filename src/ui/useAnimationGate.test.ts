@@ -182,6 +182,37 @@ describe('useExitGate — container-level gate registration for an AnimatePresen
     expect(useUiStore.getState().pendingAnimationCount).toBe(0);
   });
 
+  it('a drop to zero with enabled false never arms — the caller unmounts its <AnimatePresence> when the container empties (CR-01)', () => {
+    // Mirrors BoardDisplay's wiring: enabled = !reduce && count > 0. A flop -> preflop rewind
+    // drops 3 -> 0 AND unmounts the whole presence tree in the same commit, so no exit ever
+    // plays and onExitComplete can never fire — arming here would strand the gate permanently.
+    const { rerender } = renderHook(
+      ({ count, enabled }: { count: number; enabled: boolean }) => useExitGate(count, enabled),
+      { initialProps: { count: 3, enabled: true } },
+    );
+
+    rerender({ count: 0, enabled: false });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
+  it('enabled flipping false while a hold is pending releases it — an overlapping rewind that empties the board cannot strand the earlier hold (CR-01)', () => {
+    const { rerender } = renderHook(
+      ({ count, enabled }: { count: number; enabled: boolean }) => useExitGate(count, enabled),
+      { initialProps: { count: 4, enabled: true } },
+    );
+
+    // Turn -> flop: arms one hold for community-3's exit.
+    rerender({ count: 3, enabled: true });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    // Flop -> preflop inside the exit window: the board empties, the caller unmounts the whole
+    // presence tree (destroying the still-exiting child before its onExitComplete can fire),
+    // and enabled flips false — the release-on-disable path is the hold's only remaining
+    // release.
+    rerender({ count: 0, enabled: false });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
   it('a count drop accompanied by a reset-key change (simulating a re-deal) does not register a hold', () => {
     const { rerender } = renderHook(
       ({ count, resetKey }: { count: number; resetKey: string }) => useExitGate(count, true, resetKey),

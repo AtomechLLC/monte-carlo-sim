@@ -49,7 +49,18 @@ export function BoardDisplay() {
   // cards to actually finish leaving before a cache-hit snapshot is applied. `dealNonce` is the
   // reset key — see useExitGate's own doc comment for why a re-deal must re-baseline the count
   // tracking rather than register a hold for what is an instant replacement, not an exit.
-  const releaseExitGate = useExitGate(visibleBoard.length, !reduce, dealNonce);
+  //
+  // `visibleBoard.length > 0` is part of `enabled` (CR-01, 03-REVIEW): when a rewind empties
+  // the board (flop -> preflop), the ternary below unmounts the whole <AnimatePresence> in that
+  // same commit — no exit ever plays and onExitComplete can never fire, so arming a hold for
+  // that drop would strand the gate permanently (odds frozen at em dashes until reload).
+  // Disabling instead means (a) the 3 -> 0 drop never arms, and (b) a hold armed by an earlier
+  // overlapping drop (turn -> flop, then flop -> preflop inside the exit window) is released by
+  // useExitGate's release-on-disable path. Rewind-to-preflop therefore stays an instant unmount
+  // (as it already was — the presence tree never survives the commit to play D-12's exit); the
+  // 150ms rewind-exit choreography is unchanged for partial rewinds (river/turn/flop), where
+  // the board stays non-empty and <AnimatePresence> stays mounted.
+  const releaseExitGate = useExitGate(visibleBoard.length, !reduce && visibleBoard.length > 0, dealNonce);
 
   return (
     <div className="community-area">
