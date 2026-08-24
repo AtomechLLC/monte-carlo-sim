@@ -615,3 +615,108 @@ describe('App — animation gate (D-11/D-12): odds never move while a card is in
     expect(screen.getByTestId('simulation-error')).toBeInTheDocument();
   });
 });
+
+describe('App — reduced motion, re-deal cancellation and error-through-gate hardening (D-09/D-10/D-13)', () => {
+  beforeEach(() => {
+    resetStores();
+  });
+
+  it('a full deal-advance-advance-advance-rewind-reveal sequence ends with the animation counter back at 0 under reduced motion (D-09)', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    await user.click(screen.getByTestId('advance-button')); // -> flop
+    await user.click(screen.getByTestId('advance-button')); // -> turn
+    await user.click(screen.getByTestId('advance-button')); // -> river
+    await user.click(screen.getByTestId('rewind-button')); // -> turn
+    await user.click(screen.getByTestId('opponent-seat-0')); // reveal
+
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+    // Every card is present in its final position immediately under reduced motion — no
+    // orphaned/incomplete registration survives the sequence.
+    expect(screen.getByTestId('hero-hole').children).toHaveLength(2);
+    expect(screen.getByTestId('opponents').children).toHaveLength(3);
+  });
+
+  it('re-dealing while three animations are manually armed releases exactly those three without the counter ever going negative (D-10)', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    act(() => {
+      useUiStore.getState().beginAnimation();
+      useUiStore.getState().beginAnimation();
+      useUiStore.getState().beginAnimation();
+    });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(3);
+
+    // deal() arms one more unit and TableScene's per-commit release effect releases exactly the
+    // one it armed — the three manually-armed registrations are untouched by a re-deal.
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    expect(useUiStore.getState().pendingAnimationCount).toBe(3);
+
+    act(() => {
+      useUiStore.getState().endAnimation();
+    });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(2);
+
+    act(() => {
+      useUiStore.getState().endAnimation();
+    });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    act(() => {
+      useUiStore.getState().endAnimation();
+    });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
+  it('a re-deal leaves no orphaned card elements: hero-hole has 2 children, opponents has 3, board-cards is absent at pre-flop (D-10)', async () => {
+    vi.mocked(simulationService.startSimulation).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /^deal$/i }));
+    await user.click(screen.getByRole('button', { name: /^deal$/i })); // re-deal
+
+    expect(screen.getByTestId('hero-hole').children).toHaveLength(2);
+    expect(screen.getByTestId('opponents').children).toHaveLength(3);
+    expect(screen.getByTestId('board-empty-state')).toBeInTheDocument();
+    expect(screen.queryByTestId('board-cards')).not.toBeInTheDocument();
+  });
+
+  it('a stale simulation-error banner clears when the next street is served from the settled cache (WR-01)', async () => {
+    vi.mocked(simulationService.startSimulation).mockImplementationOnce(async (_conditioned, onProgress) => {
+      onProgress({
+        requestId: 1,
+        categoryCounts: new Array(10).fill(0),
+        outcomes: { win: 50, tie: 0, lose: 50 },
+        trialsCompleted: 100,
+        done: true,
+      });
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /^deal$/i })); // -> preflop, settles + caches
+
+    vi.mocked(simulationService.startSimulation).mockImplementationOnce(
+      async (_conditioned, _onProgress, onError) => {
+        onError('worker exploded');
+      },
+    );
+    await user.click(screen.getByTestId('advance-button')); // -> flop, errors (never cached)
+
+    expect(await screen.findByTestId('simulation-error')).toBeInTheDocument();
+
+    const callsBeforeRewind = vi.mocked(simulationService.startSimulation).mock.calls.length;
+    await user.click(screen.getByTestId('rewind-button')); // -> preflop, cache HIT
+
+    // No new startSimulation call — the WR-01 fix must clear the banner from the cache-hit
+    // branch itself, not from a fresh live run.
+    expect(vi.mocked(simulationService.startSimulation).mock.calls.length).toBe(callsBeforeRewind);
+    expect(screen.queryByTestId('simulation-error')).not.toBeInTheDocument();
+  });
+});
