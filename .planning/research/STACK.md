@@ -1,164 +1,148 @@
-# Stack Research
+# Stack Research — v2.0 Blackjack & Multi-Deck
 
-**Domain:** Browser-based, client-side Monte Carlo Texas Hold'em odds simulator with animated casino-table visuals (no backend)
-**Researched:** 2026-08-23
-**Confidence:** HIGH (framework/tooling versions verified against live npm registry; library-specific recommendations MEDIUM given smaller ecosystem for niche packages — see per-item notes)
+**Domain:** Browser Monte Carlo casino game simulator — adding Blackjack + multi-deck Hold'em to a shipped v1.0 app
+**Researched:** 2026-08-24
+**Confidence:** HIGH
+
+## Scope Note
+
+This is a **subsequent-milestone, additive** stack review. The v1.0 stack (React 19.2.8, Vite 8.2.2, TypeScript 6.0.3, Zustand 5.0.15, Motion, Comlink 4.4.2, `pure-rand` 8.4.2, `@poker-apprentice/hand-evaluator` 4.3.0, vendored SVG cards) is locked and validated — it is **not** re-researched here. The question this file answers is narrow: **what, if anything, needs to be added or built for Blackjack and 2-deck Hold'em?**
+
+**Bottom line, evidence-backed:** Nothing new needs to be installed. Both new capabilities are hand-rolled TypeScript modules layered on the existing worker/evaluator architecture. This confirms rather than merely defaults to the brief's stated expectation — see the evidence in each section below.
 
 ## Recommended Stack
 
-### Core Technologies
+### Core Technologies (reused, unchanged)
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|------------------|
-| React | 19.2.8 | UI framework | Largest ecosystem for exactly the pieces this app needs: SVG card component patterns, animation libraries with first-class React bindings, and Web Worker/hook patterns. React 19's compiler removes most manual memoization concerns, closing the gap with more "surgical" frameworks for the update frequency this app has (odds table refreshing a few times/sec, not per-frame). For a solo/portfolio project, ecosystem depth and AI-tooling familiarity outweigh Svelte's raw micro-benchmark edge (see Alternatives). |
-| Vite | 8.2.2 | Build tool / dev server | The 2025/2026 default for client-only SPAs — instant HMR, native ESM dev server, first-class Web Worker support via the `?worker` import suffix (no separate worker-loader config), and zero-config production bundling with automatic code-splitting. No SSR/server framework (Next.js, Remix) is needed — this is a pure client-side app with no backend, so a server-oriented meta-framework would add complexity with no payoff. |
-| TypeScript | 6.0.3 | Language / type system | Use the 6.x line, **not** 7.0.2, despite 7.0 being `npm dist-tag latest`. TypeScript 7.0 (the Go-native "tsgo" compiler, GA July 2026, ~10x faster type-checking) ships **without a compiler API**, so `typescript-eslint` (and other API-dependent tooling) does not yet support it — confirmed as "not planned" for 7.0, targeted for TS 7.1 in autumn 2026. Pin `typescript@6.0.3` for full ecosystem compatibility today; revisit TS 7.1 once it's GA and typescript-eslint adds support. |
-| Zustand | 5.0.15 | Client state management | Manages simulation state (current street, hole/board cards, revealed opponents, live trial counts/odds) without Redux-style boilerplate. ~1KB, no providers needed, plays well with a Web Worker feeding it streamed updates. No server state exists in this app (no backend), so a data-fetching layer like TanStack Query is unnecessary — Zustand alone is the complete state story. |
+| Technology | Version | Purpose in v2.0 | Why no change needed |
+|------------|---------|------------------|----------------------|
+| Comlink | 4.4.2 (locked) | Same worker-RPC pattern streams Blackjack hand/EV results and 2-deck Hold'em odds, exactly like v1's poker loop | The streaming-progress pattern (`Comlink.proxy()` callback, partial-aggregate messages) is game-agnostic — it doesn't care whether the trial loop is poker or Blackjack. Reuse the same worker module (or a sibling module using the same wrapper), not a new library. |
+| `pure-rand` | 8.4.2 (locked) | Seedable shuffling for a 1-or-2-deck Blackjack shoe and a 104-card (2-deck) Hold'em deck | A "shoe" is just a longer array to shuffle/draw from. No new RNG concern — `pure-rand`'s xoroshiro128+ engine doesn't care about deck size. |
+| Zustand | 5.0.15 (locked) | New store slice for Blackjack game state (hand, dealer up-card, deck-count setting) and a `deckCount` setting shared across both games | Store composition (multiple slices/stores) is a Zustand pattern already available, no new state library needed. |
+| `@poker-apprentice/hand-evaluator` | 4.3.0 (locked) | Still the evaluation core for 2-deck Hold'em's non-five-of-a-kind hands (see below) | Its low-level `evaluate`/`compare`/`rankN` primitives turn out to be reusable almost as-is for multi-deck play — confirmed by reading the actual source (not assumed). Only a thin wrapper is new; the dependency itself doesn't change. |
+| React 19.2.8 / Motion / DOM+SVG cards (locked) | — | Blackjack table scene (dealer + player positions, hit/stand controls) reuses the same card component, felt-table visual language, and deal/flip animation primitives built for poker in Phase 3 | Blackjack has *fewer* on-screen cards than the poker table (1 dealer + 1-N player hands vs. 4 seats × 2 + 5 board), so the "DOM+SVG+Motion is plenty for this element count" conclusion from v1 research holds even more strongly. No rendering-approach change. |
 
-### Rendering Approach (the key architectural decision)
+### Supporting Libraries — none added
 
-**Recommendation: DOM + SVG + CSS/Motion animations. Do NOT reach for a canvas engine (PixiJS/Konva) for this project.**
+| Library | Version | Purpose | Verdict |
+|---------|---------|---------|---------|
+| *(none)* | — | Blackjack rules engine, multi-deck poker evaluation layer, multi-deck shoe model | All three are hand-written TypeScript modules inside the existing `src/` tree — see rationale below. Every candidate npm package investigated for these was rejected (see Package Legitimacy Audit). |
 
-| Approach | Verdict | Why |
-|----------|---------|-----|
-| **DOM + SVG + Motion (recommended)** | ✅ Use this | The scene has a small, bounded element count: 4 seats × 2 hole cards + 5 community cards + felt table + seat markers + an odds table ≈ 15-20 animated visual elements plus a data-dense HTML table. SVG "works beautifully up to a few thousand elements" — this app uses a tiny fraction of that ceiling, so canvas's performance advantage never materializes. SVG is also natively vector, which is exactly what "detailed pips and proper court cards" calls for — no rasterization/texture-atlas work needed. Critically, the odds table (live-updating percentages, hand-category rows) is inherently tabular text data — DOM/HTML is dramatically better than canvas for text rendering, accessibility, and layout than drawing text manually onto a `<canvas>`. |
-| PixiJS 8.20.0 | ❌ Avoid | A WebGL sprite engine built for hundreds/thousands of moving sprites (games, particle effects). This project has ~13 cards on screen at once. PixiJS adds WebGL context management, texture-atlas asset pipeline, and a completely separate rendering/hit-testing model from the DOM-based odds UI — real complexity with no performance payoff at this element count. |
-| Konva 10.3.1 / react-konva | ❌ Avoid (but closest runner-up) | Konva's strength is a canvas-based retained-mode scene graph with built-in drag/drop and hit detection — useful for card games with many freely-draggable pieces (e.g., a full solitaire tableau). This app's interactions are simpler (click a seat to reveal, click a card slot to open a picker), which DOM click handlers already do natively and accessibly. Reconsider Konva only if playtesting reveals CSS-transform card animations are janky on low-end/mobile devices (see Stack Patterns by Variant). |
+## (a) Blackjack Rules: Hand-Roll — Confirmed, Not Just Assumed
 
-### Animation
+**Verdict: hand-roll. No maintained, browser-safe, fit-for-purpose Blackjack library exists at the versions/adoption level this project requires.**
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|------------------|
-| Motion (`motion` package, formerly Framer Motion) | 13.1.1 | Deal, flip, and reveal animations | Purpose-built for exactly this: declarative `animate`/`variants` API for the deal-from-deck movement, `rotateY` + `backfaceVisibility: hidden` for the classic 3D card-flip reveal, and layout animations (FLIP technique) for cards moving between deck → seat → community row as streets advance. First-class React bindings, actively maintained, and the de facto standard React animation library in 2025/2026 (the `framer-motion` package name still works as an alias but `motion` is the current canonical package). |
+Investigated every Blackjack-related npm package with any real signal (search + `npm view` + download stats + `slopcheck`):
 
-### Supporting Libraries
+| Package | Last real release | Downloads/mo | Fit | Problem |
+|---------|-------------------|--------------|-----|---------|
+| `blackjack-strategy` (gsdriver) | 2020-09-03 (v1.4.0) | 178 | Wrong shape | Only returns a basic-strategy **action suggestion** (`GetRecommendedPlayerAction` → `"hit"/"stand"/...`) — it does not compute bust probability, dealer outcome distributions, or EV, which is exactly what this project needs. Six years stale. |
+| `engine-blackjack` (kedoska) | 2017-06-27 (v0.9.2) | 376 | License + abandonment | **GPL-2.0** — copyleft license risk for a project that should stay freely shippable/forkable; last published 2017, built on `neutrino` tooling that is itself long dead. |
+| `blackjack-simulator` (gsdriver) | 2016-10-19 (v1.0.2) | 12 | Dead | 12 downloads/month — essentially unused; two versions ever published, in 2016. |
+| `@blackjacktrainer/blackjack-simulator` (mhluska) | Actively maintained (343 commits, published 2 months ago) | 373 | Wrong product shape | This one is **legitimate** (real GitHub org, MIT, powers blackjacktrainer.app) — but it's built for **card-counting / bankroll session simulation** (`Simulator` class returns `amountEarned`, `bankrollMean`, `riskOfRuin` across many hands with bet-spread strategy). This project needs per-*current-hand* bust/dealer-outcome/EV odds, not multi-hand bankroll trajectories, and has no betting/bankroll concept at all (explicitly out of scope per `PROJECT.md`). Pulling in a 4.3MB package with its own Card/Shoe/Game class hierarchy to use ~5% of its surface (basic deal/bust arithmetic) is worse than writing the ~100 lines directly. |
+| `miaoda-game-blackjack-rules` | 27 days old | 1,106 (suspiciously high for its age) | **SUS** | `slopcheck` flagged: no source repository linked at all, brand-new, and download count is anomalously high for a week-old, unlinked package. Sibling packages from the same publish window (`miaoda-game-deck-core`, `miaoda-game-blackjack-react`) show the same pattern — consistent with an AI-generated package cluster, not a project with real usage. **Rejected outright regardless of how good the description reads.** |
+| `miaoda-game-deck-core` | 27 days old | — | **SUS** | Same red flags as above (dependency of the rules package). |
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `@poker-apprentice/hand-evaluator` | 4.3.0 | Fast hand evaluation + Hold'em equity primitives | **Primary recommendation** for hand evaluation. v4 (June 2026 rewrite) replaced the core with an integer/lookup-table evaluator, ~18M 7-card evaluations/sec (Apple M3 Pro benchmark), pure TypeScript with no Node-only APIs (Rollup-built ESM + CJS + type defs, only dependency is a types-only package) — safe to run inside a Web Worker. Actively maintained (published as recently as July 2026). Has a purpose-built `equityHoldem` helper (win/tie/total/equity) AND lower-level `evaluate`/`rank` primitives you'll need anyway to build the **hand-category distribution** (pair/flush/straight/etc. frequency) this project requires — `equityHoldem` alone only returns win/tie/total, not category breakdowns, so plan to write a thin custom Monte Carlo loop around the raw evaluator (see Architecture research / PITFALLS.md). |
-| `@pokertools/evaluator` | 1.0.16 | Alternative fast evaluator | Newer (created Nov 2025) perfect-hash + lookup-table evaluator, benchmarked ~15-20M evals/sec for 5-card and ~10-12M/sec for 7-card hands, with a documented test suite verifying all 2.6M 5-card and 20.3M 6-card combinations. Consider as a fallback/comparison if `@poker-apprentice/hand-evaluator` has an API mismatch, or if profiling shows you need the raw speed edge — but it's a much younger project (6 GitHub stars at research time) so carries more adoption risk. |
-| Comlink | 4.4.2 | Web Worker RPC | Wraps `postMessage` boilerplate so the simulation worker can be called (and can call back with progress) like a local async function/callback. Use `Comlink.proxy()` to pass a progress-reporting callback from the main thread into the worker so partial results (running win/tie/loss + hand-category counts) can stream back for the "live convergence" requirement, rather than waiting for a final result. |
-| `pure-rand` | 8.4.2 | Seedable, statistically-vetted PRNG | Use instead of `Math.random()` for the deck shuffle / trial sampling. A seedable RNG (e.g. xoroshiro128+) makes simulations **reproducible** — essential for writing deterministic unit tests of the probability math (see Testing below) and for potential future "replay this exact deal" features. Also the RNG engine `fast-check` itself uses internally, so no new statistical-quality risk. |
-| Immer | 11.1.18 | Immutable state updates | Optional. Useful if the Zustand store's card/street state gets nested enough that hand-written spread updates get error-prone (e.g., updating one opponent's revealed status inside an array of 3 opponents inside a street-indexed history for rewind). Skip it if the store stays flat. |
+**Why hand-rolling is actually the right call here (not just "nothing good exists"):** Blackjack rules are a small, closed-form state machine — hard/soft total (an ace only needs one `if` to decide 1-vs-11 based on whether counting it as 11 busts), bust check (`total > 21`), dealer play (loop: hit while `total < 17`, or `total === 17 && isSoft && hitSoft17`), natural blackjack (`total === 21 && cards.length === 2`), and payout comparison. This is fundamentally different from 7-card poker hand ranking (the reason a library was recommended in v1) — poker hand ranking has thousands of non-obvious edge cases (kicker ordering, wheel straights, best-5-of-7 selection) that a perfect-hash lookup table exists specifically to get right at scale; Blackjack's rules have none of that combinatorial danger. Writing it is fast, testable with a handful of exact-value Vitest cases plus `fast-check` invariants (e.g., "dealer never stands below hard 17," "bust probability + non-bust probability sums to 1"), and keeps the entire new game's logic under project ownership with zero foreign class hierarchy to adapt to the existing worker/store architecture.
 
-### Development Tools
+## (b) 2-Deck Hold'em Evaluation: Custom Wrapper, Not Standalone — Confirmed by Reading Source
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| ESLint | 10.9.0 | Linting | Flat config (`eslint.config.js`) is standard now; requires Node `^20.19.0 \|\| ^22.13.0 \|\| >=24`. |
-| `typescript-eslint` | 8.67.0 | TS-aware lint rules | Peer-depends on TypeScript `>=4.8.4 <6.1.0` at research time — confirms pinning TypeScript to the 6.x line (see Core Technologies) rather than 7.0. |
-| Prettier | 3.9.6 | Formatting | Standard, no notable config needed for this project. |
-| `@vitejs/plugin-react` | 6.1.0 | Vite React integration | Enables Fast Refresh; use the default (Babel-based) transform unless you specifically want the React Compiler's oxc/SWC path. |
+**Verdict: no evaluator (this project's locked one, or any alternative found) supports duplicate cards or five-of-a-kind. This is a structural limitation of every standard lookup-table poker evaluator, not a documentation gap. The custom layer should be a thin wrapper around the existing locked evaluator, not a standalone reimplementation — confirmed by reading the actual `@poker-apprentice/hand-evaluator` v4 source, not by inference.**
 
-## Web Workers for Monte Carlo Trials
+**Evidence, read directly from the library's source (`poker-apprentice/hand-evaluator` on GitHub, `main` branch):**
 
-**Pattern: dedicated persistent worker + Comlink + streamed partial results.**
+1. **The high-level `equity`/`odds` functions explicitly throw on duplicates.** The v4 changelog states: *"`odds` validates its input. Duplicate cards and hands holding more cards than the game allows now throw instead of producing meaningless results"* (`DuplicateCardError`). Irrelevant in practice here — per v1's own research, this project never calls `equityHoldem`/`odds` directly; it hand-rolls the Monte Carlo loop around the low-level primitives, which is the layer that matters.
+2. **The low-level `rankN` core has zero duplicate validation and a hard-coded ≤4-per-rank assumption.** Read from `src/core/rank.ts` and `src/core/hash.ts`: `rankN` builds a `rankCounts[rank] += 1` array directly from whatever cards are passed in (no uniqueness check at all — confirmed by reading `evaluate.ts` too, which is a non-validating wrapper around `rankN`). The perfect-hash table builder (`buildSuffixCounts` in `hash.ts`) explicitly caps each rank's count in its combinatorics at `digit <= SUIT_COUNT` (4), with an inline comment: *"a rank appears at most once per suit."* Feeding it a 5-of-a-kind rank count produces an out-of-range/incorrect hash table index — **silent wrong classification, not a thrown error.** This is worse than an error and is exactly the failure mode a pre-check must intercept.
+3. **`HandStrength` enum (from `@poker-apprentice/types`) tops out at `RoyalFlush = 9`.** There is no slot for a hand rank above straight flush, confirming the "canonical 7,462 hand equivalence classes" the library targets structurally cannot represent five-of-a-kind.
+4. **`@pokertools/evaluator`** (the locked alternative/fallback candidate) has the identical limitation, and says so in its own README: *"The evaluator does **not** validate for duplicate cards... `evaluate([0,0,0,0,0])` → undefined behavior."* Its combinatorics-verification table (2,598,960 for 5 cards = C(52,5)) confirms it's built on the same single-52-card-deck domain (Cactus Kevin / Two-Plus-Two lineage) as every other lookup-table evaluator found in a broader search (HenryRLee/PokerHandEvaluator, Nerdmaster/poker, paulhankin/poker, etc.) — **this is universal to the entire class of perfect-hash poker evaluators**, not a gap specific to one package. No amount of further package search will turn up a fix; the algorithm family is fundamentally single-deck.
 
-- Import the worker with Vite's built-in syntax: `import MyWorker from './simulation.worker.ts?worker'` — no bundler config needed, worker code gets its own chunk in production, ESM imports work natively inside the worker during dev.
-- Run the Monte Carlo loop (random-complete the unknown hole/board cards many times, evaluate all 4 hands with the lookup-table evaluator, tally win/tie/loss + hand-category counts per player) entirely inside the worker so the main thread and UI stay responsive.
-- Stream partial aggregates back periodically (e.g., every few thousand trials or every ~50-100ms via a `Comlink.proxy()` progress callback) rather than only returning a final result — this is what makes the "watch the percentages converge live" requirement actually visible, and it's a well-established pattern (confirmed via multiple 2025 Comlink + Web Worker writeups).
-- At this app's scale (13 cards, 3 opponents, small integer tallies as payload) there's no need for `Transferable`/`SharedArrayBuffer` optimization — the data crossing the worker boundary is tiny. Don't add that complexity preemptively.
-- Re-run/cancel: when the user advances/rewinds a street or reveals an opponent, terminate or signal the in-flight worker loop and restart with the new known/unknown card partition — don't let a stale simulation keep writing to the store.
+**Why a wrapper (not a rewrite) is the right shape**, also confirmed by reading source rather than assumed:
 
-## Poker Hand Evaluation: Library vs. Hand-Rolled
+- `compare(a, b)` in the locked library is trivially extensible: `if (a.strength === b.strength) return handComparator(a.hand, b.hand); return a.strength < b.strength ? 1 : -1;` — it only needs `strength` to be a comparable ordinal and `hand` to be a rank-sorted card array. A custom `FiveOfAKind` value (e.g. `10`, one above the library's `RoyalFlush = 9`) slots in cleanly.
+- `handComparator` does element-wise rank comparison across the `hand` arrays (`cardComparator` per index) — this generalizes correctly to a monorank 5-card "hand" array (e.g. five Aces) with no special-casing needed, since every element shares the same rank.
+- **Recommended module shape:** before delegating to the locked evaluator, count rank occurrences in the specific 7-card grouping being evaluated (2 hole + up to 5 board). If any rank's count is ≥5 (only possible with a 2-deck shoe: 8 copies of each rank exist, so 5+ in a single player's best-7 is rare but real), short-circuit and construct `{ strength: FiveOfAKind, hand: <first 5 matching dealt cards> }` directly — this needs no library call at all, it's a `Map<Rank, Card[]>` tally. Otherwise, every other category (high card through quads and straight flush) is evaluated identically to single-deck play regardless of *which* physical duplicate a card came from — rank-count-based classification doesn't care that two "Ace of Spades" strings are both present as long as the count itself stays ≤4, which the untouched `evaluate`/`rankN` already handles correctly since duplicate-string cards just look like "another card of that rank" to the counting logic. Delegate to the existing `evaluate`/`compare` unchanged for that path.
+- This means the new work is genuinely small: a rank-tally pre-check (~20 lines), an extended enum value, and a comparator that checks the pre-check's flag before falling through to the locked library's `compare`. **Not** a reimplementation of 7-card hand ranking.
 
-**Recommendation: use a library for the evaluation primitive, hand-roll the Monte Carlo orchestration around it.**
+**Integration point to flag as a fragility (MEDIUM confidence risk, worth a regression test):** the non-validating behavior of `evaluate`/`rankN` is an *implementation detail* observed by reading the current source, not a documented public guarantee (only `equity`/`odds` validation is called out in the changelog/README as intentional, stable behavior). If a future minor/patch version of `@poker-apprentice/hand-evaluator` adds duplicate validation to `evaluate` itself (plausible, since v4 already moved in the direction of "throw instead of producing meaningless results" for the equity path), the 2-deck wrapper would start throwing on ordinary ≤4-of-a-rank duplicate-card input. **Mitigation:** pin the exact locked version (already done via lockfile), and add a Vitest regression test that calls `evaluate()` with a deliberately duplicated card pair (e.g., two `'As'` entries) and asserts it does *not* throw — this test will fail loudly on any future upgrade that changes this behavior, before it reaches the Monte Carlo loop.
 
-- Writing a correct *and* fast 7-card evaluator from scratch (perfect-hash or Two-Plus-Two-style lookup tables) is a well-trodden, solved problem — there's no learning-goal or product reason to reinvent it, and getting hand ranking edge cases right (wheel straights, kicker ordering, best-5-of-7 selection) is exactly the kind of thing that's easy to get subtly wrong.
-- Avoid the older, once-popular options: **`pokersolver`** (last published 2020, unmaintained) and the original **`poker-evaluator`**/**`poker-evaluator-ts`** (dependency tree still pinned to TypeScript ^3.7 and `@types/node` ^13, and historically ships its lookup table via a pattern that trips up bundlers expecting `fs.readFileSync` to work — a known Webpack/Vite footgun for browser targets). Both are functionally superseded by the actively-maintained options above.
-- The orchestration layer (looping N trials, drawing from the remaining deck respecting already-known cards, tallying results, streaming partial progress) is specific enough to this app's exact requirements (rewind, manual reveal, live convergence) that it should be hand-written — no off-the-shelf "poker equity calculator" package will match the interaction model (forward/backward street navigation, opponent-reveal mid-simulation) out of the box.
+## Deck/Shoe Model: Extend, Don't Replace
 
-## Testing Tools for Probability Math
+No new package for shoe management either. The one real change: v1's single-deck "remaining cards" model is presumably a `Set<Card>` (each of the 52 rank+suit strings present or absent). A 2-deck shoe needs a **multiset** (each rank+suit string can have a remaining count of 0, 1, or 2), because `'As'` is no longer a unique identifier once two of them exist in the shoe. This is a small, mechanical change to existing dealing/exclusion logic (swap `Set<Card>` for `Map<Card, number>` or a flat `Card[]` shoe array with real duplicate entries and index-based draws) — not a new dependency, and it's the same underlying `pure-rand` shuffle either way. Worth a `fast-check` invariant when this ships: "the number of remaining cards with a given rank+suit label never exceeds `deckCount`."
 
-| Tool | Version | Purpose | Why |
-|------|---------|---------|-----|
-| Vitest | 4.1.11 | Unit/integration test runner | Native Vite integration (shares config/transform pipeline), fast, ESM-native — the default pairing with a Vite app. Use it for the simulation engine, hand evaluator wrapper, and deck/shuffle logic — the actual math this app lives or dies on. |
-| `fast-check` | 4.9.0 | Property-based testing | The right tool for probability code: instead of asserting exact output on a handful of hand-picked hands, assert *invariants* that must hold for any input — e.g. "win% + tie% + loss% always sums to ~1", "a evaluated hand's category is never better than a strictly stronger 7-card hand's category", "revealing a card never increases another player's probability of holding it". `fast-check` generates hundreds of randomized card/board combinations per run and shrinks failures to a minimal reproducing case. 10M+ weekly downloads, ships its own TS types. |
-| `@fast-check/vitest` | 0.4.1 | Vitest integration for fast-check | Thin adapter so `fc.test`/property assertions read as native Vitest tests (`it.prop`) instead of manual `fc.assert(fc.property(...))` boilerplate. |
-| `@testing-library/react` | 16.3.2 | Component testing | For UI-level tests (does the odds table re-render with new numbers, does clicking a seat trigger reveal state) — pairs with `@testing-library/user-event` (14.6.6) and `@testing-library/jest-dom` (7.0.1) matchers, run under Vitest. |
-| `@playwright/test` | 1.62.1 | End-to-end smoke tests | Use sparingly — one or two E2E flows (deal a hand, advance through all streets, watch odds converge and settle, reveal an opponent) to catch integration breaks across the worker/UI boundary that unit tests can't. Not a substitute for the property-based math tests above. |
+## Package Legitimacy Audit
 
-**Statistical-correctness testing strategy specifically for Monte Carlo convergence:**
-- For scenarios where exact odds are known/computable (e.g., pre-flop heads-up hand vs. random hand equities are widely published; a fully-determined board with all cards known has a deterministic single "trial" outcome), assert the simulation's output converges within a tolerance band (e.g., ±1-2%) of the known value after N trials — this is a statistical assertion, not an exact-equality one; use a generous epsilon and a fixed seed (via `pure-rand`) to keep the test deterministic despite being "random."
-- Test the hand evaluator in isolation against a small set of known-answer hands (royal flush beats straight flush, wheel straight (A-2-3-4-5) ranks correctly low, kicker comparisons) as exact-value unit tests — these are cheap and catch the most common evaluator bugs immediately, complementing the property-based invariant tests.
+`slopcheck` (v0.6.1, installed locally) was run against every Blackjack-candidate package via `py -m slopcheck install <packages> --ecosystem npm`, plus `npm view <pkg> scripts` was checked for each (no postinstall scripts found on any candidate — moot anyway since none are being installed).
+
+| Package | Registry | Age / Evidence | Source Repo | slopcheck | Disposition |
+|---------|----------|-----------------|--------------|-----------|-------------|
+| `blackjack-strategy` | npm | Last real release 2020-09-03; 178 dl/mo | gsdriver/blackjack-strategy | [OK] (`"Not exactly popular"`) | **Rejected** — wrong API shape (action-suggestion, not odds/EV), stale |
+| `blackjack-simulator` | npm | Last release 2016-10-19; 12 dl/mo | gsdriver/blackjack-simulator | **[SUS]** (`"Only 12 downloads. Nobody uses this."`) | **Rejected** — dead |
+| `engine-blackjack` | npm | Last release 2017-06-27; 376 dl/mo; **GPL-2.0** | kedoska/engine-blackjack | [OK] (`"Not exactly popular"`) | **Rejected** — abandoned (9 years) + copyleft license risk |
+| `@blackjacktrainer/blackjack-simulator` | npm | Actively maintained; 373 dl/mo | mhluska/blackjack-simulator | [OK] (`"Not exactly popular"`) | **Rejected** — legitimate project, wrong product shape (bankroll/card-counting trainer, not per-hand odds); 4.3MB for ~5% surface usage |
+| `miaoda-game-blackjack-rules` | npm | 27 days old; 1,106 dl/mo (anomalous for age) | **none linked** | **[SUS]** (`"27 days old"`, `"No source repository linked"`) | **Rejected outright** — matches AI-generated package-cluster pattern, unverifiable code |
+| `miaoda-game-deck-core` | npm | 27 days old (dependency of above) | **none linked** | **[SUS]** (same as above) | **Rejected outright**, same reasoning |
+
+**Packages removed due to `[SLOP]` verdict:** none reached that tier — `slopcheck` doesn't have hard evidence of malicious payloads for any candidate, but two (`miaoda-game-*`) are flagged `[SUS]` with red flags (no repo + anomalous downloads for age) serious enough to reject without further diligence, consistent with the project's existing practice of treating `[SUS]` + missing provenance as disqualifying rather than something to "look into more."
+**Net result: zero new runtime dependencies for v2.0.**
 
 ## Installation
 
 ```bash
-# Core
-npm install react@19.2.8 react-dom@19.2.8 zustand@5.0.15 motion@13.1.1
-
-# Poker logic
-npm install @poker-apprentice/hand-evaluator@4.3.0 comlink@4.4.2 pure-rand@8.4.2
-
-# Dev dependencies
-npm install -D typescript@6.0.3 vite@8.2.2 @vitejs/plugin-react@6.1.0 \
-  eslint@10.9.0 typescript-eslint@8.67.0 prettier@3.9.6 \
-  vitest@4.1.11 fast-check@4.9.0 @fast-check/vitest@0.4.1 \
-  @testing-library/react@16.3.2 @testing-library/user-event@14.6.6 @testing-library/jest-dom@7.0.1 \
-  @playwright/test@1.62.1
+# No new packages required for Blackjack or multi-deck Hold'em.
+# Both are hand-written TypeScript modules added to the existing src/ tree,
+# built on already-locked dependencies (Comlink, pure-rand, Zustand,
+# @poker-apprentice/hand-evaluator + @poker-apprentice/types).
 ```
 
 ## Alternatives Considered
 
-| Category | Recommended | Alternative | When to Use Alternative |
-|----------|-------------|-------------|--------------------------|
-| Framework | React 19 | Svelte 5 | If raw update performance/bundle size is the top priority over ecosystem depth — 2026 benchmarks show Svelte 5 with ~5-8% overhead vs. vanilla JS on high-frequency-update suites vs. React 19 compiler's ~12-18%. This app's update frequency (a few times/sec, not per-frame) doesn't need that edge, and React's ecosystem (animation libs, SVG card patterns, worker examples) is deeper for this specific domain. |
-| Card rendering | DOM + SVG + Motion | Konva (react-konva 19.2.5) | If playtesting on low-end/mobile hardware shows CSS-transform-based flip/deal animations dropping frames, Konva's canvas scene graph with built-in tweening is the natural escape hatch — it keeps a similar declarative React API (`react-konva`) while moving rendering off the DOM. |
-| Card rendering | DOM + SVG + Motion | PixiJS 8.20.0 | Only relevant if scope grows well beyond a single table (e.g., simultaneous multi-table view with dozens of animated tables/cards) — not justified for this project's single-table scope. |
-| Hand evaluator | `@poker-apprentice/hand-evaluator` | `@pokertools/evaluator` | If you need the extra 5-10M evals/sec headroom after profiling, or the API shape fits your Monte Carlo loop more naturally. Both are pure TS and browser-safe. |
-| State management | Zustand | Jotai | If the state model turns out to be more naturally atomic (many independent small pieces of derived state) than a single store — plausible given per-street, per-opponent, per-hand-category state, but Zustand's single-store simplicity is the better starting point for a project this size. |
-| TypeScript | 6.0.3 | 7.0.2 (tsgo) | Once `typescript-eslint` ships TS 7.1 support (targeted autumn 2026) and 7.1 is GA, revisit — the ~10x faster type-checking is a genuine upgrade, just not compatible with the lint toolchain yet. |
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|--------------------------|
+| Hand-rolled Blackjack rules engine | `@blackjacktrainer/blackjack-simulator` | If a future milestone adds card-counting practice, bet-spread strategy, or multi-hand bankroll simulation as an actual product feature (not currently planned) — at that point its `Simulator`/`Game` classes solve a real problem this project doesn't yet have, and revisiting it would be worth the integration cost. |
+| Thin wrapper around `@poker-apprentice/hand-evaluator` for 2-deck Hold'em | Standalone multi-deck evaluator written from scratch | If the wrapper's fragility risk (see Version Compatibility) ever materializes — e.g., a future major version of the locked library adds duplicate validation to `evaluate()` itself and breaks the non-throwing assumption — a standalone rank-counting evaluator (still simple: 13-bucket rank tally + a small ordered category table) becomes the fallback. Not needed today. |
+| `Map<Card, number>` multiset shoe model | Flat `Card[]` array with real duplicate entries, drawn by index and spliced | Either works; the flat-array approach is arguably simpler to reason about for shuffle correctness (it's just a longer version of what v1 already has) and avoids introducing a new data structure pattern. Pick based on whichever integrates more naturally with the existing single-deck draw code once it's in front of you — this is an implementation detail, not a stack decision. |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|--------------|
-| PixiJS or Konva as the default rendering choice | Solves a scaling problem (hundreds/thousands of sprites, complex drag interactions) this project doesn't have; adds WebGL/canvas asset pipeline and hit-testing complexity, and makes the data-dense odds table harder to render well (canvas text is worse for accessibility/crispness than DOM text) | DOM + SVG cards + Motion (see Rendering Approach) |
-| `pokersolver` | Unmaintained since 2020; string-based hand parsing is far slower than lookup-table evaluators — unsuitable for a Monte Carlo loop needing millions of evaluations | `@poker-apprentice/hand-evaluator` |
-| `poker-evaluator` / `poker-evaluator-ts` | Dependency tree pinned to TypeScript ^3.7/`@types/node` ^13; historically ships its lookup table in a way that trips up bundlers expecting Node's `fs` module in a browser build | `@poker-apprentice/hand-evaluator` |
-| TypeScript 7.0.2 as the primary compiler today | No compiler API yet, breaks `typescript-eslint` (peer range explicitly excludes it); ecosystem-wide blocker, not project-specific | TypeScript 6.0.3 |
-| Next.js / Remix / any SSR meta-framework | No backend, no SEO/SSR need — this is a pure client-side simulator that should be shippable as static files; a server-oriented framework adds deployment and mental-model complexity with zero payoff | Vite in SPA mode |
-| Redux / Redux Toolkit | Boilerplate-heavy for a single-page app with one cohesive state domain (current hand/street/simulation results) and no server-state synchronization needs | Zustand |
-| Running Monte Carlo trials on the main thread | Blocks the UI thread during simulation bursts, defeating the "feels live" requirement and risking dropped frames on card animations that run concurrently | Web Worker + Comlink (see above) |
-| `Math.random()` for simulation trials | Not seedable — makes convergence/regression tests non-deterministic and "replay this exact deal" impossible to build later | `pure-rand` |
+| `engine-blackjack` | GPL-2.0 licensed and unmaintained since 2017 (dead `neutrino` build tooling); copyleft risk for a project that should stay freely shareable | Hand-rolled rules engine |
+| `blackjack-strategy` / `blackjack-simulator` (gsdriver) | Both stale since 2016-2020, and `blackjack-strategy`'s API (basic-strategy action suggestions) doesn't produce the bust probability / dealer outcome distribution / EV this project needs regardless of staleness | Hand-rolled rules engine + existing Monte Carlo worker pattern |
+| `miaoda-game-blackjack-rules` / `miaoda-game-deck-core` | `slopcheck`-flagged: no linked source repository, 27 days old, anomalous download count for age — matches an AI-generated package-cluster pattern seen across sibling `miaoda-*` packages published in the same window | Hand-rolled rules engine |
+| Any poker "multi-deck" or "duplicate-card" evaluator package (none found, but flag for future search) | Every lookup-table poker evaluator (the two already vetted for this project, plus every other one surfaced in a broad search) is built on the C(52,5)/C(52,7) single-deck combinatorial domain — this is a property of the *algorithm family* (perfect-hash / Two-Plus-Two lookup tables), not a gap any specific package happens to have. A package claiming multi-deck/five-of-a-kind support should be treated with extra `slopcheck` scrutiny, since it would be solving a problem essentially no one else in the ecosystem has solved. | The thin wrapper described above |
+| `@poker-apprentice/hand-evaluator`'s `equity`/`odds` (or `equityHoldem`) functions for 2-deck mode | These validate and **throw `DuplicateCardError`** on any duplicate card — which is guaranteed to occur in 2-deck mode | The low-level `evaluate`/`compare`/`rankN` primitives (already what v1 uses for its hand-rolled Monte Carlo loop), gated by the five-of-a-kind pre-check |
 
 ## Stack Patterns by Variant
 
-**If playtesting reveals DOM/CSS animation jank on target devices:**
-- Migrate just the card layer to `react-konva` (Konva 10.3.1), keeping the odds table and controls in DOM/React as-is — a hybrid canvas-cards + DOM-chrome split is a common, low-risk escape hatch since the two layers don't need to share a rendering context.
-- Because everything is behind component boundaries from day one, this migration should only touch the card-rendering components, not the simulation/state layer.
+**If a future milestone adds Blackjack side bets, insurance, or splits/doubles:**
+- Still hand-roll. Each of these is a well-defined additional branch in the same small rules state machine (e.g., split = evaluate two independent hands from the same starting pair; insurance = a side EV calculation off the dealer's up-card being an Ace). None of it crosses the complexity threshold where a lookup-table-style library would pay for its integration cost — Blackjack's total rule surface, even fully loaded with casino-standard options, is an order of magnitude smaller than 7-card poker hand ranking.
 
-**If the project later expands beyond Texas Hold'em (Omaha, etc., explicitly out of scope for this milestone but flagged in PROJECT.md as a possible future direction):**
-- Re-check evaluator library support — `@poker-apprentice/hand-evaluator` and `@pokertools/evaluator` are Hold'em-oriented; Omaha's "must use exactly 2 hole cards" rule needs either a library with explicit Omaha support or a hand-rolled combination-selection layer on top of the same core 5-card evaluator.
+**If a future milestone extends beyond 2 decks (e.g., a 6-deck "shoe game" mode, matching real casino Blackjack):**
+- The multiset shoe model and the five-of-a-kind pre-check both already generalize to N decks with no design change — the pre-check is "count ≥5 of a rank," which doesn't care whether that's possible because of 2 decks or 6. Only the shoe's total card count and per-rank cap (`4 × deckCount`) change, both already parameterized by `deckCount` in the model recommended above.
 
-**If simulation trial counts need to scale up significantly (e.g., exhaustive enumeration instead of sampling for exact pre-flop numbers):**
-- Consider a worker pool (multiple workers via `navigator.hardwareConcurrency`) splitting trials across cores, still coordinated via Comlink — straightforward extension of the single-worker pattern, not a stack change.
+**If profiling shows the five-of-a-kind pre-check pass adds measurable overhead inside the 200k-trial-per-second worker loop:**
+- Unlikely (it's a 7-element rank tally, negligible next to the lookup-table evaluation it gates), but if it matters, reuse the existing `evaluate.ts` pattern of pre-allocated scratch buffers (`Uint8Array` rank-count buffer, module-scoped, not re-allocated per trial) rather than reaching for a different library — this is a micro-optimization within the hand-rolled module, not a stack change.
 
 ## Version Compatibility
 
 | Package A | Compatible With | Notes |
 |-----------|------------------|-------|
-| `typescript-eslint@8.67.0` | `typescript >=4.8.4 <6.1.0` | Confirms TypeScript must stay on the 6.x line, not 7.0.2, until typescript-eslint adds TS 7.1 support. |
-| `eslint@10.9.0` | Node `^20.19.0 \|\| ^22.13.0 \|\| >=24` | Verify your Node version before scaffolding tooling. |
-| `@vitejs/plugin-react@6.1.0` | `vite@8.x` | Verify against installed Vite major when scaffolding — plugin majors track Vite majors closely. |
-| `@poker-apprentice/hand-evaluator@4.3.0` | `@poker-apprentice/types@^1.4.0` (its only runtime dependency) | No Node-only APIs; safe inside a Web Worker/browser bundle. |
+| `@poker-apprentice/hand-evaluator@4.3.0` | Custom 2-deck wrapper (new, this milestone) | Wrapper relies on `evaluate`/`rankN` **not** validating duplicate cards — this is current-source-confirmed behavior but not a documented public guarantee (only `equity`/`odds` validation is called out as intentional in the v4 changelog). Pin the exact locked version; add a regression test (see "Integration point to flag" above) that fails loudly if a future version changes this. |
+| `@poker-apprentice/types@^1.4.0` | `HandStrength` enum extension | The locked enum tops out at `RoyalFlush = 9`. The custom `FiveOfAKind` value must be defined in project code (not in the upstream package) as a value `>9` (e.g. `10`) in a project-local extended enum/type used only in 2-deck mode, keeping the upstream type untouched. |
+| Multiset shoe model (new) | `pure-rand@8.4.2` (locked) | No compatibility concern — `pure-rand`'s shuffle/sample functions operate on arrays of arbitrary length and don't inspect card semantics; extending from a 52-card array to a 104-card array (2 decks) or a per-rank count map requires no RNG-side change. |
 
 ## Sources
 
-- Context7 (`ctx7` CLI): `/vitejs/vite` — Web Worker `?worker` import syntax and bundling behavior (HIGH confidence, official docs)
-- Context7 (`ctx7` CLI): PixiJS ecosystem package resolution (used for popularity/maintenance cross-check, MEDIUM confidence)
-- npm registry (`npm view`, live, 2026-08-23) — authoritative current version numbers for all packages listed above (HIGH confidence)
-- [TypeScript 7.0 RC Moves Microsoft's Go Rewrite Into the Mainline Compiler](https://visualstudiomagazine.com/articles/2026/06/22/typescript-7-0-rc-moves-microsofts-go-rewrite-into-the-mainline-compiler.aspx) — MEDIUM confidence, corroborated by multiple sources and GitHub issue
-- [typescript-eslint GitHub Issue #12518 — TypeScript 7.0.2 Support](https://github.com/typescript-eslint/typescript-eslint/issues/12518) — HIGH confidence, primary source for the TS7/lint incompatibility
-- [Announcing TypeScript 7.0 — TypeScript Blog](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/) — HIGH confidence, official
-- GitHub: [poker-apprentice/hand-evaluator](https://github.com/poker-apprentice/hand-evaluator) — MEDIUM-HIGH confidence, official repo/README fetched directly
-- GitHub: [aaurelions/pokertools](https://github.com/aaurelions/pokertools/tree/main/packages/evaluator) — MEDIUM confidence (newer, smaller project), official repo/README fetched directly
-- GitHub: [htdebeer/SVG-cards](https://github.com/htdebeer/SVG-cards) — referenced as the SVG asset source underlying `react-deck-o-cards`; MEDIUM confidence
-- [Konva "Best JavaScript Canvas Library" guide](https://konvajs.org/docs/guides/best-canvas-library.html) and [SVG vs Canvas vs WebGL 2026 comparison](https://www.svggenie.com/blog/svg-vs-canvas-vs-webgl-performance-2025) — MEDIUM confidence, cross-referenced across multiple 2025/2026 sources, consistent conclusions
-- WebSearch: Zustand/Jotai/Redux 2026 comparisons (multiple sources, consistent "Zustand for small-to-medium client state" consensus) — MEDIUM confidence
-- WebSearch: Comlink + Web Worker Monte Carlo patterns (LogRocket, multiple 2024-2025 implementation writeups) — MEDIUM confidence
+- GitHub (`poker-apprentice/hand-evaluator`, `main` branch, fetched directly): `README.md`, `src/core/rank.ts`, `src/core/hash.ts`, `src/core/constants.ts`, `src/evaluate.ts`, `src/compare.ts`, `src/types.ts`, `src/utils/handComparator.ts` — HIGH confidence, primary source, read directly rather than inferred
+- GitHub (`poker-apprentice/types`, `main` branch): `src/types.ts` (`HandStrength` enum definition) — HIGH confidence, primary source
+- GitHub (`aaurelions/pokertools`, `packages/evaluator/README.md`): duplicate-card behavior, combinatorics verification table — HIGH confidence, official README, directly fetched
+- npm registry (`npm view`, live, 2026-08-24): version/publish-date/license/scripts data for `blackjack-strategy`, `blackjack-simulator`, `engine-blackjack`, `@blackjacktrainer/blackjack-simulator`, `miaoda-game-blackjack-rules`, `miaoda-game-deck-core` — HIGH confidence
+- npmjs.org downloads API (`api.npmjs.org/downloads/point/last-month/...`, live, 2026-08-24) — HIGH confidence, authoritative download counts
+- `slopcheck` v0.6.1 (local install, `pip show slopcheck`), run via `py -m slopcheck install <packages> --ecosystem npm` — HIGH confidence, direct tool output
+- GitHub (`mhluska/blackjack-simulator`): project purpose, API shape (`Simulator`, `Game` classes), maintenance status — MEDIUM-HIGH confidence, fetched via WebFetch summary of repo content
+- WebSearch: "poker hand evaluator five of a kind multiple decks" — MEDIUM confidence, corroborates (does not solely establish) the primary-source finding that no evaluator in the ecosystem supports multi-deck/five-of-a-kind
+- WebSearch: Blackjack npm package landscape survey — MEDIUM confidence, used to enumerate candidates before deeper per-package verification
 
 ---
-*Stack research for: Browser-based Monte Carlo Texas Hold'em simulator*
-*Researched: 2026-08-23*
+*Stack research for: v2.0 Blackjack & Multi-Deck milestone, Monte Carlo Poker Simulator*
+*Researched: 2026-08-24*

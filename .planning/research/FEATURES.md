@@ -1,212 +1,234 @@
 # Feature Research
 
-**Domain:** Poker odds/equity simulators and calculators (Texas Hold'em), applied to a browser-based educational full-table visualizer
-**Researched:** 2026-08-23
+**Domain:** Blackjack probability/odds explorers + multi-deck effects in card-based Monte Carlo simulators (v2.0 milestone: Blackjack + Multi-Deck, added to an existing Hold'em odds simulator)
+**Researched:** 2026-08-24
 **Confidence:** MEDIUM-HIGH
 
 ## Feature Landscape
 
-The poker odds/equity tool category splits into two lineages that this project deliberately fuses:
+Blackjack tooling on the web splits into three lineages, and this milestone deliberately wants exactly one of them, adapted to this project's existing "odds explorer" model:
 
-1. **Utilitarian equity calculators** (Equilab, PokerStove, CardPlayer/PokerNews/Omni Calculator/CalcBE web calculators, PokerCruncher, Flopzilla) — form-based UIs (dropdowns or flat card grids) built for players and coaches to crunch numbers. Fast, dense, unstyled. No table, no seats, no animation. These define the *analytical* table stakes: card selection, equity math, hand-category breakdowns, street handling.
-2. **Broadcast-style odds overlays** (WSOP/televised poker graphics) — visual, at-a-glance win% per player shown on top of a real table as the hand progresses, updating at each street and on all-ins. These define the *presentational* target this project is aiming for, but broadcast graphics are one-way (viewer can't interact, pick cards, or rewind).
+1. **Strategy calculators / EV tools** (Wizard of Odds hand calculator, "Best in Slot" blackjack calculator, The Probability Lab, GamblingCalc) — you set player cards + dealer up-card + deck count/ruleset, and the tool returns the recommended action plus an EV number per action (hit/stand/double/split/surrender), usually expressed as expected return per 1 unit wagered. These are **prescriptive** (they tell you what to do) and mostly static/instant (closed-form or pre-tabulated, not a visible live simulation). They define the *analytical* table stakes for what numbers a credible blackjack tool must produce.
+2. **Card-counting trainers** (Card Counting Trainer, True Count Trainer, bjcardcounter.com, mobile "Blackjack Coach" apps) — timed drills that flash cards and quiz the user on running count / true count / basic-strategy deviations. These are **skill-drill** tools (reflex/memorization training against a clock), a fundamentally different interaction loop from an odds explorer — no relevance to "watch the numbers move," everything is about the user producing the number correctly under time pressure.
+3. **Dealer-bust / probability-table references** (Wizard of Odds "why number of decks matter," the classic dealer-bust-by-upcard chart, "Statistics of Blackjack" writeups) — static tables/articles showing dealer final-outcome distributions and how deck count shifts them. These are **descriptive reference material**, not interactive tools, but they identify exactly which numbers are considered the canonical "interesting" blackjack probabilities.
 
-No product found combines both: a fully interactive, felt-table, animated-card presentation with live Monte-Carlo-driven odds a user can rewind, replay, and reveal into. That gap is this project's core differentiation opportunity — the analytics are commodity, the *experience* of watching probability resolve at a real table is not.
+This project's existing Hold'em app already established the right synthesis for lineage 3 turned interactive (poker's hand-category table, win/tie/lose, live convergence). The blackjack feature should be **lineage 1's inputs and numbers, lineage 3's descriptive/non-prescriptive stance, delivered with the existing project's Monte Carlo/live-convergence presentation** — explicitly *not* lineage 2's drill/quiz interaction model.
+
+### The Odds-Explorer Interaction Loop (Blackjack, no betting)
+
+This is the direct blackjack analog of the existing Hold'em loop ("deal or construct → read odds → advance/rewind → watch odds respond"):
+
+1. **Deal or construct a scenario** — random deal (default) or manual picker sets: player's first two cards, dealer's up-card (visible), dealer's hole card (hidden — same "anonymous but real" model as a poker opponent). This reuses the existing card-picker/random-deal/reveal patterns near-verbatim; the dealer's hidden hole card *is* an "opponent" in the existing engine's sense.
+2. **Read the odds panel** for the current hand, before any decision: player bust-if-hit probability, dealer final-outcome distribution conditioned on the up-card, and win/push/lose probability + EV for the two live options (stand now vs. hit now). No recommended action is shown — this mirrors the already-established anti-GTO stance from the poker research (descriptive, not prescriptive).
+3. **Take an action** (hit, stand, double if allowed, split if a pair) — this is the blackjack analog of "advance a street." Hitting deals one visible card and recomputes everything against the new total; standing locks the player's hand and reveals the dealer's hole card, triggering the dealer's fixed drawing-rule playout and a final win/push/lose result.
+4. **Reveal the dealer's hole card early** (optional, analogous to poker's opponent reveal) — turns "what's the chance the dealer has a ten under there" from a live Monte Carlo question into a certainty, and all downstream odds recompute conditioned on it. This is a very natural reuse of the existing reveal mechanic and maps directly onto the real insurance decision's underlying question without needing to implement insurance as an actual side wager.
+5. **Toggle deck count (1 vs 2)** at any point — every displayed number (bust chance, dealer distribution, natural frequency, EV) recomputes live so the user can watch deck composition itself move the odds. This is the same "watch information reshape probability" payoff the project's Core Value already commits to, just with the deck itself as the "information."
+
+There is no bankroll, no bet sizing, and no chip stack anywhere in this loop — EV is reported as a **per-decision, per-unit-wagered ratio** (e.g., "Stand: −0.18 units expected" / "Hit: −0.31 units expected"), which is the standard way EV is expressed in blackjack literature (Wizard of Odds, Schlesinger's *Blackjack Attack*) and requires no actual money/chips concept to compute or display. This satisfies the project's no-betting constraint while still delivering the single most useful number a real strategy calculator produces.
 
 ### Table Stakes (Users Expect These)
 
-Features that exist in essentially every equity calculator on the market. Missing these makes the tool feel broken or amateurish to anyone who has used PokerStove, Equilab, or even a free web calculator.
-
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Card picker for hole/board cards | Every calculator surveyed (Equilab, PokerStove, PokerNews, CardPlayer, Omni Calculator, PokerScout) uses a click-to-select card grid; it's the universal input pattern | LOW-MEDIUM | Must prevent duplicate-card selection across hand/board/opponents; needs 4-color or suit-clear deck rendering |
-| Win/tie/lose equity vs opponents | The single output every tool leads with; PokerStove, Equilab, PokerNews, Omni Calculator, Wizard of Odds, 888poker all show this as the headline number | LOW (display) / HIGH (engine) | Display is trivial once the Monte Carlo engine exists; the engine itself is the real cost |
-| Accurate 7-card hand evaluator | Underpins every other number in the app; every competitor has a correct, fast evaluator as its foundation | HIGH | Must correctly rank best-5-of-7, handle ties/splits; needs to run millions of times per second inside a Monte Carlo loop |
-| Hand-category probability distribution | Equilab (hand strength view), CalcBE ("hold'em distribution"), and most modern free calculators show "% you end with a pair / two pair / trips / etc." by river | MEDIUM | Aggregation layer on top of the evaluator + simulation; must recompute per street as board narrows the outcome space |
-| Street-by-street input/progression | PokerNews, Omni Calculator, CardPlayer all explicitly support leaving later-street cards "Unknown" and recompute as flop/turn/river are added | MEDIUM | Needs a simple state machine (preflop → flop → turn → river) plus recompute-on-change |
-| Real-time recalculation on any card change | Every modern calculator (Flopzilla explicitly notes "updates automatically without a Compute button") recomputes the instant an input changes | MEDIUM | Requires the simulation to be cheap/fast enough (or interruptible) to not freeze the UI on every card click |
-| Random/quick deal | PokerStove, Equilab, and consumer mobile apps ("Poker Odds – Simulator") all support one-click random dealing as the default entry point, distinct from manual setup | LOW | Simple RNG deal into the picker state; must respect "no duplicate cards" |
-| Support for multiple simultaneous opponents | PokerScout supports up to 10 seats with live win/tie% per seat; PokerNews supports up to 9 opponents; multi-opponent is the norm, not the exception | LOW (fixed at 3 per this project) | This project fixes opponent count at 3, which simplifies layout vs. competitors that support variable N — a deliberate, reasonable scope reduction, not a regression |
+| Player bust-if-hit probability | Every strategy calculator and every "dealer bust chart" reference leads with this; it's the single most intuitive blackjack probability (P(next card busts current total)) | LOW | Simple to compute exactly from remaining-shoe composition; still route through the Monte Carlo engine for presentation consistency with the rest of the app (see Architecture note below) |
+| Dealer final-outcome distribution by up-card | The canonical "dealer bust chart" (17/18/19/20/21/blackjack/bust breakdown conditioned on the visible up-card) appears in essentially every blackjack probability reference (Wizard of Odds, "Statistics of Blackjack," Medium/DataGenetics writeups) — overall dealer bust rate is famously ~28% but varies sharply by up-card (dealer showing 5–6 busts ~40%+, dealer showing 7–A busts much less) | MEDIUM | This is blackjack's direct analog to the existing poker hand-category table — same "distribution table that updates live" pattern, reuse that UI concept |
+| Win/push/lose probability for Stand vs. Hit | The headline output of literally every calculator surveyed (Wizard of Odds, Best in Slot, GamblingCalc, The Probability Lab) — always shown per available action | LOW (display) / MEDIUM (engine: needs dealer playout simulation) | Requires simulating the dealer's fixed drawing rule (hit to 17, stand on all 17s — pick one standard rule and don't expose it as a toggle, see Anti-Features) inside each trial |
+| EV per decision, per-unit-wagered | Every surveyed calculator's "so what should I actually expect" number; industry-standard normalized unit (not dollars, not a bankroll) | LOW (given win/push/lose is already computed) | EV = P(win)×(+1, or +1.5 for a stood natural) + P(push)×0 + P(lose)×(−1); purely a derived statistic, no wager/chip state needed — this is what keeps the feature inside the no-betting constraint |
+| Natural blackjack frequency | Universally cited stat in every blackjack probability reference; also the cleanest single number for demonstrating the deck-count effect (verified: ~4.83% at 1 deck vs. ~4.78% at 2 decks — small but real and directly attributable to card removal) | LOW | Pure deck-composition calculation (P(ace)×P(ten-value \| ace drawn) × 2 orderings); ideal candidate for a "before/after" deck-count-toggle callout since the delta is real but subtle enough to need the tool to make it visible |
+| Live recalculation on every action and on the deck-count toggle | Matches the existing app's already-established pattern (every card change recomputes); users of any modern calculator expect zero "Compute" button | MEDIUM | Reuses the existing worker/Comlink streaming architecture — one more request-shape into the same engine, not a new architectural pattern |
+| Random deal + manual card picker for player hand and dealer up-card | Direct reuse of the existing Hold'em picker/random-deal UX; users of the existing app will expect the same interaction to carry over to the new game | LOW (given existing picker component) | The "no duplicate cards" picker constraint now must also respect deck count (2-deck mode legitimately allows the same rank+suit to be picked twice — see 2-Deck Hold'em section) |
+| Deck-count toggle (1 / 2) affecting Blackjack specifically | This is the explicit PROJECT.md v2.0 target feature — a shoe of 1 or 2 decks is table stakes for a blackjack tool that claims deck count as a first-class variable | LOW–MEDIUM | Must correctly rebuild the "remaining shoe" composition (52 or 104 cards minus dealt/known cards) that every other probability in this table is computed from |
 
 ### Differentiators (Competitive Advantage)
 
-Features that are rare, absent, or done poorly in the surveyed products, and that align directly with this project's stated core value ("probability made visible").
-
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Full casino-table visual presentation (felt, seated opponents, animated card dealing/flipping) | No surveyed equity calculator (Equilab, PokerStove, web calculators, PokerCruncher, Flopzilla) has a real table scene — they're all forms. Broadcast TV graphics have the visual language but aren't interactive. This is the single biggest gap in the market for an *educational* tool | HIGH | Largest scope item in the project; art + animation work, not just logic. Justifies "game design learning tool" framing over "yet another calculator" |
-| Live Monte Carlo convergence display (percentages visibly settling as trial count climbs) | Most calculators either show a static final answer or, at best, a progress spinner (PokerStove's Monte Carlo mode computes "millions per second" but doesn't narrate the convergence as a teaching moment). Making the *method* visible — not just the result — is this project's explicit pedagogical thesis | MEDIUM-HIGH | Requires a streaming/incremental simulation (Web Worker posting partial results every N trials) rather than a single batch compute-then-return; this is an architectural choice, not just a UI skin |
-| Opponent card reveal mid-hand, with live recalculation | Standard calculators let you *set* opponent cards up front (known hand vs. known hand) but don't model the *act* of revealing previously-hidden information mid-flow and recomputing live off it — that's a broadcast-TV behavior, not a calculator one | MEDIUM | Requires the simulation to correctly condition on a partially-known opponent set (some revealed, some still random) — genuine simulation logic, not just UI |
-| Forward + rewind street navigation | Calculators let you jump directly to any street by filling in cards, but none surveyed support "go back to preflop and watch the odds unwind" as a first-class interaction — it's always forward-only data entry | MEDIUM | Needs state history (snapshot per street) so rewinding is instant, not a recompute; enhances the "watch information reshape probability" narrative directly |
-| Manual "what-if" scenario builder alongside random deal | Some tools (PokerStove, Equilab) allow manual card entry, but pairing a default *random* mode with an easy toggle into full manual construction, in a single fluid UI, is uncommon — most tools are manual-only forms | LOW-MEDIUM | Mostly a UI/mode-toggle concern once the card picker and engine exist |
-| Outs / draw callouts tied to hand-category shifts | Equilab's Flop Outs Counter and dedicated outs calculators (CardPlayer, Bet Shrew) show numeric outs; doing this as a highlighted/annotated layer on top of the live table (not a separate tool) would be novel presentation of a known concept | MEDIUM | Not in the current locked requirement set — recommend as a v1.x addition once the core odds engine and table are proven |
-| Educational annotations (plain-language explanations of what's happening) | Rare — only PokerNews' color-coded "cards that help/hurt" guide does anything like this among surveyed tools; most calculators assume the user already knows poker math | LOW-MEDIUM | High leverage for the stated audience (game-design learners, not necessarily poker experts); can be layered incrementally as tooltips/callouts without touching the simulation engine |
+| Monte Carlo convergence display for Blackjack odds (not closed-form/instant) | Every surveyed blackjack calculator (Wizard of Odds, Best in Slot, GamblingCalc) returns an instant, silently-computed number — none narrate the *method*. Blackjack's finite state space makes exact enumeration trivially fast, so competitors never bother simulating; deliberately running it through the same visible-convergence Monte Carlo pipeline as the poker engine makes this tool's pedagogical thesis ("watch probability resolve") consistent across both games rather than "poker teaches the method, blackjack just shows an answer" | MEDIUM | Architectural consistency choice, not a performance necessity — blackjack could be computed exactly and instantly, but doing so would silently break the app's own teaching device. Worth an explicit product decision, not a default | 
+| Dealer hole-card reveal as a live "insurance question," without implementing insurance as a bet | No surveyed calculator frames "is there a ten under there?" as a live, revealable Monte Carlo question the way this project already treats poker opponent reveals — most just let you set the dealer's hole card manually. Presenting it as a reveal action (matching the existing poker mechanic almost exactly) is a natural, low-cost differentiator unique to this app's existing interaction model | LOW (reuses existing reveal mechanic) | Deliberately expose the *probability* insurance is based on (P(dealer has ten-value hole card given an Ace up)) without any wager UI — keeps the no-betting constraint intact while still teaching the concept insurance is built on |
+| Side-by-side / before-after deck-count comparison callout | Verified real numbers (natural blackjack frequency 4.83%→4.78%, dealer bust rate shifts, stiff-hand bust-on-hit deltas) are small enough that a bare toggle risks going unnoticed; explicitly highlighting *which* numbers just changed and by how much (e.g., a brief flash/delta annotation, similar to how the poker table needs to visibly re-settle percentages) makes the deck-count effect the tool's actual teaching moment rather than a background parameter | LOW–MEDIUM | Directly serves the v2.0 milestone's stated goal ("deck count visibly changes the odds") — this is arguably the single most important differentiator for satisfying that specific goal, more so than any individual new number |
+| Double Down and Split as additional live decision branches | Both appear in every real strategy calculator (table stakes for a "credible blackjack tool" reputation) but add genuine engine complexity — double forces exactly one more card then a forced stand (cheap extension of the hit-then-dealer-playout trial); split creates two independent hands each needing their own hit/stand loop (nontrivial, especially interactions like double-after-split and resplitting) | Double: LOW–MEDIUM. Split: HIGH | Recommend shipping Hit/Stand (+ dealer reveal) as the v2.0 core loop, Double as a fast-follow (P1.5/P2), Split deferred to v2.x once the two-hand state model is validated |
+| Non-graded running/true-count readout tied to the live odds panel | Distinguishes itself from every card-counting *trainer* (which quizzes/times the user) by simply displaying "here's why the odds just shifted" as a passive readout next to the odds table — this is thematically identical to the milestone's own framing ("deck composition is a probability variable") and the engine already tracks exact remaining-shoe composition needed to compute it for free | LOW (data already exists in engine state) | Recommend as a v3+ candidate bundled conceptually with the already-deferred EDU-01/02/03 annotation layer, not v2.0 — it's explanatory/annotation in nature, which PROJECT.md explicitly scoped out of this milestone |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|------------------|-------------|
-| Hand-range input for opponents (Equilab/PokerCruncher/Flopzilla-style 13x13 range grid, weighted combos) | Power-user equity tools (Equilab, PokerCruncher, Flopzilla) all treat range-vs-range as their signature pro feature | Adds significant UI complexity foreign to this project's audience; conflicts with the "anonymous opponent, reveal or not" model already locked in PROJECT.md — ranges imply partial knowledge this tool doesn't model | Keep opponents binary: hidden (uniformly random from remaining deck) or revealed (fully known). No weighted/partial-range states |
-| User-exposed trial-count / precision tuning (choose 10k vs 1M trials, enumeration vs Monte Carlo toggle) | PokerStove exposes "Enumerate All" vs "Monte Carlo" and trial-count settings for accuracy-conscious pros | Undermines the "just watch it happen" simplicity that is this project's actual pedagogical point; adds a settings surface with no learning payoff for the target audience | Auto-run to a sensible convergence threshold (or fixed high trial count) with no user-facing precision dial; the live convergence *display* is the feature, not manual control over it |
-| Betting, pot, chip stacks, wagering | "Real poker" feel; most consumer poker apps (and the source game itself) center on betting | Explicitly out of scope per PROJECT.md — betting adds pot math, side pots, and decision-modeling complexity that serves a *game*, not a *probability lens*; doesn't serve the learning goal | Pure odds/equity display with no wagering — already the correct call, keep it locked |
-| GTO/strategy recommendations ("you should bet/fold here") | Training-oriented tools (solvers, PokerCruncher's advanced stats) push toward "what should I do" | Turns an odds *explorer* into a poker *trainer*; conflates "what's true" (probability) with "what's optimal" (strategy), which is explicitly not this project's goal per PROJECT.md context | Show descriptive odds only — probabilities, not prescriptions |
-| Configurable/variable number of opponents (1-9, like PokerNews/PokerScout) | Common in general-purpose calculators; feels more flexible | Conflicts with the fixed, art-directed felt-table layout (3 seated opponents) already decided in PROJECT.md; dynamic seating adds real rendering/layout complexity for a benefit this tool doesn't need | Fixed 3 opponents for v1; if variable seating is ever wanted, treat it as a distinct future milestone, not a v1 toggle |
-| Hand history logging / session stats / HUD-style tracking | PokerTracker-style tools build entire businesses on this; feels like a natural "save your work" feature | Requires persistence (storage or backend), directly conflicts with the "client-side only, no backend" architectural constraint in PROJECT.md, and doesn't serve a single-session learning tool | Ephemeral session state only; a shareable permalink of a specific constructed scenario is a reasonable *future* alternative, not persistent history |
-| Multiplayer / shared live sessions | Social/classroom appeal — "let's all look at the same hand" | Explicitly out of scope per PROJECT.md (single-user learning tool, no networked play); adds server/sync complexity that contradicts the client-only architecture | Single-user tool; if sharing matters later, a static exported/linked scenario state is lower-cost than live multiplayer |
+| Full color-coded basic-strategy chart (the traditional hit/stand/double/split/surrender grid) | Every blackjack site has one; feels like an obviously "complete" blackjack tool without it | Directly conflicts with the project's already-established anti-GTO-recommendation stance for poker ("show descriptive odds only... not prescriptions"); a prescriptive strategy chart turns an odds *explorer* into a *trainer*, changing the product's identity | Show the same underlying EV numbers per action (hit/stand/double/split) descriptively, for the *current* hand only — never a static "correct play" grid or a green/red highlight telling the user what to do |
+| Card-counting drill/quiz trainer (timed count practice, flash-card speed drills) | Genuinely popular standalone genre (Card Counting Trainer, True Count Trainer, bjcardcounter.com all exist and have real audiences) | Wrong interaction loop entirely — these are reflex/memorization trainers racing a clock, not an "explore and watch probability respond" tool; building this would import a whole second product genre with its own UX needs (deal speed controls, scoring, timers) that don't serve this project's Core Value | If deck-composition-driven probability shift is worth surfacing, do it as the passive non-graded count *readout* differentiator above — no quiz, no clock, no score |
+| Side bets: Perfect Pairs, 21+3, Lucky Ladies, etc. | Common at real tables; "more numbers to show" feels additive | These are separate wagering side-games with independent payout tables, unrelated to the hand-value/bust/dealer-distribution probabilities this tool teaches; they also reintroduce betting-shaped concepts (stake, payout ratio) the project explicitly excludes | None needed — they don't serve the probability-education goal at all; skip entirely, not just defer |
+| Insurance implemented as an actual side wager (place/resolve a bet, track a payout) | It's a real, standard blackjack decision point most players will expect to see modeled | Implementing it as a wager reintroduces bet-sizing/payout/bankroll concepts explicitly out of scope per PROJECT.md ("no betting, chips") | Expose the underlying probability (dealer hole-card is ten-value, given an Ace up) via the existing reveal mechanic instead — see Differentiators |
+| Exposing every casino rule variant as a user setting (S17 vs H17, DAS, resplit limits, surrender availability, blackjack payout ratio) | Real calculators (Wizard of Odds, Best in Slot) all expose these as dropdowns for "accuracy" | Mirrors the already-identified poker anti-feature ("user-exposed trial-count/precision tuning... undermines the 'just watch it happen' simplicity"); a settings surface this wide has no learning payoff for this tool's audience and dilutes deck count as *the* explorable variable this milestone is about | Hard-code one sensible standard ruleset (e.g., dealer stands on all 17s, double after split allowed, no resplitting aces, 3:2 blackjack payout used only for EV math) and keep deck count (1 vs 2) as the sole user-facing probability knob for v2.0 |
+| Exact/closed-form instant computation replacing Monte Carlo for blackjack (since it's fast enough to enumerate exactly) | Tempting "free" accuracy/performance win since blackjack's state space is small and fully enumerable | Exactly the same trap already flagged for poker's "deliberately not exact-enumerating" pattern — silently swapping in a different algorithm because it's easy breaks the app's consistent "watch Monte Carlo converge" pedagogy and makes blackjack feel bolted-on rather than a sibling game | Keep blackjack odds flowing through the same streaming Monte Carlo worker pipeline as poker, even though exact enumeration is computationally available |
+
+## 2-Deck Hold'em: What Should Visibly Change
+
+This is a mode of the *existing* poker game, not the new Blackjack game, but shares the same "deck count as a probability variable" theme and the same underlying shoe-composition engine work.
+
+**What the user should see change:**
+- **A new "Five of a Kind" row** in the existing hand-category table, ranked between Royal Flush and Straight Flush (see ranking convention below) — this is the most dramatic, legible signal that "something fundamental about the deck changed," and it's a natural top-of-table addition to a table structure that already exists.
+- **Visibly shifted frequencies for Four of a Kind, Full House, and Flush** — with 8 copies of each rank in a 2-deck shoe (4 suits × 2 decks) instead of 4, quads and full houses become meaningfully more common; flush frequency is largely unaffected in kind but flush *ties* become more likely since more players can share an identical flush made of duplicate-origin cards. The live-updating category table already shows this automatically once the engine's shoe model is deck-count-aware — no new UI beyond the new row is strictly required, but the shift itself is worth confirming looks "real" in a quick sanity pass (values should visibly move when toggling 1→2 decks with the same seed/scenario).
+- **Duplicate cards visibly present on the felt** — e.g., two Ace of Spades appearing simultaneously in different hands/board slots. This needs a **visual origin cue** (a small per-card deck-index badge, a second card-back color/pattern, or similar), not because the rules require it, but because a user who spots two identical-looking cards on the table without any differentiation will reasonably suspect a rendering bug rather than a real 2-deck outcome — this is a trust/legibility requirement, not a probability requirement.
+
+**Hand ranking convention for the new hand (verified via community gambling-math consensus, not an official rulebook — no single deck count beyond "1" has an official rulebook):**
+- Order, most to least rare within the new top tier: **Royal Flush → Five of a Kind → Straight Flush → Four of a Kind → Full House → Flush → Straight → Three of a Kind → Two Pair → Pair → High Card.** This matches the Wizard-of-Vegas gambling-math forum's worked-out 2-deck ranking (five of a kind and straight flush both treated as genuinely new/rarer categories, inserted above four of a kind, with royal flush remaining the single rarest hand) and is consistent with the standard poker-hand-ranking principle of "rarer combinatorially = ranks higher."
+- **Do not** add the more exotic "flush containing two pair" category some 2-deck 5-card-draw rankings introduce (a flush whose 5 cards happen to also contain two pairs — only possible with duplicate ranks in the same suit). It is real but vanishingly rare, off-the-shelf evaluator libraries have no concept of it, and it would require a bespoke 12th category with its own detection logic for a hand type players will almost never see in a 7-card Hold'em context. Treat it as an anti-feature for this milestone: if it happens to occur, letting it evaluate as a plain Flush is an acceptable, defensible simplification.
+- **Duplicate-card ties resolve exactly like standard Hold'em ties already do — no new rule is needed at the game-design level.** Poker ties are broken by rank only; suit never breaks a tie, and fully-equal hands split. Two players each holding an "Ace of Spades" from different physical decks are, for ranking purposes, just two players holding an Ace — the existing rank-based comparison already handles this correctly. The only real risk is **mechanical**, not a rules question: the evaluation layer must be verified to treat each of the 104 cards as a distinct object and must not internally collapse two physically-identical rank+suit cards into a single logical card (e.g., via a 52-bit-per-card bitmask representation, which some fast evaluator libraries use internally and which would silently undercount duplicate-rank groups). This is a hand-off note for the architecture/implementation phase, not a new game rule.
+- **Dependency:** both "Five of a Kind" and correct duplicate-rank comparison require a **custom evaluation layer** built on top of (or replacing, in 2-deck mode) the existing off-the-shelf 7-card evaluator, which — like every mainstream Hold'em evaluator — assumes a single 52-card deck with no duplicates and has no built-in concept of "5 of the same rank." This was already anticipated in PROJECT.md's v2.0 feature list and should be treated as the single highest-complexity item in this milestone's poker-side scope.
 
 ## Feature Dependencies
 
 ```
-7-card hand evaluator
-    └──requires──> (nothing; foundational)
+Blackjack: Deck-aware shoe model (1 or 2 decks)
+    └──requires──> Reuse of existing deck/card-removal tracking (extended to N decks, not just 52 unique cards)
 
-Monte Carlo simulation engine
-    └──requires──> 7-card hand evaluator
-                       └──requires──> deck/card-removal tracking (known vs. unknown cards)
+Blackjack: Player bust-if-hit probability
+    └──requires──> Deck-aware shoe model
 
-Win/tie/lose equity display
-    └──requires──> Monte Carlo simulation engine
+Blackjack: Dealer final-outcome distribution
+    └──requires──> Deck-aware shoe model
+    └──requires──> Dealer fixed-drawing-rule playout logic (new engine code — poker has no analog)
 
-Hand-category probability table
-    └──requires──> Monte Carlo simulation engine (aggregated by resulting hand rank)
+Blackjack: Win/Push/Lose + EV for Stand/Hit
+    └──requires──> Dealer final-outcome distribution
+    └──requires──> Player hand-value logic (hard/soft totals, bust detection — new engine code)
 
-Street-by-street progression (preflop→flop→turn→river)
-    └──requires──> Monte Carlo simulation engine (recompute per street)
-    └──requires──> state history/snapshots (for rewind)
+Blackjack: Natural blackjack frequency
+    └──requires──> Deck-aware shoe model
+    └──enhances──> Deck-count comparison callout (their delta is the demonstration)
 
-Rewind navigation
-    └──requires──> Street-by-street progression's state history
+Blackjack: Double Down EV
+    └──requires──> Win/Push/Lose + EV for Stand/Hit (extends the same trial logic by one forced card)
 
-Opponent card reveal
-    └──requires──> deck/card-removal tracking (revealed card removed from "unknown" pool, forces re-simulation)
-    └──requires──> Monte Carlo simulation engine (conditioning on mixed known/unknown opponents)
+Blackjack: Split EV
+    └──requires──> Win/Push/Lose + EV for Stand/Hit
+    └──requires──> Two-independent-hand state model (new — no existing analog in the poker engine)
 
-Live convergence display (trial counter, settling percentages)
-    └──requires──> Monte Carlo simulation engine running as streaming/incremental (Web Worker posting partial results)
+Blackjack: Dealer hole-card reveal ("insurance question")
+    └──requires──> Reuse of existing opponent-reveal mechanic/pattern
 
-Full casino-table visual (felt, seats, animated cards)
-    └──enhances──> all of the above (presentation layer; doesn't gate correctness of any calculation)
+Deck-count toggle (spans both games)
+    └──requires──> Deck-aware shoe model (Blackjack)
+    └──requires──> Deck-aware shoe model + custom evaluation layer (Hold'em 2-deck mode)
+    └──enhances──> Natural blackjack frequency, all Blackjack odds, poker hand-category table
 
-Card picker (manual entry)
-    └──requires──> deck/card-removal tracking
+Hold'em: Five of a Kind category + duplicate-rank comparison
+    └──requires──> Custom evaluation layer (off-the-shelf evaluator has no multi-deck/duplicate concept)
+    └──requires──> Deck-aware shoe model (2-deck mode)
 
-Random deal / redeal
-    └──requires──> deck/card-removal tracking
+Hold'em: Duplicate-card visual origin cue on the felt
+    └──enhances──> Hold'em 2-deck mode (trust/legibility, not correctness)
 
-Outs / draw callouts
-    └──requires──> 7-card hand evaluator (near-miss detection)
-    └──enhances──> Hand-category probability table
+Card-counting readout (non-graded) [v3 candidate]
+    └──requires──> Deck-aware shoe model
+    └──conflicts with──> "no exposed precision/settings dial" philosophy if implemented as a graded drill (ANTI-FEATURE variant)
 
-Educational annotations
-    └──enhances──> Win/tie/lose display, Hand-category probability table, Outs callouts (adds explanatory copy; doesn't gate them)
+Full basic-strategy chart (ANTI-FEATURE)
+    └──conflicts with──> existing "descriptive not prescriptive" product stance (already established for poker's GTO anti-feature)
 
-Hand-range input for opponents (ANTI-FEATURE)
-    └──conflicts with──> Opponent card reveal model (binary known/unknown vs. weighted range)
+Side bets (ANTI-FEATURE)
+    └──conflicts with──> No-betting/no-chips constraint (PROJECT.md)
 ```
 
 ### Dependency Notes
 
-- **Everything downstream of "deck/card-removal tracking":** this is the single most load-bearing piece of state in the app. Random deal, manual picker, opponent reveal, and rewind all read/write it, and it must always stay internally consistent (no card assigned twice) or every displayed probability becomes wrong. Get this right first.
-- **Live convergence display requires the simulation engine to be architected as streaming from day one.** If the engine is built as "compute once, return final answer," retrofitting incremental progress reporting later means re-architecting the Web Worker message protocol, not just adding a UI element. This should be a phase-0/phase-1 architectural decision, not deferred polish.
-- **Rewind requires state history, not re-derivation.** The cheapest correct approach is snapshotting the equity result at each street as it's computed forward, so "rewind" is an instant lookup, not a re-simulation. This avoids re-running Monte Carlo trials every time the user steps backward.
-- **Full casino-table visual enhances but never gates correctness.** It's safe to build and validate the odds engine against a bare-bones card grid first, then layer the felt-table presentation on top — the simulation and the scene are decoupled concerns.
-- **Outs/draw callouts and educational annotations are additive layers**, not core-path dependencies — they read off data the engine already produces (hand-category shifts, evaluator near-misses) and can be scoped into v1.x without touching the simulation core.
+- **Deck-aware shoe model is the single most load-bearing new piece of state for this milestone**, exactly analogous to how "deck/card-removal tracking" was flagged as the most load-bearing v1 state. Every blackjack probability and the entire 2-deck Hold'em mode read from it; it must be generalized from "which of 52 unique cards are known/removed" to "which of N×52 physical cards (with legitimate rank+suit duplicates when N=2) are known/removed." Get this generalization right before building any feature on top of it — the same "get this right first" lesson from v1 research applies directly.
+- **Dealer fixed-drawing-rule playout is genuinely new engine logic with no poker analog.** Poker's engine only ever evaluates already-complete 7-card hands; blackjack requires simulating a *procedural* dealer decision loop (hit while total < 17, respecting the chosen soft-17 rule) inside every trial. This is real new complexity, not a thin wrapper over the existing evaluator.
+- **Split requires a genuinely new state shape** (two independent hands sharing one shoe context, each with its own hit/stand decisions and its own EV) that nothing in the existing architecture anticipates — recommend treating it as a distinct, later phase rather than bundling it with the initial Hit/Stand/Dealer-Reveal loop.
+- **The custom evaluation layer for 2-deck Hold'em is the highest-complexity single item in the poker half of this milestone** and was already flagged in PROJECT.md; it blocks both the Five-of-a-Kind category and correctness of ordinary category counts (quads/boat/flush) once duplicates are possible, so it should be built and correctness-tested (against known combinatorial counts, similar to v1's "known-answer hand" testing approach) before the deck-count toggle is wired up to the Hold'em UI.
+- **The deck-count toggle "enhances" almost everything** rather than gating it — each game's odds should be correct at 1 deck without the toggle existing at all, and the toggle's job is purely to swap which shoe-size the already-correct engine is fed. This mirrors v1's finding that presentation/toggle layers should be decoupled from correctness-critical engine work.
 
 ## MVP Definition
 
-### Launch With (v1)
+### Launch With (v2.0)
 
-This maps directly to PROJECT.md's current "Active" requirements — research confirms these are the correct, non-negotiable core, matching or exceeding the analytical table stakes found across every surveyed competitor while adding the presentational differentiator no competitor has.
+Minimum viable set to deliver "Blackjack as a second game" + "deck count as a first-class variable," matching PROJECT.md's stated v2.0 target features.
 
-- [ ] 7-card hand evaluator + Monte Carlo simulation engine (streaming/incremental) — nothing else works without this
-- [ ] Card picker for manual hole/board card selection — table stakes across every competitor
-- [ ] Random deal with re-deal — table stakes (PokerStove, Equilab, mobile apps)
-- [ ] Win/tie/lose equity vs. 3 opponents — the headline output of every competitor
-- [ ] Hand-category probability table by river — matches Equilab/CalcBE-tier tools
-- [ ] Street-by-street progression (preflop→flop→turn→river) with recompute — table stakes
-- [ ] Rewind navigation across streets — differentiator, no competitor does this
-- [ ] Opponent card reveal with recalculation — differentiator, no competitor does this as a live mid-hand action
-- [ ] Live convergence display (trial count + settling percentages) — differentiator, this is the pedagogical core
-- [ ] Full casino-table visual scene with animated card dealing/flipping — differentiator, the single biggest gap in the market
+- [ ] Deck-aware shoe model generalized to support 1 or 2 decks, for both games — foundational, nothing else works without it
+- [ ] Blackjack: random deal + manual picker for player hand and dealer up-card — reuses existing picker/deal UX
+- [ ] Blackjack: player bust-if-hit probability, live-updating
+- [ ] Blackjack: dealer final-outcome distribution by up-card (17/18/19/20/21/blackjack/bust), via Monte Carlo dealer playout
+- [ ] Blackjack: win/push/lose probability + per-unit EV for Stand and for Hit (no bankroll/chips)
+- [ ] Blackjack: dealer hole-card reveal (opponent-reveal-pattern reuse), recomputing odds live
+- [ ] Blackjack: natural (blackjack) frequency readout, deck-count-dependent
+- [ ] Deck-count toggle (1/2) for Blackjack, with live recompute of every above number
+- [ ] Hold'em 2-deck mode: custom evaluation layer supporting duplicate rank+suit cards and correct comparison
+- [ ] Hold'em 2-deck mode: Five of a Kind category added to the hand-category table, ranked between Royal Flush and Straight Flush
+- [ ] Hold'em 2-deck mode: visual origin cue distinguishing duplicate-looking cards on the felt
+- [ ] Deck-count toggle (1/2) spanning both games (single shared control point)
 
-### Add After Validation (v1.x)
+### Add After Validation (v2.x)
 
-- [ ] Outs/draw callouts (numeric outs + highlighting) — add once the core table and engine are proven; trigger: users asking "why did my odds jump" without an explanation
-- [ ] Educational annotation layer (tooltips/callouts explaining hand ranks, what changed and why) — trigger: user testing shows people don't understand *why* percentages moved, only *that* they moved
-- [ ] Shareable scenario permalinks (encode a constructed "what-if" scenario in a URL) — trigger: users want to show/discuss a specific scenario without screen-sharing
+- [ ] Double Down as a live decision with its own EV — trigger: core Hit/Stand loop is proven and users start asking "what if I double"
+- [ ] Deck-count before/after comparison callout (explicit delta highlighting on numbers that just changed) — trigger: user testing shows the raw toggle alone doesn't make the deck-count effect legible enough
+- [ ] Split as a live decision (two-hand state model) — trigger: Double is proven and the two-hand data model is deliberately designed, not bolted on
+- [ ] Surrender EV as a fourth descriptive action option — cheap once Stand/Hit/Double EV all exist; low priority since it's a rule-variant, not a core mechanic
 
-### Future Consideration (v2+)
+### Future Consideration (v3+)
 
-- [ ] Variable opponent count (beyond fixed 3) — defer until the fixed-3 felt-table experience is validated; changes table layout/art significantly
-- [ ] Other poker variants (Omaha, Stud) — explicitly deferred per PROJECT.md; only revisit if the Hold'em tool proves the concept
-- [ ] Opponent hand-range modeling (weighted ranges instead of binary known/unknown) — defer indefinitely; conflicts with the simplicity goal, would need strong evidence of demand from an audience that has outgrown the current model
+- [ ] Non-graded running/true-count readout tied to the odds panel — bundle conceptually with the already-deferred EDU-01/02/03 annotation layer; defer for the same reason (explanatory layer, not core mechanic)
+- [ ] Exposing additional casino rule variants (S17/H17, DAS, resplit limits, payout ratio) as user settings — defer indefinitely; conflicts with keeping deck count as the sole explorable variable, same reasoning as the already-established "no exposed precision dial" anti-feature
+- [ ] "Flush with two pair" 2-deck hand category — defer indefinitely (near-never-seen edge case, no evaluator library support, high implementation cost for negligible educational payoff)
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Hand evaluator + Monte Carlo engine | HIGH | HIGH | P1 |
-| Win/tie/lose equity display | HIGH | LOW (given engine) | P1 |
-| Hand-category probability table | HIGH | MEDIUM | P1 |
-| Card picker (manual entry) | HIGH | MEDIUM | P1 |
-| Random deal/re-deal | HIGH | LOW | P1 |
-| Street-by-street progression | HIGH | MEDIUM | P1 |
-| Rewind navigation | MEDIUM-HIGH | MEDIUM | P1 |
-| Opponent card reveal | HIGH | MEDIUM | P1 |
-| Live convergence display | HIGH | MEDIUM-HIGH | P1 |
-| Full casino-table visual + animation | HIGH | HIGH | P1 |
-| Outs/draw callouts | MEDIUM | MEDIUM | P2 |
-| Educational annotations | MEDIUM-HIGH | LOW-MEDIUM | P2 |
-| Shareable scenario permalinks | LOW-MEDIUM | LOW-MEDIUM | P3 |
-| Variable opponent count | LOW | HIGH | P3 |
-| Other poker variants | LOW (for this audience) | HIGH | P3 |
-| Hand-range opponent modeling | LOW (for this audience) | HIGH | P3 (likely never) |
+|---------|------------|----------------------|----------|
+| Deck-aware shoe model (both games) | HIGH | MEDIUM | P1 |
+| Blackjack dealer playout + final-outcome distribution | HIGH | MEDIUM-HIGH | P1 |
+| Blackjack bust-if-hit probability | HIGH | LOW | P1 |
+| Blackjack win/push/lose + EV (Stand/Hit) | HIGH | MEDIUM | P1 |
+| Blackjack dealer hole-card reveal | MEDIUM-HIGH | LOW | P1 |
+| Blackjack natural-frequency readout | MEDIUM | LOW | P1 |
+| Deck-count toggle (both games) | HIGH | LOW-MEDIUM | P1 |
+| Hold'em 2-deck custom evaluation layer | HIGH (blocking) | HIGH | P1 |
+| Hold'em Five of a Kind category | HIGH | MEDIUM (given evaluation layer) | P1 |
+| Duplicate-card visual origin cue | MEDIUM (trust/legibility) | LOW | P1 |
+| Double Down EV | MEDIUM-HIGH | LOW-MEDIUM | P2 |
+| Deck-count before/after delta callout | MEDIUM-HIGH | LOW-MEDIUM | P2 |
+| Split EV (two-hand model) | MEDIUM | HIGH | P2/P3 |
+| Surrender EV | LOW-MEDIUM | LOW | P3 |
+| Non-graded count readout | LOW-MEDIUM (niche) | LOW | P3 |
+| Full basic-strategy chart (anti-feature) | LOW (for this audience) | MEDIUM | Do not build |
+| Card-counting drill/quiz trainer (anti-feature) | LOW (wrong genre) | HIGH | Do not build |
+| Side bets (anti-feature) | LOW | MEDIUM | Do not build |
+| Exposed rule-variant settings (anti-feature) | LOW | MEDIUM | Do not build |
 
 **Priority key:**
-- P1: Must have for launch
-- P2: Should have, add when possible
-- P3: Nice to have, future consideration
+- P1: Must have for v2.0 launch
+- P2: Should have, add when possible (v2.x)
+- P3: Nice to have, future consideration (v3+)
 
 ## Competitor Feature Analysis
 
-| Feature | Equilab | PokerStove | PokerNews/Omni-style web calculators | Our Approach |
-|---------|---------|------------|---------------------------------------|--------------|
-| Card input | Range-grid + specific cards | Specific cards or ranges | Click-to-select card grid | Click-to-select on a live felt table, not a form |
-| Opponent modeling | Weighted ranges, library of school ranges | Specific hands or ranges | Specific hands, "random" default | Binary: hidden (random) or revealed (known) — no weighted ranges |
-| Equity display | Numeric win/tie% per range | Numeric win/tie% per hand | Numeric win/loss/tie% | Same numbers, presented at animated table seats, not a results table |
-| Hand-category breakdown | Yes (hand strength distribution) | Limited | Yes on several free calculators (CalcBE, Omni) | Yes, full high-card→royal-flush table, live-updating |
-| Street progression | Manual re-entry per street | Manual re-entry per street | Leave later cards "Unknown," recompute | First-class forward/rewind navigation with animated dealing |
-| Convergence visibility | Final number only | Final number only (Monte Carlo mode computes fast, not narrated) | Final number only | Live, visible, is the pedagogical centerpiece |
-| Presentation | Utilitarian desktop app UI | Utilitarian desktop app UI (discontinued 2008) | Bare web form | Full casino table: felt, seats, detailed animated cards |
-| Educational framing | None (assumes poker literacy) | None | PokerNews has a green/red "helps/hurts" guide; rare | Explanatory annotations layered on top of live odds |
-| Outs display | Yes (Flop Outs Counter) | No | Some (CardPlayer, dedicated outs calculators) | Deferred to v1.x, presented as highlighted callouts not a separate tool |
+| Feature | Wizard of Odds hand calculator | Best in Slot / GamblingCalc calculators | Card-counting trainers (bjcardcounter, True Count Trainer) | Our Approach |
+|---------|-------------------------------|------------------------------------------|--------------------------------------------------------------|--------------|
+| Input model | Player cards + dealer up-card + full ruleset dropdowns (decks 1-8, S17/H17, DAS, surrender) | Same, form-based | Live simulated shoe dealt at speed; user counts along | Same random-deal/manual-picker card model as existing poker game; deck count (1/2) is the only exposed rule knob |
+| Core output | Recommended action + EV in $/unit per action | Recommended action + EV per action | Running/true count accuracy score, timed | Descriptive EV per available action (Stand/Hit, later Double/Split) — no recommended action shown |
+| Computation method | Closed-form/tabulated (instant) | Closed-form/tabulated (instant) | N/A (drill, not a calculator) | Streaming Monte Carlo with visible convergence, consistent with the existing poker engine |
+| Dealer outcome visibility | Available as a separate reference chart, not tied to the calculator's live inputs | Not typically shown | N/A | Live dealer final-outcome distribution tied to the current up-card, same UI pattern as poker's hand-category table |
+| Deck-count effect visibility | Exposed as a dropdown input; effect on EV shown only if the user manually toggles and re-reads numbers | Same | Deck count affects true-count math only, not surfaced as an "effect" | Explicit deck-count toggle spanning both games with (v2.x) delta-highlighting on numbers that changed |
+| Betting/wager concepts | EV expressed per unit bet, no actual wager UI | Same | Often includes bet-spread/bankroll advice | EV per unit, no wager UI, no bankroll, no bet-spread — strictly descriptive |
+| Prescriptive strategy | Yes — this is the entire point of the tool | Yes | Yes (deviation quizzes) | No — explicitly avoided, consistent with the existing poker anti-GTO stance |
 
 ## Sources
 
-- [PokerListings: How To Use Equilab Poker Software in 2026](https://www.pokerlistings.com/poker-tools/calculators/equilab)
-- [PokerStrategy.com: Equilab Hold'em](https://www.pokerstrategy.com/poker-software-tools/equilab-holdem/)
-- [PokerVIP: PokerStrategy Equilab Holdem Calculator Review](https://www.pokervip.com/strategy-articles/texas-hold-em-no-limit-intermediate/pokerstrategy-equilab-holdem-calculator-review)
-- [Cardmates: PokerStove Equity Calculator Review & Alternatives](https://cardmates.co.uk/pokerstove_calculator_review)
-- [TwoPlusTwo forum: PokerStove "Monte Carlo" vs. "Enumerate All"](https://forumserver.twoplustwo.com/32/beginners-general-questions/pokerstove-quot-monte-carlo-quot-vs-quot-enumerate-all-quot-968226/)
-- [Wikipedia: Poker calculator](https://en.wikipedia.org/wiki/Poker_calculator)
-- [PokerNews: Texas Hold'em Poker Odds Calculator](https://www.pokernews.com/poker-tools/poker-odds-calculator.htm)
-- [CardPlayer: Texas Hold'em Poker Odds Calculator](https://www.cardplayer.com/poker-tools/odds-calculator/texas-holdem)
-- [PokerScout: Texas Hold'em Poker Odds Calculator](https://www.pokerscout.com/calculators/texas-holdem-odds/)
-- [Wizard of Odds: Texas Hold'em Calculator](https://wizardofodds.com/games/texas-hold-em/calculator/)
-- [CalcBE: Poker Odds Calculator for Texas Hold'em](https://calcbe.com/en/calculators/poker-probability/)
-- [Omni Calculator: Poker Odds Calculator](https://www.omnicalculator.com/other/poker-odds)
-- [Apple App Store: PokerCruncher - Expert - Odds](https://apps.apple.com/us/app/pokercruncher-expert-odds/id422498721?mt=12)
-- [PokerCruncher: Tutorial](https://www.pokercruncher.com/ipPokerCruncherTutorial.html)
-- [MyPokerCoaching: How to Use Flopzilla](https://www.mypokercoaching.com/flopzilla/)
-- [PokerListings: Flopzilla Pro Full Guide & Price for 2026](https://www.pokerlistings.com/poker-tools/calculators/flopzilla-pro)
-- [Quora: How are win/lose percentages from televised Texas Hold'em games calculated?](https://www.quora.com/How-are-the-win-lose-percentages-from-televised-Texas-Hold-Em-games-calculated-There-is-an-example-in-the-details)
-- [Apple App Store: Poker Odds Teacher](https://apps.apple.com/us/app/poker-odds-teacher/id308077124)
-- [Apple App Store: Poker Odds – Simulator](https://apps.apple.com/us/app/poker-odds-simulator/id1300580543)
-- [ThePokerBank: Poker Percentage Odds Chart](https://www.thepokerbank.com/tools/odds-charts/percentage/)
-- [Pokerology: Poker Odds & Outs](https://www.pokerology.com/poker/math/drawing-odds/)
+- [Wizard of Odds: Why the number of decks matter in blackjack](https://wizardofodds.com/games/blackjack/why-number-of-decks-matter/) — MEDIUM-HIGH confidence, official/authoritative gambling-math reference site, directly fetched
+- [Best in Slot: Blackjack Calculator](https://www.bestinslot.co/blackjack-calculator) — MEDIUM confidence, product page, corroborated by multiple similar calculators
+- [The Probability Lab: Blackjack Basic Strategy Calculator](https://theprobabilitylab.com/blackjack) — MEDIUM confidence, corroborates EV-per-unit convention
+- [GamblingCalc: Blackjack Basic Strategy Calculator](https://gamblingcalc.com/casino/blackjack-calculator/) — MEDIUM confidence
+- [PokerNews: Free Online Blackjack Calculator](https://www.pokernews.com/casino/blackjack/free-blackjack-calculator.htm) — MEDIUM confidence, corroborating source
+- [Using Probability Theory to Calculate the Bust Odds for Every Dealer-Hand in Blackjack — Medium](https://medium.com/@andrewruggero16/using-probability-theory-to-calculate-the-bust-odds-for-every-dealer-hand-in-blackjack-d19749b45cb8) — MEDIUM confidence, corroborates ~28.4% overall dealer bust rate and up-card-dependent bust variation
+- [The statistics of Blackjack — Towards Data Science](https://towardsdatascience.com/the-statistics-of-blackjack-e3b5fc29e67d/) — MEDIUM confidence, corroborates win/tie/loss/natural distribution figures
+- [Casino.org: This Is How The Number Of Decks Used Can Impact Your Blackjack Game](https://www.casino.org/blog/how-many-decks-in-blackjack/) — MEDIUM confidence, corroborates natural-blackjack-frequency deck-count delta (~4.83% 1-deck vs. ~4.78% 2-deck, converging toward ~4.75% at higher deck counts)
+- [Card Counting Trainer](https://cardcountingtrainer.com/), [True Count Trainer](https://truecount.vip/), [Blackjack Trainer (bjcardcounter.com)](https://bjcardcounter.com/), [The Card Counting](https://thecardcounting.com/) — MEDIUM confidence, product pages surveyed to establish the "drill/quiz" genre as distinct from an odds-explorer interaction loop
+- [Blackjack Side Bets — betandbeat.com](https://betandbeat.com/blackjack/side-bets/), [PokerNews: Blackjack Side Bets](https://www.pokernews.com/casino/blackjack/side-bets.htm) — MEDIUM confidence, corroborate side bets as high-house-edge wagers unrelated to core hand-value probability, supporting the anti-feature classification
+- [Wizard of Vegas forum: Two-deck poker](https://wizardofvegas.com/forum/gambling/poker/799-two-deck-poker/) — MEDIUM confidence (community forum, but a well-established gambling-math authority site with contributions from recognized industry mathematicians); primary source for the 2-deck poker hand-ranking order (Royal Flush > Five of a Kind > Straight Flush > Four of a Kind > ...) and for "ties handled the same as normal poker"
+- [Americas Cardroom: What is Five of a Kind?](https://www.americascardroom.eu/how-to/poker-terms/five-of-a-kind/), [Poker.org: Poker Hand Rankings](https://www.poker.org/poker-hands-ranking-chart/) — MEDIUM confidence, corroborate the general convention that Five of a Kind (however enabled — wild card or duplicate deck) ranks above a Straight Flush
+- [PokerNews: Tied Poker Hands](https://www.pokernews.com/poker-hands/tied-poker-hands.htm), [Poker.com: Ties](https://poker.com/rules-of-poker/ties/) — HIGH confidence, standard rules reference confirming suits never break ties and identical-rank hands split, which grounds the "no new tie-break rule needed for duplicate cards" finding
+- Existing project research (`.planning/research/ARCHITECTURE.md`, `.planning/research/FEATURES.md` from v1) — HIGH confidence, direct reuse of already-validated architectural patterns (worker/Comlink streaming, reveal mechanic, "re-condition don't reuse trials," anti-GTO/anti-precision-dial stances) extended into this milestone rather than re-derived
 
-**Note on confidence:** Most findings above draw on WebSearch summaries of product marketing/review pages rather than direct hands-on use or Context7-verified docs (poker equity calculators are not a documented library ecosystem). Corroboration came from multiple independent sources agreeing on core mechanics (card picker, win/tie/lose, Monte Carlo vs. enumeration, street progression), which supports MEDIUM-HIGH confidence on the table-stakes list. The claim that no competitor combines a full animated casino table with live-narrated Monte Carlo convergence is a negative claim based on absence across all sources checked (Equilab, PokerStove, PokerCruncher, Flopzilla, PokerNews/CardPlayer/Omni/CalcBE web calculators, mobile "Poker Odds" apps, and a direct search for 3D/WebGL poker odds visualizers) — flagged MEDIUM confidence since a true exhaustive market scan (especially of newer/smaller mobile apps) wasn't feasible within this research pass.
+**Note on confidence:** Blackjack probability figures (dealer bust rate, natural-blackjack frequency, deck-count deltas) are corroborated across 3+ independent sources with consistent direction and close magnitude — MEDIUM-HIGH confidence. The 2-deck poker hand-ranking convention rests on a single (but credible, gambling-math-specialist) community forum thread rather than an official rulebook, since no official rulebook for 2-deck Hold'em exists — flagged MEDIUM confidence and should be treated as "the most defensible convention found," not an authoritative standard, in case a future contributor wants to revisit it.
 
 ---
-*Feature research for: Browser-based Monte Carlo Texas Hold'em odds simulator (educational, full casino-table presentation)*
-*Researched: 2026-08-23*
+*Feature research for: Monte Carlo Poker Simulator v2.0 (Blackjack & Multi-Deck milestone)*
+*Researched: 2026-08-24*
