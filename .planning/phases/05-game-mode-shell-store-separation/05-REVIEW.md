@@ -21,6 +21,17 @@ findings:
   info: 3
   total: 8
 status: issues_found
+fix_log:
+  fixed_at: 2026-08-24
+  fixed:
+    - { id: CR-02, commit: a6f4ced }
+    - { id: CR-01, commit: ab90734 }
+    - { id: WR-01, commit: 28c5e15 }
+    - { id: WR-02, commit: c9abed0 }
+    - { id: IN-01, commit: ab90734 }
+  deferred:
+    - { id: WR-03, to: phase-6, note: HoldemGame extraction folds into the Blackjack tree work }
+  open: [IN-02, IN-03]
 ---
 
 # Phase 5: Code Review Report
@@ -51,6 +62,8 @@ Reviewed the Phase 5 game-mode shell (gameModeStore, GameModeSwitcher, Blackjack
 
 ### CR-01: Switch-back to Hold'em bypasses the animation gate — cached odds applied (or a live run started) while cards are mid-flight
 
+**Status:** FIXED in `ab90734` — live-read secondary guard added alongside the (kept) subscribed dependency; race test now proves same-flush registrations block the odds effect (pre-fix: a run started and was churn-cancelled).
+
 **File:** `src/App.tsx:56` (gate check), `src/App.tsx:110` (dependency array)
 **Issue:** The animation gate `if (pendingAnimationCount > 0) return;` uses the render-closure value. On the commit where `mode` flips back to `'holdem'` with a dealt hand, the render sees `pendingAnimationCount === 0` (nothing armed it — no gameStore action fired). In that same commit the entire card tree re-mounts; passive effects flush child-first, so every `AnimatedCard`/`FlipCard` registers with the gate (count = N) *before* App's odds effect runs — but the effect's closure still holds 0, so the gate check passes while N cards are mid-flight. Consequences under real motion (i.e., every real browser without reduced motion; the default test harness forces reduced motion, so no behavioral test can see this):
 - **Cache hit:** the settled snapshot is applied immediately, violating the locked invariant quoted in this effect's own comment ("no cached snapshot may be applied, while any card describing that knowledge state is still mid-flight" — D-11/D-12, TBL-04).
@@ -65,6 +78,8 @@ if (pendingAnimationCount > 0 || useUiStore.getState().pendingAnimationCount > 0
 ```
 
 ### CR-02: TableScene's release effect steals one gate unit on every re-mount with a dealt hand — gate opens one card early (two cards early in dev StrictMode)
+
+**Status:** FIXED in `a6f4ced` — previous-values ref exactly as suggested (StrictMode-safe, no compensating cleanup); pinned by the new `TableScene.remount.test.tsx` (mount theft, StrictMode double-theft, exactly-once release on real transitions) and the race test's initial gate count tightened to exactly 8 (pre-fix: 7).
 
 **File:** `src/ui/TableScene.tsx:22-31` (defect activated by the Phase 5 fork in `src/App.tsx:166-171`)
 **Issue:** `TableScene`'s effect calls `useUiStore.getState().endAnimation()` unconditionally, including on initial mount. Its own comment justifies this with "StrictMode dev-mode... double-invoke only simulates at a component's OWN initial mount, when pendingAnimationCount is always still 0 (nothing has been dealt yet)". Phase 5 falsifies that premise: switching blackjack → holdem re-mounts `TableScene` with `runout` non-null. Child-first effect ordering means the N re-mounting cards have already registered (count = N) when TableScene's mount effect fires and decrements a unit that no gameStore action armed — count = N−1 with N cards in flight. The gate therefore reaches 0 while the last-staggered card is still animating: odds un-dim and the cached snapshot applies (or a live run starts) one card early on *every* switch-back under real motion. In dev, StrictMode (enabled in `main.tsx`) double-invokes the effect — and since it registers no cleanup, that is *two* uncompensated `endAnimation()` calls, opening the gate two cards early. The clamp-at-0 prevents stranding but cannot prevent theft, exactly as `uiStore.ts`'s own resetAnimations comment warns ("the clamp prevents negatives, not cross-registration theft"). The race test's deliberately loose post-return assertion (`afterReturn >= 0`, `App.modeSwitchRace.test.tsx:137-140`) passes right through this.
@@ -86,6 +101,8 @@ Note: fixing CR-01 alone does not fix this — the stolen unit still opens the g
 
 ### WR-01: Stale error banner re-mounts — and re-announces via role="alert" — on switch-back, persisting for the whole re-mount animation
 
+**Status:** FIXED in `28c5e15` — mode-leave effect clears the error via a queued microtask (the suggested fix); pinned by the new `App.modeErrorBanner.test.tsx`, including a guard that a FRESH post-switch-back error still surfaces.
+
 **File:** `src/App.tsx:127-142` (banner), `src/App.tsx:38` (state)
 **Issue:** `errorMessage` is not cleared when leaving Hold'em. If a run errored, the banner text ("...stopped updating. Re-deal, or navigate...") survives the blackjack dwell and re-renders the instant the user switches back — describing a run that the mode switch itself deliberately cancelled. Because clearing only happens once the gate opens (cache-hit microtask at `src/App.tsx:73`, or the first `onProgress` at line 91), under real motion the stale banner sits on screen for the full re-mount animation (~1s). Worse, re-mounting an element with `role="alert"` re-*announces* it to screen readers — a fresh, spurious error announcement on every switch-back after any historical error. This is the same "banner no longer describes what's on screen" class the project already fixed once as 02-REVIEW WR-01.
 **Fix:** Clear the error when mode leaves `'holdem'`, mirroring the existing microtask discipline:
@@ -98,11 +115,15 @@ useEffect(() => {
 
 ### WR-02: Switch-back replays the entire deal choreography, contradicting the phase's own "instant DOM swap / no new animation" spec
 
+**Status:** FIXED in `c9abed0` — option (b), matching the spec as written: `gameModeStore.holdemRestorePending` is set exactly on a blackjack→holdem transition, consumed capture-once at render by the animation layer (AnimatedCard renders `initial={false}` and never arms the gate, with a gate-idle backstop so a stale flag cannot suppress a real deal/advance mount; FlipCard registers only for a genuine hidden→face-up transition), and acknowledged by App in the restore commit's effect phase. Race test tightened: switch-back gate count exactly 0, no in-flight markers, D-07 recompute starts on the restore commit, a fresh Deal afterwards animates normally, and a revealed seat restores face-up with no flip replay.
+
 **File:** `src/App.tsx:166-172`; spec at `.planning/phases/05-game-mode-shell-store-separation/05-UI-SPEC.md:236` and D-07 in `05-CONTEXT.md:30`
 **Issue:** 05-UI-SPEC locks "Switching modes is an instant DOM swap (unmount one scene, mount the other) — no transition... this phase adds no new animation," and D-07 promises "returning shows the exact table left behind." In reality, every `AnimatedCard` re-mounts with `initial={{x: origin.x, y: origin.y, opacity: 0}}` and replays the full 300ms/80ms-stagger deck fly-in, and every revealed `FlipCard` replays its flip — a ~1s re-deal performance (with dimmed odds) before the "exact table left behind" is visible. The race test acknowledges the re-registration ("the same real cards mount again and register again under real motion") but no design artifact blesses the replay. This is also the mechanism that arms the gate CR-01/CR-02 then mishandle.
 **Fix:** Decide explicitly: either (a) amend 05-UI-SPEC to bless replay-on-return as the intended behavior (in which case CR-01/CR-02 fixes make it at least gate-correct), or (b) suppress entrance animation on mode-return re-mounts (e.g., thread a "resume, don't deal" signal so `AnimatedCard` renders with `initial={false}` when the mount was caused by a mode flip rather than a deal/street change). Option (a) is the cheaper honest fix; option (b) matches the spec as written.
 
 ### WR-03: Fork shape is leak-prone and will trap Phase 6 — five repeated inline `mode === 'holdem'` guards plus Hold'em-scoped local state in the cross-game shell
+
+**Status:** DEFERRED to Phase 6 (orchestrator decision, recorded in STATE as a Phase 6 fold-in, commit `6954a71`) — the `<HoldemGame />` extraction lands alongside Phase 6's Blackjack tree, where the symmetric slot it creates is immediately needed. Note for the extractor: the WR-01/WR-02 fixes added two `[mode]` housekeeping effects and `errorMessage` clearing to App.tsx — they move with the fork restructure, and the guard test's literal-string pins must be amended in the same commit per that file's standing rule.
 
 **File:** `src/App.tsx:118, 127, 145, 161, 166` (guards); `src/App.tsx:38-41` (`errorMessage`, `scenarioOpen`)
 **Issue:** Every Hold'em-only region carries its own inline `mode === 'holdem' &&` guard. A future Hold'em-only sibling added without its guard silently renders in blackjack mode — no compile-time signal, and the only safety nets are two manually-synced testid arrays that have *already diverged* (12 entries in `App.modeSwitch.test.tsx:39-52` vs 29 in `App.modeIsolation.test.tsx:87-117`), so a new testid missing from both lists is unprotected. Additionally, `errorMessage` and `scenarioOpen` are Hold'em-scoped state living in the cross-game App shell; Phase 6's Blackjack tree will need its own error/odds surface and either collides with these or forces the refactor then, under more pressure. The mode-scoped odds effect will face the same crowding when a second (Blackjack) simulation effect arrives.
@@ -111,6 +132,8 @@ useEffect(() => {
 ## Info
 
 ### IN-01: Stale "checked FIRST" comment on the animation gate
+
+**Status:** FIXED incidentally in `ab90734` — CR-01's rewrite of that exact comment block adopted the suggested "checked before the cache-hit branch below" wording.
 
 **File:** `src/App.tsx:51-56`
 **Issue:** Two adjacent guards both carry comments claiming they are "checked FIRST" — the mode gate (line 43, correct) and the animation gate (line 51, now second; its "FIRST" referred to the pre-Phase-5 ordering relative to the cache-hit branch).
