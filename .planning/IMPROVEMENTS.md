@@ -4,15 +4,15 @@ Curated 2026-08-24 at v1.0 close, from review findings (01/02/03-REVIEW.md), the
 
 ## Tier 1 — Robustness debt worth clearing first (small, sharp-edged)
 
-1. **Surface hard worker crashes (WR-02, open since Phase 2).** `simulationService` handles call rejections but never subscribes to the Worker `error` event — a script-load failure in production leaves Comlink promises hanging and the odds frozen with no banner. Add the `error`/`messageerror` listeners routing into the existing `onError` path. *(S — the error-banner plumbing already exists.)*
-2. **Make TypeScript strictness explicit.** `tsconfig.app.json` relies on TS 6.0.3 defaulting `strict: true`. Write it down so a future compiler-default change can't silently drop the nullability contracts the leak guards depend on (e.g. `FlipCard.card` must be `undefined` while hidden). Also remove the `"node"` types entry that leaked into the browser tsconfig. *(S)*
+1. ~~**Surface hard worker crashes (WR-02, open since Phase 2).** `simulationService` handles call rejections but never subscribes to the Worker `error` event — a script-load failure in production leaves Comlink promises hanging and the odds frozen with no banner. Add the `error`/`messageerror` listeners routing into the existing `onError` path. *(S — the error-banner plumbing already exists.)*~~ **Done (2026-08-24, quick/260824-biv plan 01).**
+2. ~~**Make TypeScript strictness explicit.** `tsconfig.app.json` relies on TS 6.0.3 defaulting `strict: true`. Write it down so a future compiler-default change can't silently drop the nullability contracts the leak guards depend on (e.g. `FlipCard.card` must be `undefined` while hidden). Also remove the `"node"` types entry that leaked into the browser tsconfig. *(S)*~~ **Done (2026-08-24, quick/260824-biv plan 01).**
 3. **Run the security gate retroactively.** Security enforcement is on but no phase has a SECURITY.md — `/gsd:secure-phase 1|2|3` verifies the threat-model mitigations that already exist in every PLAN. Client-only static app, so expect mostly accept-dispositions, but the gate should be green, not skipped. *(S per phase)*
 4. **Real-motion E2E smoke test (Playwright).** The milestone's only critical bugs lived exactly where jsdom's forced reduced-motion couldn't see: real animation timing. One Playwright spec driving Deal → Advance → Rewind-to-preflop → Reveal → re-deal-from-river with animations ON would have caught all three deadlocks. CLAUDE.md already recommends `@playwright/test` and it was never added. *(M — highest test-leverage item on this list.)*
 
 ## Tier 1b — Defects/UX gaps found in first real user session (2026-08-24)
 
-- **Win/tie/loss row lost its labels in the Phase 3 re-skin.** OddsPanel renders `200,00080.2%3.1%16.7%` as one unlabeled run-on string — the trial counter and three percentages need labels ("Trials / Win / Tie / Loss") and spacing. Automated walkthroughs read values via test-ids and never saw the missing visual separation. *(S — pure markup/CSS.)*
-- **Category-table semantics read as "at least," but the table is exclusive-final-category.** First real user reaction: holding a locked-in trips ("should be 100% three of a kind") while the table showed 65.2%, because improvement outcomes (full house 29%, quads 4.2%, straight 1.5%) are separate rows. The math is correct and sums to 100%; the framing isn't communicated. Fix candidates: a "Final hand by the river" header/subtitle, a cumulative "at least" column or hover, and/or highlighting locked-in categories ("you already have this ✓"). Direct evidence for the EDU-02 annotations scope. *(S for the header; M for cumulative/locked-in display.)*
+- ~~**Win/tie/loss row lost its labels in the Phase 3 re-skin.** OddsPanel renders `200,00080.2%3.1%16.7%` as one unlabeled run-on string — the trial counter and three percentages need labels ("Trials / Win / Tie / Loss") and spacing. Automated walkthroughs read values via test-ids and never saw the missing visual separation. *(S — pure markup/CSS.)*~~ **Done (2026-08-24, quick/260824-biv plan 02).**
+- ~~**Category-table semantics read as "at least," but the table is exclusive-final-category.** First real user reaction: holding a locked-in trips ("should be 100% three of a kind") while the table showed 65.2%, because improvement outcomes (full house 29%, quads 4.2%, straight 1.5%) are separate rows. The math is correct and sums to 100%; the framing isn't communicated. Fix candidates: a "Final hand by the river" header/subtitle, a cumulative "at least" column or hover, and/or highlighting locked-in categories ("you already have this ✓"). Direct evidence for the EDU-02 annotations scope. *(S for the header; M for cumulative/locked-in display.)*~~ **Done (2026-08-24, quick/260824-biv plan 02): added the caption/subtitle and a per-row "Locked In" indicator.**
 
 ## Tier 2 — Product improvements that amplify the core value
 
@@ -30,14 +30,15 @@ Curated 2026-08-24 at v1.0 close, from review findings (01/02/03-REVIEW.md), the
 
 ## Tier 4 — Small polish (batch into any touching plan)
 
-13. Deduplicate `formatPct` across the three display components into one helper. *(S)*
-14. Remove the dead scaffold CSS block (`#next-steps`/`#docs`/`.logo`) in `App.css` — already logged in `.planning/phases/03-casino-table-ui-animation/deferred-items.md`. *(S)*
-15. Harden the test `matchMedia` polyfill from substring matching to proper query parsing (it currently works because Motion queries the exact boolean form). *(S)*
-16. Render or remove `errorMessage` string state noted in 03-REVIEW (the banner shows a generic message; the detail string is captured but never displayed). *(S)*
+13. ~~Deduplicate `formatPct` across the three display components into one helper. *(S)*~~ **Done (2026-08-24, quick/260824-biv plan 02).**
+14. ~~Remove the dead scaffold CSS block (`#next-steps`/`#docs`/`.logo`) in `App.css` — already logged in `.planning/phases/03-casino-table-ui-animation/deferred-items.md`. *(S)*~~ **Done (2026-08-24, quick/260824-biv plan 03).**
+15. ~~Harden the test `matchMedia` polyfill from substring matching to proper query parsing (it currently works because Motion queries the exact boolean form). *(S)*~~ **Done (2026-08-24, quick/260824-biv plan 03).**
+16. ~~Render or remove `errorMessage` string state noted in 03-REVIEW (the banner shows a generic message; the detail string is captured but never displayed). *(S)*~~ **Done (2026-08-24, quick/260824-biv plan 03).**
 17. Graceful fade for the flop→preflop full rewind (the CR-01 fix correctly disables the exit gate when the board empties; the visual now unmounts instantly rather than fading — cosmetic only). *(S-M, needs care not to re-open CR-01)*
 
 ## Suggested sequencing
 
-- **Now (one cleanup plan):** items 1-3 + 13-16 — a single `/gsd:quick`-sized hardening pass clears every open review item.
+- **Done (quick/260824-biv, 2026-08-24):** items 1, 2, both Tier 1b bullets, and 13-16 — cleared in one `/gsd:quick`-sized hardening pass.
+- **Still open, small:** item 3 (retroactive security gate) — a natural fit for another `/gsd:quick` pass whenever convenient.
 - **Next milestone (`/gsd:new-milestone` v2):** items 5-8 as the education-layer scope, with item 4 (Playwright) as its first plan so the animation layer finally has real-motion coverage before more UI lands on it.
 - **When sharing matters:** items 10-11.

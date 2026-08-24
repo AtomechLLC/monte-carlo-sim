@@ -12,6 +12,42 @@ const api = Comlink.wrap<SimulationApi>(worker);
 let currentRequestId = 0;
 let lastRequestId = 0;
 let currentOnProgress: ((snapshot: ProgressSnapshot) => void) | null = null;
+let currentOnError: ((message: string) => void) | null = null;
+
+// WR-02 fix (02-REVIEW.md): call rejections were already surfaced via the `catch` block in
+// `startSimulation` below, but a HARD worker death (script-load failure, or an
+// undeserializable `postMessage` payload) never rejects that in-flight Comlink call at all —
+// it fires the Worker's own `error`/`messageerror` event instead, which nothing here
+// subscribed to. That used to leave every pending Comlink promise hanging forever with the
+// odds panel silently frozen and no banner. These two listeners route a hard crash through
+// the exact same `onError` path a call rejection already uses.
+const WORKER_CRASH_MESSAGE = 'The simulation worker stopped unexpectedly';
+const WORKER_MESSAGE_ERROR = 'The simulation worker sent a message that could not be read';
+
+/**
+ * Reports a hard worker failure exactly once: captures the current `onError` callback, then
+ * invalidates the module's notion of "current run" (nulling both callbacks and marking
+ * `currentRequestId` as no generation) BEFORE invoking the callback. Nulling first is what
+ * guarantees exactly-once delivery — a second `error`/`messageerror` event (or a late
+ * Comlink rejection for the now-dead generation) finds `currentOnError` already null / the
+ * requestId already invalidated, so it cannot double-report or resurrect a dead generation.
+ */
+function reportWorkerFailure(message: string): void {
+  const failedOnError = currentOnError;
+  currentOnProgress = null;
+  currentOnError = null;
+  currentRequestId = -1;
+  failedOnError?.(message);
+}
+
+worker.addEventListener('error', (event) => {
+  // Suppress the browser's default "Uncaught error in worker" console spew — the visible
+  // banner (driven by `onError` above) is now the signal, not the console.
+  event.preventDefault();
+  reportWorkerFailure(event.message ? `${WORKER_CRASH_MESSAGE}: ${event.message}` : WORKER_CRASH_MESSAGE);
+});
+
+worker.addEventListener('messageerror', () => reportWorkerFailure(WORKER_MESSAGE_ERROR));
 
 // DEVIATION from the plan's documented "per-call `Comlink.proxy()` + `finally { proxy
 // [Comlink.releaseProxy]() }`" guidance (Rule 1 — the documented call does not exist on the
@@ -54,6 +90,7 @@ export async function startSimulation(
   const requestId = ++lastRequestId;
   currentRequestId = requestId;
   currentOnProgress = onProgress;
+  currentOnError = onError;
 
   try {
     await api.runSimulation(conditioned, requestId, progressProxy);
@@ -62,10 +99,12 @@ export async function startSimulation(
       onError(error instanceof Error ? error.message : String(error));
     }
   } finally {
-    // Drop the dispatch target once this generation is no longer current — prevents a stale
-    // `onProgress` closure from being retained (and possibly invoked) past its run's lifetime.
+    // Drop the dispatch targets once this generation is no longer current — prevents a stale
+    // `onProgress`/`onError` closure from being retained (and possibly invoked) past its run's
+    // lifetime.
     if (currentRequestId === requestId) {
       currentOnProgress = null;
+      currentOnError = null;
     }
   }
 }

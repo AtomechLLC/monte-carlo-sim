@@ -2,9 +2,17 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "es2023",
+    // Explicit, not relied-upon-as-default (IMP-02): TS 6.0.3 defaults this to true, but the
+    // leak guards this app depends on (e.g. `FlipCard.card` being `undefined` while hidden,
+    // `deriveConditionedState`'s `null` opponent holes) need the nullability contract that
+    // `strict` turns on. Writing it down means a future compiler-default change can't
+    // silently drop it.
+    "strict": true,
     "lib": ["ES2023", "DOM", "WebWorker"],
     "module": "esnext",
-    "types": ["vite/client", "node"],
+    // Browser app code must not see Node ambient globals (IMP-02) — "node" was leaking
+    // `process`/`Buffer`/etc. into the type-checked surface of a client-only static app.
+    "types": ["vite/client"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 

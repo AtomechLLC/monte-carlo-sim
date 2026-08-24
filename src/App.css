@@ -70,89 +70,6 @@
   }
 }
 
-#next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-#next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
-}
-
 #spacer {
   height: 88px;
   border-top: 1px solid var(--border);
@@ -188,9 +105,11 @@
  *
  * Everything below styles the plain-semantic-HTML controls introduced across
  * 02-01..02-04 (card picker, street controls, board display, opponent reveal)
- * per 02-UI-SPEC.md. Nothing above this comment is touched — the Phase 1
- * scaffold selectors (.counter, .hero, #next-steps, etc.) are left exactly as
- * they were, unused dead code and all.
+ * per 02-UI-SPEC.md. Nothing above this comment is touched — the remaining
+ * Phase 1 scaffold selectors (.counter, .hero, #center, #spacer, .ticks) are
+ * left exactly as they were, unused dead code and all. The former dead
+ * "next steps"/"docs"/logo scaffold block (also Phase 1 dead code) was
+ * removed outright post-v1.0 (IMPROVEMENTS.md item 14).
  * ------------------------------------------------------------------------- */
 
 /* Vertical rhythm: 16px between each top-level page section (card picker,
@@ -220,14 +139,26 @@ h2 {
 /* Destructive is reserved for exactly one thing: the simulation-error
  * banner's text and left border. Never used for the neutral "disabled"/
  * "used" dimming below — that is opacity on --text, not this colour. */
-.simulation-error {
+.simulation-error-banner {
   margin-top: 16px;
   padding: 8px 12px;
   border-left: 4px solid var(--destructive);
+}
+
+.simulation-error {
   color: var(--destructive);
   font-size: 16px;
   font-weight: 400;
   line-height: 1.5;
+}
+
+/* IMP-16: the error-detail sentence (Label role — no new type sizes). */
+.simulation-error-detail {
+  margin: 4px 0 0;
+  color: var(--destructive);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 /* Accent is reserved for exactly three things: the current street-name
@@ -595,6 +526,59 @@ h2 {
  * update" cue paired with the `aria-busy` attribute for assistive tech. */
 .odds-panel--pending {
   opacity: 0.6;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tier 1b defects (post-v1.0 IMPROVEMENTS.md items 1b): the win/tie/loss row
+ * previously rendered as one unlabelled run-on string ("200,00080.2%3.1%16.7%"),
+ * and the category table read as "at least" when it is actually an exclusive
+ * final-hand distribution. The rules below add real dt/dd label association
+ * to the stats row and a self-explaining caption to the category table.
+ * Tokens only: Label role (14/400/1.4), Body role (16/400/1.5), xs (4px) and
+ * md (16px) spacing.
+ * ------------------------------------------------------------------------- */
+.odds-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0;
+}
+
+.odds-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* `margin: 0` matters here: the UA stylesheet gives <dd> a 40px inline-start margin. */
+.odds-stat__label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.odds-stat__value {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.category-table__caption {
+  text-align: left;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.category-table__subtitle {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 /* Main scene row: TableScene + OddsPanel, `xl` (32px) gap side-by-side at
