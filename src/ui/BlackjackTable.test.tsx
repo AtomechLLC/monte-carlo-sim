@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { StrictMode } from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { BlackjackTable } from './BlackjackTable';
 import { useBlackjackStore } from '../state/blackjackStore';
 import { useUiStore } from '../state/uiStore';
@@ -224,12 +224,173 @@ describe('BlackjackOutcomeBanner gating (A6/A16, T-06-28)', () => {
   });
 });
 
+describe('Dealer and player areas — cards, totals, one-way hole reveal (BJ-06, D-02/D-13/D-14)', () => {
+  it('the hidden hole card appears NOWHERE in the DOM — neither alt text nor asset filename (T-06-24)', () => {
+    seedDealtRound(); // hole is 'Th' -> alt "Ten of Hearts", asset "H-10.svg"
+    const { container } = render(<BlackjackTable />);
+    expect(container.innerHTML).not.toContain('Ten of Hearts');
+    expect(container.innerHTML).not.toContain('H-10.svg');
+    // ...while the upcard IS face-up with its human-readable alt.
+    expect(screen.getByAltText('Seven of Diamonds')).toBeInTheDocument();
+  });
+
+  it('clicking the reveal button shows the hole face, disables the button, and balances the gate', () => {
+    seedDealtRound();
+    const { container } = render(<BlackjackTable />);
+    const button = screen.getByTestId('blackjack-hole-reveal');
+    expect(button).toBeEnabled();
+    expect(button).toHaveAttribute('aria-label', "Reveal the dealer's hole card");
+
+    fireEvent.click(button);
+
+    expect(useBlackjackStore.getState().revealedHole).toBe(true);
+    expect(container.innerHTML).toContain('H-10.svg');
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-label', "Dealer's hole card: Ten of Hearts");
+    // revealHole() armed one unit; the release effect released it on the revealedHole change.
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
+  it('clicking twice reveals once — the second click arms nothing (one-way per round)', () => {
+    seedDealtRound();
+    render(<BlackjackTable />);
+    const button = screen.getByTestId('blackjack-hole-reveal');
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(useBlackjackStore.getState().revealedHole).toBe(true);
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
+  it('reveal button disabled matrix: idle disabled, player-turn enabled, revealed disabled, resolved disabled', () => {
+    // idle
+    const { unmount } = render(<BlackjackTable />);
+    expect(screen.getByTestId('blackjack-hole-reveal')).toBeDisabled();
+    unmount();
+
+    // player-turn, hole hidden
+    seedDealtRound();
+    const second = render(<BlackjackTable />);
+    expect(screen.getByTestId('blackjack-hole-reveal')).toBeEnabled();
+
+    // player-turn, hole revealed early (BJ-06): still player-turn, but one-way
+    act(() => {
+      useBlackjackStore.setState({ revealedHole: true });
+    });
+    expect(screen.getByTestId('blackjack-hole-reveal')).toBeDisabled();
+    second.unmount();
+
+    // resolved
+    useBlackjackStore.setState({
+      round: { dealerUpcard: '7d', dealerHole: 'Th' },
+      playerHand: ['Kh', '9s'],
+      dealerPlayoutCards: [],
+      roundPhase: 'resolved',
+      revealedHole: true,
+      outcome: 'win',
+      playerNaturalWin: false,
+      roundNonce: 1,
+    });
+    render(<BlackjackTable />);
+    expect(screen.getByTestId('blackjack-hole-reveal')).toBeDisabled();
+  });
+
+  it('the dealer total badge is ABSENT while the hole is hidden and present after a reveal (A11)', () => {
+    seedDealtRound();
+    render(<BlackjackTable />);
+    expect(screen.queryByTestId('blackjack-dealer-total')).not.toBeInTheDocument();
+
+    act(() => {
+      useBlackjackStore.setState({ revealedHole: true });
+    });
+    // 7d + Th = 17
+    expect(screen.getByTestId('blackjack-dealer-total').textContent).toBe('17');
+  });
+
+  it('soft totals read "Soft {total}" in both badges (A11)', () => {
+    useBlackjackStore.setState({
+      round: { dealerUpcard: 'Ad', dealerHole: '6h' },
+      playerHand: ['As', '6c'],
+      dealerPlayoutCards: [],
+      roundPhase: 'player-turn',
+      revealedHole: true,
+      outcome: null,
+      playerNaturalWin: false,
+      roundNonce: 1,
+    });
+    render(<BlackjackTable />);
+    expect(screen.getByTestId('blackjack-player-total').textContent).toBe('Soft 17');
+    expect(screen.getByTestId('blackjack-dealer-total').textContent).toBe('Soft 17');
+  });
+
+  it('the player total badge is present whenever a hand exists', () => {
+    seedDealtRound();
+    render(<BlackjackTable />);
+    expect(screen.getByTestId('blackjack-player-total').textContent).toBe('19');
+    expect(screen.getByTestId('blackjack-player-label')).toHaveTextContent('You');
+  });
+
+  it('playout draws render face-up after the hole, and the dealer total counts them', () => {
+    useBlackjackStore.setState({
+      round: { dealerUpcard: '6d', dealerHole: 'Th' },
+      playerHand: ['Kh', '9s'],
+      dealerPlayoutCards: ['2c'],
+      roundPhase: 'resolved',
+      revealedHole: true,
+      outcome: 'lose',
+      playerNaturalWin: false,
+      roundNonce: 1,
+    });
+    render(<BlackjackTable />);
+    expect(screen.getByAltText('Two of Clubs')).toBeInTheDocument();
+    // 6d + Th + 2c = 18
+    expect(screen.getByTestId('blackjack-dealer-total').textContent).toBe('18');
+  });
+
+  it('a natural-resolved deal mounts the hole face-up in the same commit, gate balanced (D-03a)', () => {
+    render(<BlackjackTable />);
+    const before = useUiStore.getState().pendingAnimationCount;
+    expect(before).toBe(0);
+
+    // Mirrors deal() resolving a dealer natural: one set(), one unconditional beginAnimation().
+    act(() => {
+      useBlackjackStore.setState({
+        round: { dealerUpcard: 'Ad', dealerHole: 'Tc' },
+        playerHand: ['Kh', '9s'],
+        dealerPlayoutCards: [],
+        roundPhase: 'resolved',
+        revealedHole: true,
+        outcome: 'lose',
+        playerNaturalWin: false,
+        roundNonce: 1,
+      });
+      useUiStore.getState().beginAnimation();
+    });
+
+    // The hole face is present on the round's FIRST render — FlipCard mounted already
+    // face-up (mountedFaceUp suppresses the flip; no land-then-flip two-step).
+    expect(document.body.innerHTML).toContain('C-10.svg');
+    // Exactly the deal's own unit was armed and released — no extra flip registration.
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+  });
+
+  it('player cards use the hero width class, dealer cards the opponent width class (A5)', () => {
+    seedDealtRound();
+    render(<BlackjackTable />);
+    expect(
+      screen.getByTestId('blackjack-player-cards').querySelectorAll('.card-slot--hero'),
+    ).toHaveLength(2);
+    expect(
+      screen.getByTestId('blackjack-dealer-cards').querySelectorAll('.card-slot--opponent'),
+    ).toHaveLength(2);
+  });
+});
+
 // The eight resolution paths of 06-UI-SPEC's outcome-banner copy table — headings and bodies
 // LOCKED VERBATIM (strings transcribed from the spec, not imported from the component).
 describe('BlackjackOutcomeBanner copy — all eight locked paths (06-UI-SPEC)', () => {
   const CASES: {
     name: string;
-    state: Parameters<typeof useBlackjackStore.setState>[0];
+    state: Partial<ReturnType<typeof useBlackjackStore.getState>>;
     heading: string;
     body: string;
   }[] = [
