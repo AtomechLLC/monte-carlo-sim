@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { DealButton } from './ui/DealButton';
 import { HandDisplay } from './ui/HandDisplay';
 import { WinTieLossDisplay } from './ui/WinTieLossDisplay';
+import { OddsTable } from './ui/OddsTable';
 import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
 import { startSimulation } from './state/simulationService';
@@ -26,6 +27,7 @@ function App() {
       <DealButton />
       <HandDisplay />
       <WinTieLossDisplay />
+      <OddsTable />
     </>
   );
 }
