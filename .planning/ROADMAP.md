@@ -64,7 +64,32 @@ Plans:
   3. User can rewind to an earlier street and see odds return to their earlier-street values; re-advancing shows the same cards unless a separate re-deal action is taken.
   4. User can reveal any opponent's hole cards mid-hand and see all odds recalculate to account for the newly known cards.
 
-**Plans**: TBD
+**Plans:** 6 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Generalize the conditioning engine and worker contract to a variable knowledge partition (NAV-01, NAV-03, DEAL-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Predetermined runout, street advance/rewind, board display, and effect rewiring (NAV-01, NAV-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-03-PLAN.md — Knowledge-keyed settled-odds cache and one-way opponent reveal (NAV-02, NAV-03)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-04-PLAN.md — Seven-slot card picker with visible duplicate blocking and merge-on-deal (DEAL-02, DEAL-03)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 02-05-PLAN.md — Empty state, UI-contract conformance pass, and the end-to-end acceptance suite (all)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 02-06-PLAN.md — Phase acceptance: human walkthrough of the full construction and navigation loop (all)
 
 ### Phase 3: Casino Table UI & Animation
 
@@ -90,5 +115,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Odds Loop | 4/4 | Complete   | 2026-08-24 |
-| 2. Scenario Construction & Street Navigation | 0/TBD | Not started | - |
+| 2. Scenario Construction & Street Navigation | 0/6 | Planned | - |
 | 3. Casino Table UI & Animation | 0/TBD | Not started | - |
