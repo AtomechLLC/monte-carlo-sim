@@ -25,7 +25,7 @@
  * one of these two functions — never a third ad-hoc exclusion list.
  */
 import type { Card } from '@poker-apprentice/types';
-import { shoeWithout, type DeckCount } from './shoe';
+import { cardCounts, shoeWithout, type DeckCount } from './shoe';
 import { isNatural } from './blackjackHandValue';
 import type { BlackjackConditionedState } from './blackjackEquity';
 
@@ -122,6 +122,42 @@ export function liveShoeLedger(
     ...liveDrawnSoFar,
   ];
   return shoeWithout(deckCount, known);
+}
+
+/**
+ * Count-only physical-duplicate check backing the deck-toggle guard (UI-SPEC A3,
+ * 06-REVIEW WR-01): true iff any card VALUE appears twice or more among the round's
+ * PHYSICAL cards — the player hand, the upcard, the predetermined hole (hidden or not)
+ * and every live playout draw. Such a table is impossible under a one-deck shoe, and a
+ * 2 -> 1 switch on top of it would silently corrupt every later `liveShoeLedger` read
+ * (`shoeWithout` drops the one copy it has and ignores the excess: table + ledger = 53
+ * cards). Count-aware via `cardCounts` — a Set-based membership check would collapse the
+ * very duplicate copies it exists to detect (PITFALLS Pitfall 6).
+ *
+ * This is the ONLY function in the codebase permitted to read `round.dealerHole` for
+ * PHYSICAL-POSSIBILITY purposes (D-01, D-02): the hole is a real, already-dealt card, so
+ * a possibility check that ignored it would under-count. DELIBERATE, DOCUMENTED ~one-bit
+ * knowledge leak (06-REVIEW WR-01 / D-02 trade-off): while the hole is hidden and the
+ * visible cards alone hold no duplicate, a `true` return tells the user the face-down
+ * hole duplicates a visible card's VALUE. That single bit is the accepted cost of never
+ * entering an impossible physical state — no silent 53-card math under any path. The
+ * card's identity never leaves this function: the return type is a bare boolean.
+ */
+export function hasPhysicalDuplicate(
+  round: PredeterminedBlackjackRound,
+  playerCardsSoFar: readonly Card[],
+  liveDrawnSoFar: readonly Card[],
+): boolean {
+  const physicalCards: Card[] = [
+    ...playerCardsSoFar,
+    round.dealerUpcard,
+    round.dealerHole, // a real physical card regardless of visibility (D-01)
+    ...liveDrawnSoFar,
+  ];
+  for (const count of cardCounts(physicalCards).values()) {
+    if (count >= 2) return true;
+  }
+  return false;
 }
 
 /**

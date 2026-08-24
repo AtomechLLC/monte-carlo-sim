@@ -470,6 +470,31 @@ describe('BJ-07: the blackjack-local deck toggle restarts the run under the new 
     expect(screen.getByTestId('blackjack-deck-toggle-2')).not.toBeDisabled();
   });
 
+  it('the A3 guard also counts the HIDDEN hole: a hole duplicating a visible card disables "1 deck" with the locked title (06-REVIEW WR-01)', () => {
+    // 2-deck round: player 5c 8d, upcard 9s, hole 5c (hidden). No VISIBLE duplicate — a
+    // visible-cards-only guard leaves "1 deck" enabled and the toggle silently creates an
+    // impossible one-deck table (two physical 5c) with a corrupted 53-card ledger. The
+    // hole is a real dealt card, so the locked "dealt cards" title copy already covers it.
+    useBlackjackStore.setState({
+      round: { dealerUpcard: '9s' as Card, dealerHole: '5c' as Card },
+      playerHand: ['5c', '8d'] as Card[],
+      dealerPlayoutCards: [] as Card[],
+      roundPhase: 'player-turn',
+      revealedHole: false,
+      outcome: null,
+      playerNaturalWin: false,
+      deckCount: 2,
+      roundNonce: 1,
+    });
+    render(<App />);
+
+    const oneDeck = screen.getByTestId('blackjack-deck-toggle-1');
+    expect(oneDeck).toBeDisabled();
+    expect(oneDeck).toHaveAttribute('title', 'The dealt cards include a duplicate — impossible with one deck');
+    // Only that segment: the active "2 decks" segment stays operable (A3/A4).
+    expect(screen.getByTestId('blackjack-deck-toggle-2')).not.toBeDisabled();
+  });
+
   it('clicking the already-active segment is a harmless no-op: no new run, no blank, no state change', async () => {
     const user = userEvent.setup();
     render(<App />);

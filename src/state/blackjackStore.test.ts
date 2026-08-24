@@ -475,6 +475,47 @@ describe('setDeckCount() — A3 semantics: unconditional cache clear, phase-gate
     expect(arms()).toBe(0);
   });
 
+  it('refuses a 2 -> 1 switch while the HIDDEN hole duplicates a visible card — a complete no-op, never a 53-card state (06-REVIEW WR-01)', () => {
+    // 2-deck round: player 5c 8d, upcard 9s, hole 5c (hidden). The VISIBLE cards have no
+    // duplicate, but the hole is a real physical card (D-01) — at 1 deck two 5c cannot
+    // exist, and every later liveShoeLedger read would silently under-remove
+    // (shoeWithout drops the one copy and ignores the second: table + ledger = 53).
+    seedPlayerTurn({ playerHand: ['5c', '8d'], dealerUpcard: '9s', dealerHole: '5c', deckCount: 2 });
+    const odds = useBlackjackOddsStore.getState();
+    odds.applySnapshot(makeSnapshot());
+    odds.cacheIfSettled(2, false, makeSnapshot());
+    const storeBefore = useBlackjackStore.getState();
+    const oddsBefore = useBlackjackOddsStore.getState();
+
+    useBlackjackStore.getState().setDeckCount(1);
+
+    // A refused switch is a COMPLETE no-op: deck count kept, cache kept, display
+    // untouched, no arm — exactly the same-value branch's shape.
+    expect(useBlackjackStore.getState()).toBe(storeBefore);
+    expect(useBlackjackStore.getState().deckCount).toBe(2);
+    expect(useBlackjackOddsStore.getState()).toBe(oddsBefore);
+    expect(useBlackjackOddsStore.getState().settledCache.size).toBe(1);
+    expect(arms()).toBe(0);
+  });
+
+  it('refuses 2 -> 1 for a REVEALED duplicate too — store-boundary defence even where the UI already disables (06-REVIEW WR-01)', () => {
+    seedPlayerTurn({ playerHand: ['5c', '8d'], dealerUpcard: '5c', dealerHole: '2h', deckCount: 2 });
+
+    useBlackjackStore.getState().setDeckCount(1);
+
+    expect(useBlackjackStore.getState().deckCount).toBe(2);
+    expect(arms()).toBe(0);
+  });
+
+  it('still allows 2 -> 1 when the full physical round (incl. the hidden hole) has no duplicate (06-REVIEW WR-01, the other direction)', () => {
+    seedPlayerTurn({ playerHand: ['5c', '8d'], dealerUpcard: '9s', dealerHole: '2h', deckCount: 2 });
+
+    useBlackjackStore.getState().setDeckCount(1);
+
+    expect(useBlackjackStore.getState().deckCount).toBe(1);
+    expect(arms()).toBe(0);
+  });
+
   it('with the value already selected: a harmless no-op that does not arm and keeps the cache', () => {
     const odds = useBlackjackOddsStore.getState();
     odds.cacheIfSettled(2, false, makeSnapshot());

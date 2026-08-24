@@ -3,7 +3,7 @@ import type { Card } from '@poker-apprentice/types';
 import { createRng, drawN } from '../engine/rng';
 import { shoeWithout } from '../engine/shoe';
 import type { DeckCount } from '../engine/shoe';
-import { liveShoeLedger, resolveNaturals } from '../engine/blackjackConditioning';
+import { hasPhysicalDuplicate, liveShoeLedger, resolveNaturals } from '../engine/blackjackConditioning';
 import type { BlackjackOutcome, PredeterminedBlackjackRound } from '../engine/blackjackConditioning';
 import {
   classifyDealerOutcome,
@@ -183,6 +183,18 @@ export const useBlackjackStore = create<BlackjackState>()((set, get) => ({
     // The already-selected segment is a harmless no-op (UI-SPEC A3/A4, the
     // mode-switcher precedent): nothing changes, nothing arms, the cache stays.
     if (get().deckCount === deckCount) return;
+    // 06-REVIEW WR-01: REFUSE a 2 -> 1 switch while the round's PHYSICAL cards —
+    // including the face-down hole, a real dealt card (D-01) — hold a duplicate. Such a
+    // table is impossible under one deck, and accepting the switch would silently
+    // corrupt every later liveShoeLedger read (shoeWithout under-removes: table +
+    // ledger = 53 cards) with no crash and quietly skewed odds. This store-boundary
+    // refusal is the correctness guarantee; the control's disabled state (same
+    // hasPhysicalDuplicate reader) is the surfaced half. A refused switch is a
+    // COMPLETE no-op, exactly like the same-value branch above.
+    const { round, playerHand, dealerPlayoutCards } = get();
+    if (deckCount === 1 && round !== null && hasPhysicalDuplicate(round, playerHand, dealerPlayoutCards)) {
+      return;
+    }
     set({ deckCount });
     const odds = useBlackjackOddsStore.getState();
     // clearCache() is UNCONDITIONAL — outside the roundPhase gate below — so the NEXT

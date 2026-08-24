@@ -1,5 +1,5 @@
 import { useBlackjackStore } from '../state/blackjackStore';
-import { cardCounts } from '../engine/shoe';
+import { hasPhysicalDuplicate } from '../engine/blackjackConditioning';
 
 /** Locked A3 duplicate-guard `title` (06-UI-SPEC Copywriting Contract — verbatim). */
 const DUPLICATE_GUARD_TITLE = 'The dealt cards include a duplicate — impossible with one deck';
@@ -17,7 +17,6 @@ export function BlackjackControls() {
   const round = useBlackjackStore((state) => state.round);
   const playerHand = useBlackjackStore((state) => state.playerHand);
   const dealerPlayoutCards = useBlackjackStore((state) => state.dealerPlayoutCards);
-  const revealedHole = useBlackjackStore((state) => state.revealedHole);
   const deckCount = useBlackjackStore((state) => state.deckCount);
   const deal = useBlackjackStore((state) => state.deal);
   const hit = useBlackjackStore((state) => state.hit);
@@ -30,30 +29,23 @@ export function BlackjackControls() {
   // double-action during the dealer playout.
   const actionsDisabled = roundPhase !== 'player-turn';
 
-  // A3 duplicate guard, derived count-aware over the VISIBLE cards only: the player hand,
-  // the dealer upcard, the hole IF revealed, and every playout draw. Computed via
-  // `cardCounts` — a Set-based membership check would collapse the very duplicate copies it
-  // is meant to detect (PITFALLS Pitfall 6), reporting "no duplicates" for the exact hands
-  // that have them. Structurally one-directional: only the 2 -> 1 direction can ever be
-  // blocked — at deckCount === 1 the shoe holds one physical copy of each card, so no
-  // duplicate can exist among the dealt cards and this boolean is false by construction
-  // (the active "1 deck" segment is therefore never disabled, per A3/A4).
-  const visibleCards =
-    round === null
-      ? []
-      : [
-          ...playerHand,
-          round.dealerUpcard,
-          ...(revealedHole ? [round.dealerHole] : []),
-          ...dealerPlayoutCards,
-        ];
-  let duplicateVisible = false;
-  for (const count of cardCounts(visibleCards).values()) {
-    if (count >= 2) {
-      duplicateVisible = true;
-      break;
-    }
-  }
+  // A3 duplicate guard over the round's PHYSICAL cards — the player hand, the upcard, the
+  // predetermined hole (hidden or not) and every playout draw — via the engine's
+  // count-aware sole reader (06-REVIEW WR-01; a Set-based check would collapse the very
+  // duplicate copies it is meant to detect, PITFALLS Pitfall 6). The hole is a real dealt
+  // card (D-01): a visible-cards-only guard left "1 deck" enabled when the HIDDEN hole
+  // duplicated a visible card, and the toggle then silently created an impossible one-deck
+  // table with a corrupted 53-card ledger. DELIBERATE, DOCUMENTED ~one-bit D-02 leak
+  // (06-REVIEW WR-01 trade-off): while the hole is hidden and no visible duplicate exists,
+  // this disabled state tells the user the hole duplicates a visible card's VALUE — the
+  // accepted cost of never entering an impossible physical state (blackjackStore's
+  // setDeckCount refuses the same switch as the correctness backstop). Structurally
+  // one-directional: only the 2 -> 1 direction can ever be blocked — at deckCount === 1
+  // the shoe holds one physical copy of each card, so no duplicate can exist among the
+  // dealt cards and this boolean is false by construction (the active "1 deck" segment is
+  // therefore never disabled, per A3/A4).
+  const duplicateOnTable =
+    round !== null && hasPhysicalDuplicate(round, playerHand, dealerPlayoutCards);
 
   return (
     <>
@@ -82,9 +74,10 @@ export function BlackjackControls() {
           data-testid="blackjack-deck-toggle-1"
           aria-pressed={deckCount === 1}
           // The A3 guard applies to this segment ONLY: switching to one deck while the
-          // visible cards contain a duplicate is impossible under one physical deck.
-          disabled={duplicateVisible}
-          title={duplicateVisible ? DUPLICATE_GUARD_TITLE : undefined}
+          // round's physical cards contain a duplicate is impossible under one physical
+          // deck (06-REVIEW WR-01: the hidden hole counts — it is a dealt card).
+          disabled={duplicateOnTable}
+          title={duplicateOnTable ? DUPLICATE_GUARD_TITLE : undefined}
           onClick={() => setDeckCount(1)}
         >
           1 deck

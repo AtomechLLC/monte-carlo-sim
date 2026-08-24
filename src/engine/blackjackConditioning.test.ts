@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import type { Card } from '@poker-apprentice/types';
 import {
   deriveBlackjackConditionedState,
+  hasPhysicalDuplicate,
   liveShoeLedger,
   resolveNaturals,
   type PredeterminedBlackjackRound,
@@ -102,6 +103,22 @@ describe('liveShoeLedger — the live-draw reader (D-01, D-11)', () => {
       expect(ledger.length).toBe(hiddenOdds.remainingDeck.length - 1);
     },
   );
+});
+
+describe('hasPhysicalDuplicate — count-only possibility reader behind the deck-toggle guard (06-REVIEW WR-01)', () => {
+  it('counts the HIDDEN hole as a physical card: true when it duplicates a visible card', () => {
+    // The exact WR-01 scenario: no visible duplicate, but two physical 5c on the table.
+    expect(hasPhysicalDuplicate({ dealerUpcard: '9s', dealerHole: '5c' }, ['5c', '8d'], [])).toBe(true);
+  });
+
+  it('false when the full physical round — hole included — has no duplicate', () => {
+    expect(hasPhysicalDuplicate({ dealerUpcard: '9s', dealerHole: '2h' }, ['5c', '8d'], [])).toBe(false);
+  });
+
+  it('true for a visible duplicate (player vs upcard) and for a playout-draw duplicate alike', () => {
+    expect(hasPhysicalDuplicate({ dealerUpcard: '5c', dealerHole: '2h' }, ['5c', '8d'], [])).toBe(true);
+    expect(hasPhysicalDuplicate({ dealerUpcard: '9s', dealerHole: '2h' }, ['5c', '8d'], ['8d'])).toBe(true);
+  });
 });
 
 describe('resolveNaturals — deal-time natural resolution (D-03, D-03a)', () => {
