@@ -82,13 +82,13 @@ Plans:
   3. Switching to Blackjack shows an independent game screen/state that shares no store fields or odds-cache keys with Hold'em, verified by a store-isolation test.
   4. Switching modes mid-simulation cleanly cancels any in-flight worker run for the game being left, so no stale odds bleed across modes.
 
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — Mode-switch vertical slice: gameModeStore, GameModeSwitcher, BlackjackScene placeholder, App mode fork (D-01/D-02/D-03/D-04/D-05)
+- [x] 05-01-PLAN.md — Mode-switch vertical slice: gameModeStore, GameModeSwitcher, BlackjackScene placeholder, App mode fork (D-01/D-02/D-03/D-04/D-05)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -157,7 +157,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Scenario Construction & Street Navigation | v1.0 | 6/6 | Complete | 2026-08-24 |
 | 3. Casino Table UI & Animation | v1.0 | 6/6 | Complete | 2026-08-24 |
 | 4. Multiset Deck & Streaming Foundation | v2.0 | 6/6 | Complete   | 2026-08-24 |
-| 5. Game-Mode Shell & Store Separation | v2.0 | 0/3 | Planned | - |
+| 5. Game-Mode Shell & Store Separation | v2.0 | 1/3 | In Progress|  |
 | 6. Blackjack Core Odds Loop | v2.0 | 0/TBD | Not started | - |
 | 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 0/TBD | Not started | - |
 | 8. Cross-Game Deck-Count Toggle UI | v2.0 | 0/TBD | Not started | - |
