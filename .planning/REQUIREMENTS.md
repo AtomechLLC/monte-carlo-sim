@@ -71,13 +71,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmap) | | |
+| ENG-01 | Phase 1: Core Odds Loop | Pending |
+| ENG-02 | Phase 1: Core Odds Loop | Pending |
+| ENG-03 | Phase 1: Core Odds Loop | Pending |
+| ENG-04 | Phase 1: Core Odds Loop | Pending |
+| ODDS-01 | Phase 1: Core Odds Loop | Pending |
+| ODDS-02 | Phase 1: Core Odds Loop | Pending |
+| ODDS-03 | Phase 1: Core Odds Loop | Pending |
+| DEAL-01 | Phase 1: Core Odds Loop | Pending |
+| DEAL-02 | Phase 2: Scenario Construction & Street Navigation | Pending |
+| DEAL-03 | Phase 2: Scenario Construction & Street Navigation | Pending |
+| NAV-01 | Phase 2: Scenario Construction & Street Navigation | Pending |
+| NAV-02 | Phase 2: Scenario Construction & Street Navigation | Pending |
+| NAV-03 | Phase 2: Scenario Construction & Street Navigation | Pending |
+| TBL-01 | Phase 3: Casino Table UI & Animation | Pending |
+| TBL-02 | Phase 3: Casino Table UI & Animation | Pending |
+| TBL-03 | Phase 3: Casino Table UI & Animation | Pending |
+| TBL-04 | Phase 3: Casino Table UI & Animation | Pending |
 
 **Coverage:**
 - v1 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️ (roadmap pending)
+- Mapped to phases: 17
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-23*
-*Last updated: 2026-08-23 after initial definition*
+*Last updated: 2026-08-23 after roadmap creation*
