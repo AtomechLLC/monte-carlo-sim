@@ -112,7 +112,7 @@ Plans:
   4. User can reveal the dealer's hole card early and watch all odds recondition on the newly known card.
   5. Toggling deck count (1 vs. 2) for Blackjack visibly changes the odds (e.g., natural-blackjack frequency ~4.83% → ~4.78%), verifiable in-app.
 
-**Plans:** 2/8 plans executed
+**Plans:** 4/8 plans executed
 **UI hint**: yes
 
 Plans:
@@ -123,8 +123,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 06-03-PLAN.md — Namespaced { poker, blackjack } worker surface, WR-02 deckCount validation, shared transport
-- [ ] 06-04-PLAN.md — Blackjack round and odds stores, symmetric restore-mount signal
+- [x] 06-03-PLAN.md — Namespaced { poker, blackjack } worker surface, WR-02 deckCount validation, shared transport
+- [x] 06-04-PLAN.md — Blackjack round and odds stores, symmetric restore-mount signal
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -182,6 +182,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Casino Table UI & Animation | v1.0 | 6/6 | Complete | 2026-08-24 |
 | 4. Multiset Deck & Streaming Foundation | v2.0 | 6/6 | Complete   | 2026-08-24 |
 | 5. Game-Mode Shell & Store Separation | v2.0 | 3/3 | Complete   | 2026-08-24 |
-| 6. Blackjack Core Odds Loop | v2.0 | 2/8 | In Progress|  |
+| 6. Blackjack Core Odds Loop | v2.0 | 4/8 | In Progress|  |
 | 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 0/TBD | Not started | - |
 | 8. Cross-Game Deck-Count Toggle UI | v2.0 | 0/TBD | Not started | - |
