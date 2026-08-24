@@ -424,7 +424,9 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
 | A2 | `backfaceVisibility`, `transform-style: preserve-3d`, and `perspective` behave as standard CSS 3D-transform properties when set via Motion's `style` prop (i.e., Motion passes them through unmodified rather than intercepting them) | Architecture Patterns → Pattern 3 | These are not Motion-animated values (Motion's docs only confirm `rotateY`/`rotateX`/`rotateZ` as animatable transform axes); the claim that the *static* companion properties pass through untouched is standard CSS/React behavior, not something Motion's docs specifically confirm, so it is marked [ASSUMED] rather than [CITED]. Low risk — this is a well-established, decades-old CSS technique independent of any animation library. |
 | A3 | The `letele/playing-cards` repo (3 GitHub stars, last pushed 2023) will remain reachable long enough to vendor its assets before/during phase execution | Standard Stack → Card Art | Low risk since D-01 requires vendoring (a one-time download, then committed to this repo) rather than an ongoing dependency — even if the source repo disappears after vendoring, the already-committed files are unaffected. Recommend downloading and committing the assets as one of the first tasks in the phase plan, before other work depends on their exact filenames. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+Both questions were resolved during UI-SPEC generation — RESOLVED: see `03-UI-SPEC.md` Autonomous Resolution Log rows A2 (card-back design: vendored back with CSS-filter tint to the app palette) and A3 (deal stagger: dealer-rotation order). Plans 03-01 Task 1 and 03-03 Task 2 implement these resolutions.
 
 1. **Should the vendored card back use one of the deck's own `B-1.svg`/`B-2.svg` designs, or a hand-rolled CSS/SVG pattern?**
    - What we know: D-02 only requires "a simple repeating pattern (CSS or SVG) consistent across all hidden cards"; the vendored deck includes two back designs (tiny, <1 KB each) that would match the face-card style/border exactly.
