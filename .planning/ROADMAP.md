@@ -104,13 +104,13 @@ Plans:
   3. User sees cards animate when dealt, flipped, and revealed (opponent reveal).
   4. User never sees odds numbers contradict or spoil cards that are still mid-animation — odds update only once the corresponding animation has completed.
 
-**Plans:** 0/6 plans complete
+**Plans:** 1/6 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Vendor the CC0 SVG deck and render real card art everywhere (TBL-02)
+- [x] 03-01-PLAN.md — Vendor the CC0 SVG deck and render real card art everywhere (TBL-02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -141,4 +141,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Core Odds Loop | 4/4 | Complete   | 2026-08-24 |
 | 2. Scenario Construction & Street Navigation | 6/6 | Complete   | 2026-08-24 |
-| 3. Casino Table UI & Animation | 0/6 | Not started | - |
+| 3. Casino Table UI & Animation | 1/6 | In Progress|  |
