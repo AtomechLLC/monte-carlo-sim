@@ -5,6 +5,7 @@ import { createRng, drawN } from '../engine/rng';
 import type { PredeterminedRunout } from '../engine/conditioning';
 import type { Street } from '../engine/streets';
 import { nextStreet, previousStreet } from '../engine/streets';
+import { useOddsStore } from './oddsStore';
 
 interface GameState {
   /** The full predetermined runout for the current hand, or `null` before the first deal (D-01). */
@@ -48,6 +49,9 @@ export const useGameStore = create<GameState>()((set, get) => ({
     };
 
     set({ runout, street: 'preflop', revealedMask: 0, dealNonce: get().dealNonce + 1 });
+    // A fresh hand must never serve a previous hand's settled odds (RESEARCH Pitfall 4,
+    // option (a) — clear the whole cache on every deal rather than namespacing keys).
+    useOddsStore.getState().clearCache();
   },
   advanceStreet: () => {
     set({ street: nextStreet(get().street) });

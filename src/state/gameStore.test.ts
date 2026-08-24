@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from './gameStore';
+import { useOddsStore } from './oddsStore';
 import { FULL_DECK } from '../engine/cards';
+import type { ProgressSnapshot } from '../worker/protocol';
 
 describe('gameStore — predetermined runout and street pointer', () => {
   beforeEach(() => {
@@ -118,5 +120,22 @@ describe('gameStore — predetermined runout and street pointer', () => {
       previous = current;
     }
     expect(sawDifference).toBe(true);
+  });
+
+  it('deal() clears the settled odds cache even when entries existed for the previous hand', () => {
+    useOddsStore.getState().clearCache();
+    const snapshot: ProgressSnapshot = {
+      requestId: 1,
+      categoryCounts: new Array(10).fill(0),
+      outcomes: { win: 60, tie: 10, lose: 30 },
+      trialsCompleted: 100,
+      done: true,
+    };
+    useOddsStore.getState().cacheIfSettled('flop', 0, snapshot);
+    expect(useOddsStore.getState().settledCache.size).toBe(1);
+
+    useGameStore.getState().deal();
+
+    expect(useOddsStore.getState().settledCache.size).toBe(0);
   });
 });
