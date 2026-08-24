@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-08-24T05:45:20.816Z"
+status: ready_to_plan
+stopped_at: Phase 02 complete (6/6) — ready to discuss Phase 3
+last_updated: 2026-08-24T07:27:23.688Z
 last_activity: 2026-08-24 -- Phase 02 execution started
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 10
-  completed_plans: 4
+  completed_plans: 10
   percent: 33
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-24)
 
 **Core value:** Probability made visible — the user can watch odds converge in real time and see exactly how each new piece of information reshapes the numbers.
-**Current focus:** Phase 02 — scenario-construction-street-navigation
+**Current focus:** Phase 3 — casino table ui & animation
 
 ## Current Position
 
-Phase: 02 (scenario-construction-street-navigation) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 02
-Last activity: 2026-08-24 -- Phase 02 execution started
+Phase: 3
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-24
 
 Progress: [███░░░░░░░] 33% (1/3 phases; 4/4 v1-so-far plans)
 
@@ -36,7 +36,7 @@ Progress: [███░░░░░░░] 33% (1/3 phases; 4/4 v1-so-far plans)
 
 **Velocity:**
 
-- Total plans completed: 4
+- Total plans completed: 10
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -45,6 +45,7 @@ Progress: [███░░░░░░░] 33% (1/3 phases; 4/4 v1-so-far plans)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 4 | - | - |
+| 02 | 6 | - | - |
 
 **Recent Trend:**
 
