@@ -122,6 +122,30 @@ describe('gameStore — predetermined runout and street pointer', () => {
     expect(sawDifference).toBe(true);
   });
 
+  it('reveal(1) sets bit 1 of revealedMask; calling reveal(1) again leaves the mask unchanged', () => {
+    useGameStore.getState().reveal(1);
+    expect(useGameStore.getState().revealedMask).toBe(0b010);
+
+    useGameStore.getState().reveal(1);
+    expect(useGameStore.getState().revealedMask).toBe(0b010);
+  });
+
+  it('reveal(0) followed by reveal(2) yields a mask of 5; no action clears an individual bit', () => {
+    useGameStore.getState().reveal(0);
+    useGameStore.getState().reveal(2);
+    expect(useGameStore.getState().revealedMask).toBe(5);
+  });
+
+  it('deal() resets revealedMask to 0', () => {
+    useGameStore.getState().reveal(0);
+    useGameStore.getState().reveal(1);
+    expect(useGameStore.getState().revealedMask).not.toBe(0);
+
+    useGameStore.getState().deal();
+
+    expect(useGameStore.getState().revealedMask).toBe(0);
+  });
+
   it('deal() clears the settled odds cache even when entries existed for the previous hand', () => {
     useOddsStore.getState().clearCache();
     const snapshot: ProgressSnapshot = {
