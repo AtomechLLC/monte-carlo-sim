@@ -596,3 +596,46 @@ h2 {
     gap: 32px;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Phase 5 game-mode switcher (05-01)
+ *
+ * The segmented `GameModeSwitcher` control (D-01) that sits as the control
+ * bar's first, unconditional child in both Hold'em and Blackjack mode. The
+ * active segment's "selected" state deliberately uses the secondary/30%
+ * `--border` role as a background fill plus a semibold weight bump — never
+ * `--accent` — so the switcher introduces zero new accent usage against the
+ * existing 3-use budget (UI-SPEC A2). Selectors are `data-testid`-scoped,
+ * matching this file's established convention rather than a bespoke class
+ * hierarchy. (The Blackjack placeholder felt shell's CSS, D-03, is appended
+ * to this same banner block in 05-01 Task 3.)
+ * ------------------------------------------------------------------------- */
+[data-testid='game-mode-switcher'] {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+[data-testid^='game-mode-switch-'] {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text);
+  background: transparent;
+  border: none;
+}
+
+[data-testid='game-mode-switch-holdem'] {
+  border-right: 1px solid var(--border);
+}
+
+[data-testid^='game-mode-switch-'][aria-pressed='true'] {
+  background: var(--border);
+  color: var(--text-h);
+  font-weight: 600;
+}
