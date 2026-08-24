@@ -7,6 +7,7 @@ import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
 import { useUiStore } from './state/uiStore';
 import { useGameModeStore } from './state/gameModeStore';
+import { HOLDEM_ONLY_TESTIDS } from './test/holdemTestids';
 
 // End-to-end happy-path proof of the Phase 5 mode switch (D-01/D-03/D-04). This file protects:
 //   D-01 — a segmented two-button `game-mode-switcher` control, visible in BOTH modes, with
@@ -36,20 +37,12 @@ function resetStores() {
   vi.mocked(simulationService.cancelSimulation).mockReset();
 }
 
-const HOLDEM_ONLY_TESTIDS = [
-  'table-scene',
-  'odds-panel',
-  'hero-hole',
-  'opponents',
-  'board-cards',
-  'street-label',
-  'rewind-button',
-  'advance-button',
-  'set-up-scenario-button',
-  'empty-hand-state',
-  'trial-counter',
-  'card-picker',
-];
+// The D-04 sweep below runs against the shared HOLDEM_ONLY_TESTIDS list from
+// src/test/holdemTestids.ts (D-07, 05-REVIEW IN-02 — this file previously carried a stale
+// 12-entry subset of App.modeIsolation.test.tsx's 29-entry list). This file's sweep never
+// deals a hand or opens the picker, so entries requiring a dealt hand are vacuously absent
+// here — it is deliberately an absence-only SMOKE sweep of the pre-deal switch path;
+// App.modeIsolation.test.tsx owns the non-vacuous present-then-absent proof for every entry.
 
 const BLACKJACK_HEADING = 'The Blackjack table deals next';
 const BLACKJACK_BODY =

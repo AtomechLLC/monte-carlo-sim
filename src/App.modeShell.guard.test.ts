@@ -31,6 +31,12 @@ import { dirname, join } from 'node:path';
 // cross-store read), the correct move is to AMEND this guard in the SAME COMMIT as the feature,
 // with the phase decision cited in the updated assertion/comment — never to silently delete or
 // weaken an assertion here.
+//
+// AMENDED 2026-08-24 (Phase 6 plan 06-02, D-07): the <HoldemGame /> extraction moved the odds
+// effect — and with it the cancelSimulation( cleanup, the mode gate and the dependency array —
+// out of App.tsx into ui/HoldemGame.tsx, so those three assertions were RETARGETED at
+// ui/HoldemGame.tsx in the same commit per this file's standing rule (never deleted, never
+// weakened), and App.tsx is now additionally pinned as owning ZERO cancellation call sites.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = __dirname;
@@ -118,51 +124,77 @@ describe('Hold\'em stores and engine/conditioning.ts — no mode branch (Pitfall
   });
 });
 
-describe('App.tsx — single cancellation owner, no production gate reset (D-07, D-08)', () => {
+describe('App.tsx (shell) + ui/HoldemGame.tsx — single cancellation owner, no production gate reset (D-07, D-08)', () => {
   const source = readSource('App.tsx');
   const commentsStripped = stripCommentLines(source);
+  // D-07 (06-02): the odds effect — and with it the cancellation cleanup, the mode gate and
+  // the dependency array — MOVED verbatim from App.tsx into ui/HoldemGame.tsx. The assertions
+  // below were retargeted at their new home in the same commit, not weakened.
+  const holdemGameSource = readSource('ui/HoldemGame.tsx');
+  const holdemGameCommentsStripped = stripCommentLines(holdemGameSource);
 
-  it('contains exactly one cancelSimulation( call site, outside of comments', () => {
+  it('ui/HoldemGame.tsx contains exactly one cancelSimulation( call site, outside of comments', () => {
     // Comment-stripped BEFORE counting (see stripCommentLines doc comment above) — this
     // function's own file-level comments are free to describe cancelSimulation( in prose
     // without flipping this count.
-    const occurrences = commentsStripped.split('cancelSimulation(').length - 1;
+    const occurrences = holdemGameCommentsStripped.split('cancelSimulation(').length - 1;
     expect(
       occurrences,
-      'App.tsx must contain exactly ONE cancelSimulation( call — the existing effect-cleanup ' +
+      'ui/HoldemGame.tsx must contain exactly ONE cancelSimulation( call — the effect-cleanup ' +
         'call site is D-07\'s entire cancellation mechanism for a mode switch; a second call ' +
-        'site would mean a competing/duplicate cancellation path was added',
+        'site would mean a competing/duplicate cancellation path was added. This assertion ' +
+        'MOVED here from App.tsx because the Hold\'em odds effect moved with the D-07 ' +
+        'extraction — it was retargeted, not weakened',
     ).toBe(1);
   });
 
-  it.each(['App.tsx', 'state/gameModeStore.ts', 'ui/GameModeSwitcher.tsx', 'ui/BlackjackScene.tsx'])(
+  it('App.tsx contains zero cancelSimulation( call sites, outside of comments', () => {
+    // ADDED with the D-07 extraction (06-02): the shell owns NO cancellation — the single
+    // cancelSimulation( call site lives in ui/HoldemGame.tsx's effect cleanup. A call site
+    // reappearing in App.tsx would mean a competing cancellation path crept back into the
+    // cross-game shell.
+    const occurrences = commentsStripped.split('cancelSimulation(').length - 1;
+    expect(
+      occurrences,
+      'App.tsx must contain ZERO cancelSimulation( calls — after the D-07 extraction the shell ' +
+        'owns no game state and no cancellation; the single sanctioned call site is ' +
+        'ui/HoldemGame.tsx\'s effect cleanup',
+    ).toBe(0);
+  });
+
+  it.each(['App.tsx', 'ui/HoldemGame.tsx', 'state/gameModeStore.ts', 'ui/GameModeSwitcher.tsx', 'ui/BlackjackScene.tsx'])(
     '%s contains zero occurrences of resetAnimations',
     (relativePath) => {
       const target = relativePath === 'App.tsx' ? source : readSource(relativePath);
       expect(
         target,
         `${relativePath} must never call resetAnimations — gate-drain on a mode switch happens ` +
-          'ONLY via the existing useAnimationGate/useExitGate unmount-cleanup paths (D-08); ' +
-          'uiStore.resetAnimations is TEST-ONLY and must never appear in production code',
+          'ONLY via the existing useAnimationGate/useExitGate unmount-cleanup paths (D-07, D-08; ' +
+          'ui/HoldemGame.tsx joined this list when the D-07 extraction moved the Hold\'em tree ' +
+          'there); uiStore.resetAnimations is TEST-ONLY and must never appear in production code',
       ).not.toContain('resetAnimations');
     },
   );
 
   it('the odds effect is mode-scoped: an early return on non-holdem mode exists', () => {
     expect(
-      source,
-      'App.tsx must contain the literal guard `if (mode !== \'holdem\') return;` as the odds ' +
-        'effect\'s FIRST check — without it, a live run could start or an odds cache key could ' +
-        'be written while Blackjack is on screen (D-05)',
+      holdemGameSource,
+      'ui/HoldemGame.tsx must contain the literal guard `if (mode !== \'holdem\') return;` as ' +
+        'the odds effect\'s FIRST check — without it, a live run could start or an odds cache ' +
+        'key could be written while Blackjack is on screen (D-05). This assertion MOVED here ' +
+        'from App.tsx because the Hold\'em odds effect moved with the D-07 extraction — it was ' +
+        'retargeted, not weakened',
     ).toContain("if (mode !== 'holdem') return;");
   });
 
   it('the odds effect\'s dependency array includes mode as a real trigger', () => {
     expect(
-      source,
-      'App.tsx\'s odds effect dependency array must end with `pendingAnimationCount, mode]` — ' +
-        'the early-return guard alone is not enough: `mode` must also be a dependency, or ' +
-        'switching modes would not re-run the effect and tear down the previous run (D-05)',
+      holdemGameSource,
+      'ui/HoldemGame.tsx\'s odds effect dependency array must end with ' +
+        '`pendingAnimationCount, mode]` — the early-return guard alone is not enough: `mode` ' +
+        'must also be a dependency, or switching modes would not re-run the effect and tear ' +
+        'down the previous run (D-05). This assertion MOVED here from App.tsx because the ' +
+        'Hold\'em odds effect moved with the D-07 extraction — it was retargeted, not weakened',
     ).toContain('pendingAnimationCount, mode]');
   });
 });

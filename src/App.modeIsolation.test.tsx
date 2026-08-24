@@ -8,6 +8,7 @@ import { useOddsStore } from './state/oddsStore';
 import { usePickerStore } from './state/pickerStore';
 import { useUiStore } from './state/uiStore';
 import { useGameModeStore } from './state/gameModeStore';
+import { HOLDEM_ONLY_TESTIDS } from './test/holdemTestids';
 import type { ProgressSnapshot } from './worker/protocol';
 import type { ConditionedState } from './engine/equity';
 
@@ -78,43 +79,11 @@ async function dealAndSettle(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: /^deal$/i }));
 }
 
-// UI-SPEC "Testids — MUST remain unchanged" (05-UI-SPEC.md, "Interaction States & Testid
-// Contract") — every Hold'em testid re-synced from that section's source-of-truth list, so a
-// newly added Hold'em testid is a one-line addition here, not a new test. `empty-hand-state` is
-// included but is the one entry whose presence condition (`mode === 'holdem' && runout === null`)
-// is mutually exclusive with every other entry (which all require a completed deal to be
-// non-vacuously present) — see the conditional setup in the sweep below.
-const HOLDEM_ONLY_TESTIDS = [
-  'table-scene',
-  'odds-panel',
-  'hero-hole',
-  'seat-label-hero',
-  'opponents',
-  'opponent-seat-0',
-  'opponent-seat-1',
-  'opponent-seat-2',
-  'seat-label-opponent-0',
-  'seat-label-opponent-1',
-  'seat-label-opponent-2',
-  'board-cards',
-  'deck-origin',
-  'street-label',
-  'rewind-button',
-  'advance-button',
-  'set-up-scenario-button',
-  'empty-hand-state',
-  'trial-counter',
-  'win-pct',
-  'tie-pct',
-  'lose-pct',
-  'category-table',
-  'category-pct-0',
-  'card-picker',
-  'picker-panel',
-  'picker-slot-hero-0',
-  'picker-clear-hero-0',
-  'picker-clear-all',
-];
+// The HOLDEM_ONLY_TESTIDS list swept below now lives in src/test/holdemTestids.ts (D-07,
+// 05-REVIEW IN-02): one exported source of truth shared with App.modeSwitch.test.tsx, so the
+// two sweeps can never diverge again. `empty-hand-state` remains the one entry whose presence
+// condition is mutually exclusive with every other entry — see the conditional setup in the
+// sweep below.
 
 describe("gameStore & pickerStore snapshot equality across a Hold'em -> Blackjack -> Hold'em round trip (D-06)", () => {
   beforeEach(() => {
