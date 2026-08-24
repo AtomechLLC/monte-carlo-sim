@@ -73,7 +73,9 @@ export function useAnimationGate(
  *
  * Registers AT MOST ONE animation (a "hold") with the same gate `useAnimationGate` uses
  * whenever `count` drops below its own previously observed value — i.e. children are about to
- * exit — and never when `count` rises or stays the same. Overlapping drops while a hold is
+ * exit — and never when `count` rises or stays the same. A rise while a hold is pending
+ * RELEASES it (03-REVIEW CR-03): the exit was superseded by re-entry, which AnimatePresence
+ * drops from its exit tracking without ever firing `onExitComplete`. Overlapping drops while a hold is
  * already pending do NOT arm a second unit (03-REVIEW CR-02a): they join the same
  * AnimatePresence exiting set, whose user-level `onExitComplete` fires exactly once when the
  * whole set drains. The returned callback is what the caller passes to
@@ -124,6 +126,20 @@ export function useExitGate(count: number, enabled: boolean, resetKey?: string |
 
     const previous = prevCountRef.current;
     prevCountRef.current = count;
+
+    // CR-03 (03-REVIEW): a rise while a hold is pending means the exit was superseded by
+    // re-entry (rewind, then advance inside the exit window). AnimatePresence deletes a
+    // re-entering child from its exit-tracking map WITHOUT invoking the user-level
+    // onExitComplete (verified against the installed source: framer-motion
+    // AnimatePresence/index.mjs — `exitComplete.delete(key)` on re-entry; the callback's only
+    // invocation site is a completing child's onExit), so this release is the hold's only
+    // remaining release path. Checked BEFORE the `enabled` guard: releases must run even if
+    // reduced motion flipped on mid-exit.
+    if (count > previous && pendingRef.current) {
+      pendingRef.current = false;
+      useUiStore.getState().endAnimation();
+      return;
+    }
 
     if (!enabled) return;
 

@@ -145,6 +145,26 @@ describe('useExitGate — container-level gate registration for an AnimatePresen
     expect(useUiStore.getState().pendingAnimationCount).toBe(0);
   });
 
+  it('a count rise while a hold is pending releases it — an exit superseded by re-entry never fires onExitComplete (CR-03)', () => {
+    const { rerender } = renderHook(({ count }: { count: number }) => useExitGate(count, true), {
+      initialProps: { count: 5 },
+    });
+
+    // River -> turn: arms one hold for community-4's exit.
+    rerender({ count: 4 });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+
+    // Advance back to river inside the exit window: AnimatePresence deletes the re-entering
+    // child from its exit-tracking map without invoking the user-level onExitComplete — the
+    // release callback is never invoked, so the hook itself must release on the rise.
+    rerender({ count: 5 });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(0);
+
+    // The lifecycle stays closed after the release: a fresh drop arms a fresh hold.
+    rerender({ count: 4 });
+    expect(useUiStore.getState().pendingAnimationCount).toBe(1);
+  });
+
   it('a resetKey change while a hold is pending releases it — a re-deal mid-exit cannot strand the gate (CR-02b)', () => {
     const { rerender } = renderHook(
       ({ count, resetKey }: { count: number; resetKey: string }) => useExitGate(count, true, resetKey),
