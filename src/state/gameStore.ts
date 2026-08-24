@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import type { Card } from '@poker-apprentice/types';
-import { FULL_DECK, CARDS_PER_DEAL } from '../engine/cards';
+import { CARDS_PER_DEAL, HOLE_CARDS_PER_PLAYER, OPPONENT_COUNT, deckWithout } from '../engine/cards';
 import { createRng, drawN } from '../engine/rng';
 import type { PredeterminedRunout } from '../engine/conditioning';
 import type { Street } from '../engine/streets';
 import { nextStreet, previousStreet } from '../engine/streets';
 import { useOddsStore } from './oddsStore';
+import { usePickerStore, pickedCards } from './pickerStore';
 
 interface GameState {
   /** The full predetermined runout for the current hand, or `null` before the first deal (D-01). */
@@ -38,20 +39,44 @@ export const useGameStore = create<GameState>()((set, get) => ({
   revealedMask: 0,
   dealNonce: 0,
   deal: () => {
-    // Single up-front draw over one pool (RESEARCH Pitfall 5) — never several independent
-    // draws, which would risk overlapping cards across hero/board/opponents.
+    // Merge-on-deal (D-03, D-06): picked cards are honoured exactly where placed; every unset
+    // slot is filled from ONE shuffle of what's left over. Never draw a second time for a
+    // different slot category — independent draws from the same starting pool can collide
+    // (RESEARCH Pitfall 5), and picks persist across deals (UI-SPEC A2) so the draft is read
+    // here but never cleared.
+    const { picks } = usePickerStore.getState();
+    const picked = pickedCards(picks);
+    const pool = deckWithout(picked);
     const rng = createRng();
-    const cards: Card[] = drawN(rng, FULL_DECK, CARDS_PER_DEAL);
+    const fill: Card[] = drawN(rng, pool, CARDS_PER_DEAL - picked.length);
 
-    const runout: PredeterminedRunout = {
-      heroHole: [cards[0], cards[1]],
-      board: [cards[2], cards[3], cards[4], cards[5], cards[6]],
-      opponentHoles: [
-        [cards[7], cards[8]],
-        [cards[9], cards[10]],
-        [cards[11], cards[12]],
-      ],
+    let cursor = 0;
+    const nextFill = (): Card => fill[cursor++];
+
+    const heroHole: [Card, Card] = [
+      picks['hero-0'] ?? nextFill(),
+      picks['hero-1'] ?? nextFill(),
+    ];
+    const board: [Card, Card, Card, Card, Card] = [
+      picks['flop-0'] ?? nextFill(),
+      picks['flop-1'] ?? nextFill(),
+      picks['flop-2'] ?? nextFill(),
+      picks['turn'] ?? nextFill(),
+      picks['river'] ?? nextFill(),
+    ];
+    // Opponent hole cards are always random and never taken from the picks (D-07) — the picker
+    // has no opponent slots, so every remaining fill card lands here.
+    const drawOpponentHole = (): [Card, Card] => {
+      const hole = Array.from({ length: HOLE_CARDS_PER_PLAYER }, () => nextFill());
+      return [hole[0], hole[1]];
     };
+    const opponentHoles = Array.from({ length: OPPONENT_COUNT }, drawOpponentHole) as [
+      [Card, Card],
+      [Card, Card],
+      [Card, Card],
+    ];
+
+    const runout: PredeterminedRunout = { heroHole, board, opponentHoles };
 
     set({ runout, street: 'preflop', revealedMask: 0, dealNonce: get().dealNonce + 1 });
     // A fresh hand must never serve a previous hand's settled odds (RESEARCH Pitfall 4,
