@@ -12,18 +12,19 @@ Probability made visible — the user can watch odds converge in real time and s
 
 ### Validated
 
-(None yet — ship to validate)
+Validated in Phase 1: core-odds-loop (2026-08-24):
+
+- [x] Win/tie/lose probability vs the 3 anonymous opponents, computed by Monte Carlo simulation
+- [x] Full hand-category odds table: live probability of ending with each hand rank (high card → royal flush) by the river (unstyled table; visual polish is Phase 3)
+- [x] Live convergence: percentages visibly settle in real time as simulation trials accumulate (200,000 trials streamed off the main thread)
+- [x] Random dealing with a re-deal button (default mode)
 
 ### Active
 
 - [ ] Full poker table scene in the browser: felt table, user's seat, three anonymous opponent seats, community card area
 - [ ] Detailed playing card visuals (proper pips and court cards) with dealing, flipping, and reveal animations
-- [ ] Full hand-category odds table: live probability of ending with each hand rank (high card → royal flush) by the river
-- [ ] Win/tie/lose probability vs the 3 anonymous opponents, computed by Monte Carlo simulation
-- [ ] Live convergence: percentages visibly settle in real time as simulation trials accumulate
 - [ ] Advance street by street (pre-flop → flop → turn → river) and watch odds change
 - [ ] Rewind to earlier streets to re-examine — odds update in both directions
-- [ ] Random dealing with a re-deal button (default mode)
 - [ ] Manual card picker: set specific hole cards and board cards for "what if" scenario exploration
 - [ ] Reveal any opponent's hole cards — revealed cards become known information and all odds recalculate to account for them
 
@@ -80,3 +81,6 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 *Last updated: 2026-08-23 after initialization*
+
+---
+*Last updated: 2026-08-24 — Phase 1 (core-odds-loop) complete: walking skeleton with live Monte Carlo odds*
