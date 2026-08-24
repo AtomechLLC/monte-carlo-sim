@@ -6,9 +6,12 @@ import { CardPicker } from './ui/CardPicker';
 import { StreetControls } from './ui/StreetControls';
 import { TableScene } from './ui/TableScene';
 import { OddsPanel } from './ui/OddsPanel';
+import { GameModeSwitcher } from './ui/GameModeSwitcher';
+import { BlackjackScene } from './ui/BlackjackScene';
 import { useGameStore } from './state/gameStore';
 import { useOddsStore } from './state/oddsStore';
 import { useUiStore } from './state/uiStore';
+import { useGameModeStore } from './state/gameModeStore';
 import { startSimulation, cancelSimulation } from './state/simulationService';
 import { deriveConditionedState } from './engine/conditioning';
 
@@ -27,6 +30,9 @@ function App() {
   // dependency value stay unchanged between two renders while the live value flipped, so the
   // effect would never re-run and the gate would never open (03-RESEARCH).
   const pendingAnimationCount = useUiStore((state) => state.pendingAnimationCount);
+  // Subscribed value, same discipline as pendingAnimationCount above (D-05): the odds effect
+  // below reads this from its dependency array, never via a live getState() call.
+  const mode = useGameModeStore((state) => state.mode);
 
   // Transient UI state, not odds data — held here rather than in oddsStore.
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -35,6 +41,13 @@ function App() {
   const [scenarioOpen, setScenarioOpen] = useState(false);
 
   useEffect(() => {
+    // Mode gate (05-01 D-05, Pitfall 11): checked FIRST, above every other guard — no simulation
+    // may start and no odds cache key may be written while another game is on screen. When `mode`
+    // later flips away from 'holdem' mid-run, this same dependency-array entry (see below) tears
+    // down the previous effect instance and fires the EXISTING ignore-flag cleanup below, which is
+    // what delivers D-07's cancellation for free — no second cancellation call site is added.
+    if (mode !== 'holdem') return;
+
     // Animation gate (D-11/D-12, TBL-04): checked FIRST, above the cache-hit branch below — a
     // settled-cache hit has no worker timing dependency today and is the branch most likely to
     // be left ungated (03-RESEARCH Pitfall 1), so it must wait for animation completion exactly
@@ -94,7 +107,7 @@ function App() {
       ignore = true;
       void cancelSimulation();
     };
-  }, [runout, street, revealedMask, dealNonce, pendingAnimationCount]);
+  }, [runout, street, revealedMask, dealNonce, pendingAnimationCount, mode]);
 
   return (
     // D-09: honours prefers-reduced-motion app-wide (and deterministically in tests, via the
@@ -102,7 +115,7 @@ function App() {
     // collapses to zero-duration animations when reduced motion is active.
     <MotionConfig reducedMotion="user">
       <h1>Monte Carlo Poker Simulator</h1>
-      {runout === null && (
+      {mode === 'holdem' && runout === null && (
         <div className="empty-hand-state" data-testid="empty-hand-state">
           <h2>No hand dealt yet</h2>
           <p>
@@ -111,7 +124,7 @@ function App() {
           </p>
         </div>
       )}
-      {errorMessage !== null && (
+      {mode === 'holdem' && errorMessage !== null && (
         // IMP-16: shows the underlying error detail alongside the existing recovery-path
         // copy. Deliberate a11y trade-off: the detail sits OUTSIDE the role="alert" live
         // region so the announced text stays the actionable recovery-path sentence
@@ -128,27 +141,35 @@ function App() {
         </div>
       )}
       <div className="control-bar">
-        <DealButton />
-        <button
-          type="button"
-          data-testid="set-up-scenario-button"
-          aria-expanded={scenarioOpen}
-          aria-controls={CARD_PICKER_REGION_ID}
-          onClick={() => setScenarioOpen((open) => !open)}
-        >
-          Set Up Scenario
-        </button>
-        <StreetControls />
+        <GameModeSwitcher />
+        {mode === 'holdem' && (
+          <>
+            <DealButton />
+            <button
+              type="button"
+              data-testid="set-up-scenario-button"
+              aria-expanded={scenarioOpen}
+              aria-controls={CARD_PICKER_REGION_ID}
+              onClick={() => setScenarioOpen((open) => !open)}
+            >
+              Set Up Scenario
+            </button>
+            <StreetControls />
+          </>
+        )}
       </div>
-      {scenarioOpen && (
+      {mode === 'holdem' && scenarioOpen && (
         <div id={CARD_PICKER_REGION_ID}>
           <CardPicker />
         </div>
       )}
-      <div className="table-row">
-        <TableScene />
-        <OddsPanel />
-      </div>
+      {mode === 'holdem' && (
+        <div className="table-row">
+          <TableScene />
+          <OddsPanel />
+        </div>
+      )}
+      {mode === 'blackjack' && <BlackjackScene />}
     </MotionConfig>
   );
 }

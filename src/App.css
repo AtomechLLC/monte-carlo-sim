@@ -601,14 +601,15 @@ h2 {
  * Phase 5 game-mode switcher (05-01)
  *
  * The segmented `GameModeSwitcher` control (D-01) that sits as the control
- * bar's first, unconditional child in both Hold'em and Blackjack mode. The
- * active segment's "selected" state deliberately uses the secondary/30%
- * `--border` role as a background fill plus a semibold weight bump — never
- * `--accent` — so the switcher introduces zero new accent usage against the
- * existing 3-use budget (UI-SPEC A2). Selectors are `data-testid`-scoped,
- * matching this file's established convention rather than a bespoke class
- * hierarchy. (The Blackjack placeholder felt shell's CSS, D-03, is appended
- * to this same banner block in 05-01 Task 3.)
+ * bar's first, unconditional child in both Hold'em and Blackjack mode, plus
+ * the Blackjack placeholder felt shell (D-03). The active segment's
+ * "selected" state deliberately uses the secondary/30% `--border` role as a
+ * background fill plus a semibold weight bump — never `--accent` — so the
+ * switcher introduces zero new accent usage against the existing 3-use
+ * budget (UI-SPEC A2). Selectors are `data-testid`-scoped, matching this
+ * file's established convention rather than a bespoke class hierarchy. The
+ * placeholder reuses `.felt` unmodified and adds no new z-index token — it
+ * has no animated or overlapping elements.
  * ------------------------------------------------------------------------- */
 [data-testid='game-mode-switcher'] {
   display: inline-flex;
@@ -638,4 +639,18 @@ h2 {
   background: var(--border);
   color: var(--text-h);
   font-weight: 600;
+}
+
+[data-testid='blackjack-scene'] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-block: 48px;
+}
+
+[data-testid='blackjack-empty-state'] {
+  max-width: 420px;
+  padding: 24px;
+  text-align: center;
+  color: var(--seat-badge-text);
 }
