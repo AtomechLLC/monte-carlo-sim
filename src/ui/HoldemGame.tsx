@@ -9,6 +9,7 @@ import { useGameStore } from '../state/gameStore';
 import { useOddsStore } from '../state/oddsStore';
 import { useUiStore } from '../state/uiStore';
 import { useGameModeStore } from '../state/gameModeStore';
+import { usePickerStore, hasDuplicatePick } from '../state/pickerStore';
 import { startSimulation, cancelSimulation } from '../state/simulationService';
 import { deriveConditionedState } from '../engine/conditioning';
 
@@ -16,6 +17,13 @@ const SIMULATION_ERROR_MESSAGE =
   'The simulation hit an unexpected error and stopped updating. Re-deal, or navigate to another street, to try again.';
 
 const CARD_PICKER_REGION_ID = 'card-picker';
+
+/** Locked A3 fresh-deal `title` (07-UI-SPEC Copywriting Contract — verbatim). */
+const FRESH_DEAL_TITLE = 'Switching the shoe deals a fresh hand';
+
+/** Locked A4 duplicate-pick guard `title` (07-UI-SPEC Copywriting Contract — verbatim). */
+const DUPLICATE_PICK_GUARD_TITLE =
+  'Your picked cards include a duplicate — impossible with one deck';
 
 /**
  * The Hold'em game root (D-07, 05-REVIEW WR-03): every Hold'em-scoped effect, state field and
@@ -28,6 +36,15 @@ export function HoldemGame() {
   const street = useGameStore((state) => state.street);
   const revealedMask = useGameStore((state) => state.revealedMask);
   const dealNonce = useGameStore((state) => state.dealNonce);
+  // Hold'em-local deck count (D-01, D-14): read from gameStore, following the same
+  // one-selector-per-field subscription style as the fields above.
+  const deckCount = useGameStore((state) => state.deckCount);
+  const setDeckCount = useGameStore((state) => state.setDeckCount);
+  // A4 guard input (07-05): the picks are the ONLY state that survives a deck toggle into the
+  // next deal(), so they are the only impossibility source for a 2 -> 1 switch. One count-aware
+  // predicate from pickerStore — never a second duplicate-counting loop in the UI.
+  const picks = usePickerStore((state) => state.picks);
+  const duplicateInPicks = hasDuplicatePick(picks);
   // Subscribed value — this dependency-array entry is what re-runs the effect on every gate
   // drain step, so the gate can always re-open. The 03-RESEARCH deadlock (dependency unchanged
   // between renders while the live value flipped, effect never re-running) only applies when a
@@ -100,7 +117,7 @@ export function HoldemGame() {
     let ignore = false;
     useOddsStore.getState().reset();
 
-    const conditioned = deriveConditionedState(runout, street, revealedMask);
+    const conditioned = deriveConditionedState(runout, street, revealedMask, deckCount);
     void startSimulation(
       conditioned,
       (snapshot) => {
@@ -136,7 +153,11 @@ export function HoldemGame() {
       ignore = true;
       void cancelSimulation();
     };
-  }, [runout, street, revealedMask, dealNonce, pendingAnimationCount, mode]);
+    // `deckCount` here is belt-and-braces under D-02 (a mid-hand change bumps `dealNonce`, an
+    // idle change early-returns at `!runout` above); its position IMMEDIATELY BEFORE
+    // pendingAnimationCount is load-bearing — the mode-shell guard pins that this array
+    // literally ends `pendingAnimationCount, mode]`.
+  }, [runout, street, revealedMask, dealNonce, deckCount, pendingAnimationCount, mode]);
 
   // WR-01 fix (05-REVIEW): leaving Hold'em cancels the run the banner was describing, so the
   // error no longer describes anything on screen — clear it, or it re-mounts (and re-announces
@@ -200,6 +221,52 @@ export function HoldemGame() {
           Set Up Scenario
         </button>
         <StreetControls />
+        {/* Structural twin of the mode switcher (D-01, UI-SPEC A2 — last control-bar child):
+            segment labels never change with state; `aria-pressed` alone carries which count is
+            active. The active segment is never `disabled` — clicking it is a harmless no-op
+            routed through the store's same-value early return. There is deliberately NO
+            confirmation dialog for the mid-hand path (A3): the app's silent-system-behaviour
+            precedent plus the copy block-list rule one out — the fresh deal itself is the
+            primary affordance (the full re-deal choreography plays the same frame the user
+            clicks), and the pre-click `title` below is the same lightweight disclosure
+            convention the picker cells already use. The on-table hand NEVER blocks a switch —
+            D-02's fresh deal discards it — so the picks are the only impossibility source. */}
+        <div data-testid="holdem-deck-toggle" role="group" aria-label="Deck count">
+          <button
+            type="button"
+            data-testid="holdem-deck-toggle-1"
+            aria-pressed={deckCount === 1}
+            // A4 guard (this segment ONLY): switching DOWN to one deck while the picks hold
+            // two copies of one value is impossible with one physical deck. Structurally
+            // one-directional: at deckCount === 1 the picker's count-aware setPick already
+            // blocks a second copy and the store refuses a duplicated 2 -> 1 switch, so this
+            // boolean is false whenever this segment is ACTIVE — the active segment is never
+            // disabled, and no pick is ever cleared by the guard. When both titles would apply
+            // (mid-hand AND duplicated picks), the A4 guard title takes precedence here.
+            disabled={duplicateInPicks}
+            title={
+              duplicateInPicks
+                ? DUPLICATE_PICK_GUARD_TITLE
+                : deckCount === 2 && runout !== null
+                  ? FRESH_DEAL_TITLE
+                  : undefined
+            }
+            onClick={() => setDeckCount(1)}
+          >
+            1 deck
+          </button>
+          <button
+            type="button"
+            data-testid="holdem-deck-toggle-2"
+            aria-pressed={deckCount === 2}
+            // A3 honesty affordance: the INACTIVE segment discloses the fresh-deal consequence
+            // while a hand is on the table; no title while idle, never on the active segment.
+            title={deckCount === 1 && runout !== null ? FRESH_DEAL_TITLE : undefined}
+            onClick={() => setDeckCount(2)}
+          >
+            2 decks
+          </button>
+        </div>
       </div>
       {scenarioOpen && (
         <div id={CARD_PICKER_REGION_ID}>
