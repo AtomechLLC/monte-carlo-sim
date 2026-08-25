@@ -644,7 +644,18 @@ h2 {
    * x=365 — a real 10px x 62px collision, not merely a tight fit. Percentage caps do not
    * bind on flex items whose content cannot shrink, which is why `min-width: 0` below is
    * load-bearing rather than decorative. */
-  left: 13%;
+  /* The plate deliberately CROSSES the table's edge (user request: "move the control buttons
+   * down and left more so that they aren't 'on' the table, have it cross the edge"). left:2%
+   * plus the low `bottom` on each modifier puts the bottom-left corner off the green while the
+   * top-right stays on it — the plate reads as clipped to the table's rim rather than resting
+   * on the felt. `.felt` sets no `overflow`, so nothing clips it.
+   *
+   * Because it is no longer boxed in by the ellipse's lower-left wedge, the width cap can
+   * relax: at 34% the transport row fits on ONE line again (it had been stacking into a
+   * column), and the hero seat is now ~108px away rather than the 29px the pocket allowed.
+   * Blackjack keeps a higher `bottom` — a six-card hand at bottom-centre spreads to x~181 and
+   * would otherwise reach under the plate. */
+  left: 2%;
   /* The cap is a FENCE, and a fence is only worth the gap it leaves. At 27% it sat 28px above
    * the cluster's ~218px measured content, so what it actually GUARANTEED at the rendered
    * 911px felt was 1.1px of hero clearance — arithmetically "no overlap", practically nothing,
@@ -653,7 +664,7 @@ h2 {
    * community row, while guaranteeing 19px of hero clearance at 911 and 35px at 1040 even if
    * the labels rendered wider than measured. Below a ~872px felt the cap starts binding and the
    * rows wrap — the documented degradation, and the reason `min-width: 0` exists. */
-  max-width: 25%;
+  max-width: 34%;
   /* WITHOUT THIS THE CAP LEAKS. `max-width` bounds the CONTENT box by default, so the 16px of
    * horizontal padding lands OUTSIDE it: measured live, a 25% (228px) cap was producing a
    * 243px box and only 3px of hero clearance — the cap was being read as an outer width in the
@@ -704,7 +715,7 @@ h2 {
 /* Hold'em carries two rows (the Deal pair, then the transport), so it sits
  * lower to keep its top clear of the community row. */
 .felt-controls--holdem {
-  bottom: 20%;
+  bottom: 6%;
 }
 
 /* Blackjack carries one row, and the player's hand at bottom-centre can reach

@@ -457,6 +457,9 @@ describe('the cluster really is on the green, at EVERY width the felt renders at
   const HOLDEM_CLUSTER_HEIGHT =
     CLUSTER_PAD_BLOCK * 2 + ROW_HEIGHT * 2 + CLUSTER_GAP + SEPARATOR_PAD;
 
+  /** Blackjack carries a single row (Deal / Hit / Stand) — no gap, no separator. */
+  const BLACKJACK_CLUSTER_HEIGHT = CLUSTER_PAD_BLOCK * 2 + ROW_HEIGHT;
+
   function geometry(feltWidth: number) {
     const feltHeight = (feltWidth * aspectH) / aspectW;
     const a = feltWidth / 2 - RAIL;
@@ -482,8 +485,19 @@ describe('the cluster really is on the green, at EVERY width the felt renders at
       /** How far out of centre a point is, where 1.0 is the inner edge of the green. */
       radial: (x: number, y: number) =>
         Math.hypot((x - feltWidth / 2) / a, (y - feltHeight / 2) / b),
+      /**
+       * The same measure against the felt's OUTLINE rather than the rail-inset green. Used by
+       * the straddle assertion: the plate is meant to cross the rail, so the rail's inner edge
+       * is no longer the boundary that matters — the table's own edge is.
+       */
+      radialOuter: (x: number, y: number) =>
+        Math.hypot((x - feltWidth / 2) / (feltWidth / 2), (y - feltHeight / 2) / (feltHeight / 2)),
       bottomOf: (modifier: string) =>
         feltHeight - percent(ruleWith(appCss, modifier), 'bottom') * feltHeight,
+      topOf: (modifier: string) =>
+        feltHeight -
+        percent(ruleWith(appCss, modifier), 'bottom') * feltHeight -
+        (modifier.includes('holdem') ? HOLDEM_CLUSTER_HEIGHT : BLACKJACK_CLUSTER_HEIGHT),
     };
   }
 
@@ -527,24 +541,37 @@ describe('the cluster really is on the green, at EVERY width the felt renders at
         ] as const
       ).map(([mode, modifier]) => [mode + ' @ ' + label, w, modifier] as const),
     ),
-  )('%s: both bottom corners sit inside the green, not merely inside the bounding box', (_label, feltWidth, modifier) => {
+  )('%s: the plate deliberately CROSSES the table edge', (_label, feltWidth, modifier) => {
     const g = geometry(feltWidth);
     const yBottom = g.bottomOf(modifier);
 
-    // The bottom corners are the binding ones: the felt is an ellipse and the cluster sits in
-    // its lower half, so the lower a corner is, the narrower the green it has to fit into.
-    for (const [corner, x] of [
-      ['bottom-left', g.xLeft],
-      ['bottom-right (at the width cap)', g.xRight],
-    ] as const) {
-      const r = g.radial(x, yBottom);
-      expect(
-        r,
-        'the ' + corner + ' corner sits at ' + r.toFixed(3) + ' of the way to the rail at a ' +
-          feltWidth + 'px felt — 1.0 is the rail\'s inner edge, and beyond it the plate hangs ' +
-          'off the table',
-      ).toBeLessThan(1);
-    }
+    // RETARGETED (user request): "move the control buttons down and left more so that they
+    // aren't 'on' the table, have it cross the edge."
+    //
+    // This assertion used to demand the opposite — both bottom corners strictly INSIDE the
+    // rail-inset ellipse — because the cluster was meant to sit on the green. The intent is now
+    // inverted, so the test is inverted with it rather than deleted: the plate must genuinely
+    // straddle the outline, which means proving BOTH halves. A cluster that drifted fully back
+    // onto the felt, or fully off it, is just as wrong as the overlap this file originally
+    // caught, and either would slip past a one-sided check.
+    //
+    // Radial value is measured against the felt OUTLINE here, not the rail-inset ellipse:
+    // crossing the rail is the point, so the rail inset is not the relevant boundary any more.
+    const outerBottomLeft = g.radialOuter(g.xLeft, yBottom);
+    const innerTopRight = g.radialOuter(g.xRight, g.topOf(modifier));
+
+    expect(
+      outerBottomLeft,
+      'the bottom-left corner sits at ' + outerBottomLeft.toFixed(3) + ' of the felt outline at ' +
+        'a ' + feltWidth + 'px felt — it must be > 1.0, i.e. off the table, or the plate no ' +
+        'longer crosses the edge',
+    ).toBeGreaterThan(1);
+
+    expect(
+      innerTopRight,
+      'the top-right corner sits at ' + innerTopRight.toFixed(3) + ' — it must stay < 1.0 (on ' +
+        'the green), or the plate has drifted off the table entirely instead of straddling it',
+    ).toBeLessThan(1);
   });
 
   it.each(WIDTHS)(
