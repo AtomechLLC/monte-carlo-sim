@@ -5,6 +5,7 @@ import { StreetControls } from './StreetControls';
 import { TableScene } from './TableScene';
 import { OddsPanel } from './OddsPanel';
 import { GameModeSwitcher } from './GameModeSwitcher';
+import { DeckCountToggle } from './DeckCountToggle';
 import { useGameStore } from '../state/gameStore';
 import { useOddsStore } from '../state/oddsStore';
 import { useUiStore } from '../state/uiStore';
@@ -230,43 +231,24 @@ export function HoldemGame() {
             primary affordance (the full re-deal choreography plays the same frame the user
             clicks), and the pre-click `title` below is the same lightweight disclosure
             convention the picker cells already use. The on-table hand NEVER blocks a switch —
-            D-02's fresh deal discards it — so the picks are the only impossibility source. */}
-        <div data-testid="holdem-deck-toggle" role="group" aria-label="Deck count">
-          <button
-            type="button"
-            data-testid="holdem-deck-toggle-1"
-            aria-pressed={deckCount === 1}
-            // A4 guard (this segment ONLY): switching DOWN to one deck while the picks hold
-            // two copies of one value is impossible with one physical deck. Structurally
-            // one-directional: at deckCount === 1 the picker's count-aware setPick already
-            // blocks a second copy and the store refuses a duplicated 2 -> 1 switch, so this
-            // boolean is false whenever this segment is ACTIVE — the active segment is never
-            // disabled, and no pick is ever cleared by the guard. When both titles would apply
-            // (mid-hand AND duplicated picks), the A4 guard title takes precedence here.
-            disabled={duplicateInPicks}
-            title={
-              duplicateInPicks
-                ? DUPLICATE_PICK_GUARD_TITLE
-                : deckCount === 2 && runout !== null
-                  ? FRESH_DEAL_TITLE
-                  : undefined
-            }
-            onClick={() => setDeckCount(1)}
-          >
-            1 deck
-          </button>
-          <button
-            type="button"
-            data-testid="holdem-deck-toggle-2"
-            aria-pressed={deckCount === 2}
-            // A3 honesty affordance: the INACTIVE segment discloses the fresh-deal consequence
-            // while a hand is on the table; no title while idle, never on the active segment.
-            title={deckCount === 1 && runout !== null ? FRESH_DEAL_TITLE : undefined}
-            onClick={() => setDeckCount(2)}
-          >
-            2 decks
-          </button>
-        </div>
+            D-02's fresh deal discards it — so the picks are the only impossibility source.
+            The segmented markup itself now lives in the shared DeckCountToggle (Phase 8
+            D-01, SC1); the A4 guard predicate and both pre-computed titles — including the
+            A4-beats-A3 precedence on the first segment — stay at this call site. */}
+        <DeckCountToggle
+          testidPrefix="holdem-deck-toggle"
+          deckCount={deckCount}
+          onSelect={setDeckCount}
+          oneDeckDisabled={duplicateInPicks}
+          oneDeckTitle={
+            duplicateInPicks
+              ? DUPLICATE_PICK_GUARD_TITLE
+              : deckCount === 2 && runout !== null
+                ? FRESH_DEAL_TITLE
+                : undefined
+          }
+          twoDecksTitle={deckCount === 1 && runout !== null ? FRESH_DEAL_TITLE : undefined}
+        />
       </div>
       {scenarioOpen && (
         <div id={CARD_PICKER_REGION_ID}>

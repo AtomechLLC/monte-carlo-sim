@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -55,6 +55,17 @@ import { dirname, join } from 'node:path';
 // the game root legitimately owns the toggle wire (D-01), its deck count living in gameStore
 // (D-14, the D-10 store-locality precedent). The three cross-game shell files keep the sweep
 // forever; the assertion was retargeted, never deleted or weakened.
+//
+// AMENDED 2026-08-25 (Phase 8 plan 08-01, D-01/D-02/D-07): the two inline deck toggles were
+// EXTRACTED into ONE shared, props-driven component — ui/DeckCountToggle.tsx (SC1) — rendered
+// by both BlackjackControls and HoldemGame. Only the segmented MARKUP moved: each game's
+// deck-count WIRE (the store read, setDeckCount, the guard predicate and the title
+// computation) stayed in its own file, so the deckCount-zero sweep's prose remains true and
+// its file list is unchanged. Every Phase 8 pin is ADDITIVE per this file's standing rule:
+// ui/DeckCountToggle.tsx joined the resetAnimations sweep on creation, gained its own
+// store-free sweep and locked-label pins, and both call sites gained SC1 source-identity
+// pins (import/render presence, inline-markup absence, single-source-of-markup sweep).
+// Nothing was deleted, relaxed or retargeted.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = __dirname;
@@ -193,6 +204,10 @@ describe('App.tsx (shell) + ui/HoldemGame.tsx — single cancellation owner, no 
     'ui/BlackjackControls.tsx',
     'state/blackjackStore.ts',
     'state/blackjackOddsStore.ts',
+    // ADDED (Phase 8 plan 08-01, D-01): the shared deck toggle joined this list on creation,
+    // exactly as ui/HoldemGame.tsx did in 06-02 and the blackjack files did in 06-07 — the
+    // prohibition covers every production file that could be tempted to "drain" the gate.
+    'ui/DeckCountToggle.tsx',
   ])(
     '%s contains zero occurrences of resetAnimations',
     (relativePath) => {
@@ -202,7 +217,8 @@ describe('App.tsx (shell) + ui/HoldemGame.tsx — single cancellation owner, no 
         `${relativePath} must never call resetAnimations — gate-drain on a mode switch happens ` +
           'ONLY via the existing useAnimationGate/useExitGate unmount-cleanup paths (D-07, D-08; ' +
           'ui/HoldemGame.tsx joined this list with the D-07 extraction, the blackjack files with ' +
-          'the 06-07 placeholder retirement, D-13); uiStore.resetAnimations is TEST-ONLY and ' +
+          'the 06-07 placeholder retirement, D-13, and ui/DeckCountToggle.tsx on its creation, ' +
+          'Phase 8 D-01); uiStore.resetAnimations is TEST-ONLY and ' +
           'must never appear in production code',
       ).not.toContain('resetAnimations');
     },
@@ -239,6 +255,13 @@ describe('No deckCount anywhere in the cross-game shell (D-10, D-14 — WR-03 re
   // in gameStore (D-14) and the blackjack deck count in blackjackStore (D-10), so no shell
   // file ever carries a deck-count field, prop or read — mode plumbing and deck plumbing stay
   // permanently disjoint.
+  //
+  // Phase 8 note (plan 08-01, D-01 — comment-only, the file list is deliberately UNCHANGED):
+  // the extraction moved the segmented MARKUP into ui/DeckCountToggle.tsx, but the deck-count
+  // WIRE (store read + setDeckCount) stayed in each game's own file, so this sweep's prose
+  // remains true. ui/DeckCountToggle.tsx must NOT be added here: it necessarily carries
+  // deckCount as a prop — it is game-parameterized UI, not shell — and this sweep pins the
+  // three cross-game SHELL files forever.
   const files = ['App.tsx', 'state/gameModeStore.ts', 'ui/GameModeSwitcher.tsx'];
 
   it.each(files)('%s contains zero occurrences of deckCount', (relativePath) => {
@@ -285,6 +308,136 @@ describe('Blackjack UI reads no Hold\'em-owned store (D-05, retargeted D-03 -> D
       'ui/BlackjackControls.tsx must never contain "uiStore" — controls read only ' +
         'useBlackjackStore (D-10); gate arming belongs to the store actions (D-13)',
     ).not.toContain('uiStore');
+  });
+});
+
+describe('ui/DeckCountToggle.tsx — store-free by construction, locked labels verbatim (Phase 8 D-01, D-02, D-06)', () => {
+  // ADDED (Phase 8 plan 08-01, D-01): the shared toggle is props-driven BY CONSTRUCTION — no
+  // store read, no owned state, no gate arming; every per-game difference arrives via props
+  // from the call sites. This sweep makes that construction rule enforceable. Raw source,
+  // comments included (the D-10 disjointness technique above): a comment normalising the
+  // shared store vocabulary inside the component would be the first symptom of the drift
+  // this pin exists to catch.
+  const toggleSource = readSource('ui/DeckCountToggle.tsx');
+
+  it.each([
+    'gameStore',
+    'oddsStore',
+    'pickerStore',
+    'uiStore',
+    'blackjackStore',
+    'gameModeStore',
+    'zustand',
+  ])('contains zero occurrences of %s, comments included', (token) => {
+    expect(
+      toggleSource,
+      `ui/DeckCountToggle.tsx must never contain "${token}" — Phase 8 D-01 makes the shared ` +
+        'control props-driven by construction: both games\' deck counts stay in their own ' +
+        'game-local stores (D-10, D-14) and reach the component only as props from the call ' +
+        'sites; this raw-source sweep (comments included) is what makes D-01 enforceable',
+    ).not.toContain(token);
+  });
+
+  it.each(['1 deck', '2 decks', 'Deck count'])(
+    'contains the locked string %s verbatim',
+    (locked) => {
+      // ADDED (Phase 8 plan 08-01): mirrors the GameModeSwitcher locked-label pins below.
+      // The testid-pin technique deliberately does NOT transfer to this component — after
+      // the extraction the literal prefixes live at the two CALL SITES (see the SC1 block).
+      expect(
+        toggleSource,
+        `the 08-UI-SPEC Copywriting Contract locks "${locked}" verbatim on the shared toggle ` +
+          '— a reword must go through the UI-SPEC, never silently drift in code (D-06)',
+      ).toContain(locked);
+    },
+  );
+});
+
+describe('SC1 — the deck-count markup lives in exactly ONE shared component, rendered at both call sites (Phase 8 D-01, D-02, 08-UI-SPEC A3)', () => {
+  // ADDED (Phase 8 plan 08-01): the source-level half of ROADMAP SC1's verification. The
+  // comment-stripped pins prove both games import AND render the shared module; the raw
+  // absence pins prove no inline segmented markup survives at either call site. The two
+  // absence markers below are the only clean ones: `aria-pressed` survives in HoldemGame's
+  // JSX rationale comment and `1 deck` in BlackjackControls' WR-01 essay, and
+  // stripCommentLines only strips lines beginning with // or *, never JSX comment blocks.
+  const callSites = ['ui/BlackjackControls.tsx', 'ui/HoldemGame.tsx'];
+
+  it.each(callSites)('%s imports the shared component module, outside of comments', (relativePath) => {
+    expect(
+      stripCommentLines(readSource(relativePath)),
+      `${relativePath} must import ui/DeckCountToggle.tsx — SC1 requires both games to render ` +
+        'the ONE shared component (Phase 8 D-01)',
+    ).toContain("from './DeckCountToggle'");
+  });
+
+  it.each(callSites)('%s renders the shared component, outside of comments', (relativePath) => {
+    expect(
+      stripCommentLines(readSource(relativePath)),
+      `${relativePath} must render <DeckCountToggle — SC1 requires the shared component at ` +
+        'both call sites, never a re-inlined copy (Phase 8 D-01)',
+    ).toContain('<DeckCountToggle');
+  });
+
+  it.each(callSites)('%s retains zero occurrences of role="group"', (relativePath) => {
+    expect(
+      readSource(relativePath),
+      `${relativePath} must not contain role="group" anywhere, comments included — the inline ` +
+        'segmented markup was extracted (Phase 8 D-01, 08-UI-SPEC A3); its reappearance would ' +
+        'mean SC1\'s single-source claim regressed',
+    ).not.toContain('role="group"');
+  });
+
+  it.each(callSites)('%s retains zero occurrences of the group aria-label', (relativePath) => {
+    expect(
+      readSource(relativePath),
+      `${relativePath} must not contain aria-label="Deck count" anywhere, comments included — ` +
+        'the wrapper markup lives only in ui/DeckCountToggle.tsx (Phase 8 D-01, 08-UI-SPEC A3)',
+    ).not.toContain('aria-label="Deck count"');
+  });
+
+  it('each call site keeps its own locked testid prefix, and the component builds the segment testids from the prefix (D-02)', () => {
+    // The prefixes are CONTRACTUAL and unchanged (D-02): they arrive as a prop, so the
+    // literal strings live at the call sites and the segment testids are constructed inside
+    // the shared component.
+    expect(
+      readSource('ui/BlackjackControls.tsx'),
+      'the contractual prefix "blackjack-deck-toggle" must stay at the blackjack call site (D-02)',
+    ).toContain('blackjack-deck-toggle');
+    expect(
+      readSource('ui/HoldemGame.tsx'),
+      'the contractual prefix "holdem-deck-toggle" must stay at the Hold\'em call site (D-02)',
+    ).toContain('holdem-deck-toggle');
+    const toggleSource = readSource('ui/DeckCountToggle.tsx');
+    expect(
+      toggleSource,
+      'ui/DeckCountToggle.tsx must build the first segment\'s testid as `${testidPrefix}-1` (D-02)',
+    ).toContain('${testidPrefix}-1');
+    expect(
+      toggleSource,
+      'ui/DeckCountToggle.tsx must build the second segment\'s testid as `${testidPrefix}-2` (D-02)',
+    ).toContain('${testidPrefix}-2');
+  });
+
+  it('exactly ONE non-test src/ui component contains the group aria-label — and it is DeckCountToggle.tsx', () => {
+    // The .test.tsx exclusion is load-bearing: plan 08-02 adds src/ui/DeckCountToggle.test.tsx,
+    // which necessarily contains the string, and this sweep must stay green when it lands.
+    // Deliberately NOT swept on `1 deck` / `2 decks`: ui/BlackjackGame.tsx's locked idle copy
+    // contains the substring "2 decks" and BlackjackControls' surviving WR-01 essay contains
+    // "1 deck".
+    // { recursive: false } is deliberate and load-bearing twice over: src/ui has no
+    // subdirectories today, and the node-builtins.d.ts shim (IMP-02) types readdirSync
+    // with a required options argument — the narrow shim shape this file must respect.
+    const uiComponentFiles = readdirSync(join(SRC_DIR, 'ui'), { recursive: false }).filter(
+      (name) => name.endsWith('.tsx') && !name.endsWith('.test.tsx'),
+    );
+    const withGroupMarkup = uiComponentFiles.filter((name) =>
+      readSource(join('ui', name)).includes('aria-label="Deck count"'),
+    );
+    expect(
+      withGroupMarkup,
+      'exactly one non-test src/ui component may contain the deck-count group markup — SC1\'s ' +
+        'single-source-of-markup rule (Phase 8 D-01, 08-UI-SPEC A3)',
+    ).toEqual(['DeckCountToggle.tsx']);
   });
 });
 

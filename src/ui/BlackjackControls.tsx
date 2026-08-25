@@ -1,5 +1,6 @@
 import { useBlackjackStore } from '../state/blackjackStore';
 import { hasPhysicalDuplicate } from '../engine/blackjackConditioning';
+import { DeckCountToggle } from './DeckCountToggle';
 
 /** Locked A3 duplicate-guard `title` (06-UI-SPEC Copywriting Contract — verbatim). */
 const DUPLICATE_GUARD_TITLE = 'The dealt cards include a duplicate — impossible with one deck';
@@ -64,33 +65,18 @@ export function BlackjackControls() {
       <button type="button" data-testid="blackjack-stand-button" disabled={actionsDisabled} onClick={stand}>
         Stand
       </button>
-      {/* Structural twin of GameModeSwitcher (A4): segment labels never change with state;
-          `aria-pressed` alone carries which count is active. The active segment is never
-          `disabled` — clicking it is a harmless no-op routed through setDeckCount (the store's
-          same-value early return). */}
-      <div data-testid="blackjack-deck-toggle" role="group" aria-label="Deck count">
-        <button
-          type="button"
-          data-testid="blackjack-deck-toggle-1"
-          aria-pressed={deckCount === 1}
-          // The A3 guard applies to this segment ONLY: switching to one deck while the
-          // round's physical cards contain a duplicate is impossible under one physical
-          // deck (06-REVIEW WR-01: the hidden hole counts — it is a dealt card).
-          disabled={duplicateOnTable}
-          title={duplicateOnTable ? DUPLICATE_GUARD_TITLE : undefined}
-          onClick={() => setDeckCount(1)}
-        >
-          1 deck
-        </button>
-        <button
-          type="button"
-          data-testid="blackjack-deck-toggle-2"
-          aria-pressed={deckCount === 2}
-          onClick={() => setDeckCount(2)}
-        >
-          2 decks
-        </button>
-      </div>
+      {/* Shared segmented control (Phase 8 D-01, SC1): the markup lives in DeckCountToggle;
+          the A3 guard predicate above and the locked title computation stay at this call
+          site, passed pre-computed — the shared component owns no game logic. The first
+          segment ONLY can ever disable (06-REVIEW WR-01: the hidden hole counts — it is a
+          dealt card), and the second segment never carries a title in any state. */}
+      <DeckCountToggle
+        testidPrefix="blackjack-deck-toggle"
+        deckCount={deckCount}
+        onSelect={setDeckCount}
+        oneDeckDisabled={duplicateOnTable}
+        oneDeckTitle={duplicateOnTable ? DUPLICATE_GUARD_TITLE : undefined}
+      />
     </>
   );
 }
