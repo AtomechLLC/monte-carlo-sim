@@ -542,11 +542,17 @@ h2 {
  * this padding is what fits; three rows reaches the community, and wider reaches the seat. */
 .felt-controls .control-group {
   min-width: 0;
-  gap: 6px;
+  gap: 4px;
 }
 
+/* Tighter than the shipped 12px inline padding, and deliberately so: the transport row
+ * (Rewind / street label / Advance) is the widest thing in the cluster and therefore decides
+ * whether it fits in two rows or spills into a third. A third row reaches the community row
+ * above, and the pocket has no vertical slack to absorb it — so ~7px per button here is what
+ * keeps the whole layout on two rows. The 44px min-width floor still governs the hit area, so
+ * this trades visual padding, never tappability. */
 .felt-controls button {
-  padding-inline: 10px;
+  padding-inline: 7px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -627,6 +633,12 @@ h2 {
    * the labels rendered wider than measured. Below a ~872px felt the cap starts binding and the
    * rows wrap — the documented degradation, and the reason `min-width: 0` exists. */
   max-width: 25%;
+  /* WITHOUT THIS THE CAP LEAKS. `max-width` bounds the CONTENT box by default, so the 16px of
+   * horizontal padding lands OUTSIDE it: measured live, a 25% (228px) cap was producing a
+   * 243px box and only 3px of hero clearance — the cap was being read as an outer width in the
+   * arithmetic while the browser applied it to the inner one. border-box makes the declared
+   * percentage mean what every clearance calculation here assumes it means. */
+  box-sizing: border-box;
   z-index: var(--z-felt-controls);
   display: flex;
   flex-direction: column;
