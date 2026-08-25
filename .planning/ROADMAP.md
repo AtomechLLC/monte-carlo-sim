@@ -27,7 +27,7 @@ Audit: [milestones/v1.0-MILESTONE-AUDIT.md](milestones/v1.0-MILESTONE-AUDIT.md)
 - [x] **Phase 4: Multiset Deck & Streaming Foundation** - Physical-card-identity deck model (1 or 2 decks, no dedup collapse) and a generalized streaming worker runner, proven behavior-identical to v1.0 at deckCount=1 (completed 2026-08-24)
 - [x] **Phase 5: Game-Mode Shell & Store Separation** - Users can switch between Hold'em and Blackjack, each with fully independent state and odds (completed 2026-08-24)
 - [x] **Phase 6: Blackjack Core Odds Loop** - Full Blackjack vertical slice: deal, bust/dealer-outcome odds, Stand/Hit EV, hit/stand play, dealer reveal, deck toggle (completed 2026-08-24)
-- [ ] **Phase 7: 2-Deck Hold'em Evaluation Layer** - Hold'em over a 104-card shoe with correct duplicate-card evaluation and a Five of a Kind category
+- [x] **Phase 7: 2-Deck Hold'em Evaluation Layer** - Hold'em over a 104-card shoe with correct duplicate-card evaluation and a Five of a Kind category (completed 2026-08-25)
 - [ ] **Phase 8: Cross-Game Deck-Count Toggle UI** - One shared deck-count control spanning both games
 
 ## Phase Details
@@ -152,7 +152,7 @@ Plans:
   3. Five of a Kind appears as its own row in the odds table in 2-deck mode, ranked above Royal Flush, with a correct probability.
   4. Two copies of the same card are visually distinguishable on the felt via a visible copy-cue UI badge, so a duplicate never reads as a rendering glitch.
 
-**Plans:** 6/7 plans executed
+**Plans:** 7/7 plans complete
 **UI hint**: yes
 
 Plans:
@@ -173,7 +173,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 07-07-PLAN.md — Full regression sweep, blocker-ledger reconciliation, multi-source coverage audit and browser acceptance checkpoint
+- [x] 07-07-PLAN.md — Full regression sweep, blocker-ledger reconciliation, multi-source coverage audit and browser acceptance checkpoint
 
 ### Phase 8: Cross-Game Deck-Count Toggle UI
 
@@ -203,5 +203,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Multiset Deck & Streaming Foundation | v2.0 | 6/6 | Complete   | 2026-08-24 |
 | 5. Game-Mode Shell & Store Separation | v2.0 | 3/3 | Complete   | 2026-08-24 |
 | 6. Blackjack Core Odds Loop | v2.0 | 8/8 | Complete    | 2026-08-25 |
-| 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 6/7 | In Progress|  |
+| 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 7/7 | Complete   | 2026-08-25 |
 | 8. Cross-Game Deck-Count Toggle UI | v2.0 | 0/TBD | Not started | - |
