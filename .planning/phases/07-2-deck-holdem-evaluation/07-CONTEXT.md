@@ -27,13 +27,18 @@ Phase 7 delivers 2-deck Hold'em (HE2-01..03): the user can enable a 2-deck varia
 
 ### UI (copy cue + table)
 - **D-08:** HE2-03 copy cue: a small corner badge on the SECOND visible copy of any duplicated card on the felt (board + revealed holes + hero hole), visible only in 2-deck mode, using existing badge tokens (no new accent). Exact treatment (glyph, corner, size) is the UI researcher's call within tokens; it must survive card animations (badge rides the card, not the slot) and be screen-reader-labelled.
-- **D-09:** Five of a Kind row: appears above Royal Flush at the TOP of the category table in 2-deck mode, same row conventions (label + formatPct + locked-in ✓ eligibility). The 1-deck table renders zero trace of it (no hidden row, no colspan artifacts) — DOM-absence pinned both ways, mirroring the Phase 5 isolation discipline.
+- **D-09 (amended post-research):** Five of a Kind row: rendered at the STRENGTH END of the category table (adjacent to and after Royal Flush — the shipped table is ascending, High Card first, so "ranked above Royal Flush" means the LAST DOM row), same row conventions (label + formatPct + locked-in ✓ eligibility). The 1-deck table renders zero trace of it (no hidden row, no colspan artifacts) — DOM-absence pinned both ways, mirroring the Phase 5 isolation discipline. (Research open-question 1 resolution: the original "top of the table" wording contradicted the shipped ascending order.)
 - **D-10:** All new testids lowercase-hyphenated, `holdem-` prefix for Hold'em-scoped additions (e.g., `holdem-deck-toggle`, `holdem-deck-toggle-1/-2`, `category-five-of-a-kind`, copy-cue testid per UI spec); copy conforms to the block-list.
 
 ### Guards & non-negotiables
 - **D-11:** D-08-class protection carried forward: at deckCount=1, Hold'em's external behavior is byte-identical — both golden files, the five frozen v1 suites, and `simulationApi.test.ts` stay untouched and green. Blackjack files are NOT touched this phase (its local toggle, stores, engine all frozen).
 - **D-12:** WR-03 RETIRES this phase: after the duplicate-aware layer ships, deckCount:2 into the Hold'em trial path becomes legal. The retirement is explicit — remove/retarget the WR-03 compliance comments and extend the worker validation so poker deckCount=2 is accepted end-to-end (the 06-03 acceptance test that pinned the `102 cards, got 101` rejection gets retargeted to the new legal path, never deleted).
 - **D-13:** Property tests are mandatory for the evaluation layer: seeded statistical anchor for Five of a Kind frequency (researcher supplies the closed-form/reference value + tolerance), duplicate-hand comparison properties, and the "gate catches every duplicate shape" exhaustive/property sweep.
+
+### Post-research resolutions (2026-08-25)
+- **D-14:** Hold'em's `deckCount` lives in `gameStore` (research open-question 2 resolution — mirrors blackjack's D-10 store-locality precedent and keeps the mode-shell sweep intact).
+- **D-15:** WR-01 closes EARLY, this phase: the CardPicker's pinned `deckCount = 1` wire into `setPick` gets the real deckCount with behavioral tests (research integration catch — the D-07 picker work touches that wire anyway; closing it here beats leaving a live trap for Phase 8).
+- **D-16:** PITFALLS.md Pitfall 7 is CORRECTED by 07-RESEARCH (empirical): the stock evaluator does NOT crash on all duplicates — silent wrong results are the dominant failure mode (five deuces → HighCard; dup-in-suit → malformed StraightFlush). Acceptance tests must assert VALUES, never mere non-throwing. The duplicate gate routes on detection, not on crash behavior.
 
 ### Claude's Discretion
 - Evaluation-wrapper module decomposition, copy-cue exact visual treatment within tokens, category-table row-injection mechanism, whether the Hold'em toggle lives beside the Deal button or the switcher, test file organization.

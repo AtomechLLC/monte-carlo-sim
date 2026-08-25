@@ -32,6 +32,15 @@
 - WR-03 retires this phase (D-12, retarget the rejection test). WR-04 folds in (D-07). WR-01 stays Phase 8 unless D-07's picker tests force the setPick wire — noted in CONTEXT.
 - Five-of-a-Kind-above-Royal convention: locked as working convention per STATE flag; researcher asked to source it better if possible.
 
+## Post-research resolutions (2026-08-25, `--auto`)
+| Research flag | Resolution |
+|---------------|-----------|
+| D-09 "top of table" vs shipped ascending order | D-09 amended — Five of a Kind renders as the LAST DOM row (strength end, after Royal Flush) |
+| deckCount home | D-14 — gameStore (blackjack D-10 precedent) |
+| CardPicker deckCount=1 pinned wire | D-15 — WR-01 closes early this phase with behavioral tests |
+| Pitfall 7 "any duplicate crashes" | D-16 — corrected: silent garbage dominates; value-asserting tests mandatory |
+| Five-of-a-Kind convention sourcing | Upgraded: pagat.com + Bicycle Cards — STATE flag resolvable |
+
 ## Claude's Discretion
 Wrapper decomposition, copy-cue treatment within tokens, row-injection mechanism, toggle placement, test organization.
 

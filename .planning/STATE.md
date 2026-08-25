@@ -85,7 +85,7 @@ None yet.
 - (Resolved) 05-REVIEW WR-03 HoldemGame extraction — CLOSED in Phase 6 (06-02, commit 4551bb9: <HoldemGame /> extracted verbatim, guards retargeted same-commit, testid arrays consolidated into src/test/holdemTestids.ts).
 - ⚠️ [Phase 7+ note] 06-REVIEW WR-01 resolution accepted a documented ~one-bit D-02 leak: the blackjack "1 deck" toggle segment disables when the HIDDEN hole duplicates a visible card (impossible-state prevention outweighed the leak; store-boundary refusal is the backstop). Carry this convention if Phase 8's cross-game toggle absorbs the blackjack-local toggle.
 - ⚠️ [Phases 1-4] Security enforcement is enabled but no SECURITY.md exists for any phase — `/gsd:secure-phase N` closes the gate (client-only app; low risk).
-- ⚠️ [Phase 7 flag] 2-deck poker hand-ranking convention (Five of a Kind above Royal Flush) is single-sourced from a community forum thread, not an official rulebook — treat as working convention, revisit if a more authoritative source surfaces.
+- (Resolved) Phase 7 ranking-convention flag — 07-RESEARCH upgraded the sourcing: pagat.com + Bicycle Cards both state five of a kind is the highest hand (beats royal flush). Convention confirmed, no longer forum-only.
 - (Resolved) Phase 6 EV-model flag — locked as D-04/D-05 in 06-CONTEXT.md before implementation (S17, 3:2 natural, ±1/push-0, hit-once-then-stand labeling) and shipped as specified.
 - (Resolved) WR-02 worker-crash surfacing — FIXED in quick task 260824-biv (Worker error/messageerror listeners now route into the error banner).
 - (Resolved) Phase 1 cosmetic debt (scaffold-tmp title, default favicon, dead scaffold assets) — closed in Phase 3 plan 03-05 (D-14).
