@@ -3,6 +3,7 @@ import { PlayingCard } from './PlayingCard';
 import { AnimatedCard } from './AnimatedCard';
 import { FlipCard } from './FlipCard';
 import { dealOriginOffset, dealIndex } from './tableGeometry';
+import { heroCueKey } from './copyCue';
 
 const HERO_HOLE_SLOTS = [0, 1] as const;
 
@@ -10,6 +11,10 @@ interface HeroSeatProps {
   variant: 'hero';
   heroHole: readonly [Card, Card] | undefined;
   dealNonce: number;
+  /** D-08 copy-cue slot keys from useCopyCuedSlots (HandDisplay's single derivation) —
+   * a props-driven read, keeping Seat store-free. Optional: absent means no cues, so
+   * direct render call sites without the prop keep the shipped 1-deck output. */
+  cuedSlots?: ReadonlySet<string>;
 }
 
 interface OpponentSeatProps {
@@ -20,6 +25,8 @@ interface OpponentSeatProps {
   hasHand: boolean;
   dealNonce: number;
   onReveal: (index: number) => void;
+  /** Same D-08 cued-slot set as HeroSeatProps — see that doc comment. */
+  cuedSlots?: ReadonlySet<string>;
 }
 
 type SeatProps = HeroSeatProps | OpponentSeatProps;
@@ -33,7 +40,7 @@ type SeatProps = HeroSeatProps | OpponentSeatProps;
  */
 export function Seat(props: SeatProps) {
   if (props.variant === 'hero') {
-    return <HeroSeat heroHole={props.heroHole} dealNonce={props.dealNonce} />;
+    return <HeroSeat heroHole={props.heroHole} dealNonce={props.dealNonce} cuedSlots={props.cuedSlots} />;
   }
   return (
     <OpponentSeat
@@ -52,9 +59,11 @@ const HERO_SEAT_KEY = 'hero';
 function HeroSeat({
   heroHole,
   dealNonce,
+  cuedSlots,
 }: {
   heroHole: readonly [Card, Card] | undefined;
   dealNonce: number;
+  cuedSlots?: ReadonlySet<string>;
 }) {
   return (
     <div className="seat seat-hero">
@@ -68,6 +77,13 @@ function HeroSeat({
           if (!card) {
             return <span key={slot} className="card-slot card-slot--hero" />;
           }
+          // D-08: the badge renders as content INSIDE AnimatedCard (via PlayingCard's copyCue
+          // prop), never as a sibling of the motion span — AnimatedCard renders the motion span
+          // that carries every transform, so content inside it inherits fly-in, rewind-exit and
+          // the restore-mount `initial={false}` path automatically ("badge rides the card, not
+          // the slot"); a sibling would detach from the card mid-animation. The `--cued` class
+          // is APPENDED to the shipped slot classes, never a replacement.
+          const cued = cuedSlots?.has(heroCueKey(slot)) ?? false;
           // Keyed by `${seatKey}-${slotIndex}-${dealNonce}` (never card identity, 03-RESEARCH
           // Anti-Patterns): a re-deal fully unmounts/remounts this element rather than Motion
           // retargeting an in-flight card into a different card.
@@ -77,9 +93,9 @@ function HeroSeat({
               animationKey={`${HERO_SEAT_KEY}-${slot}-${dealNonce}`}
               origin={dealOriginOffset('seat-hero')}
               dealIndex={dealIndex('hero', slot)}
-              className="card-slot card-slot--hero"
+              className={cued ? 'card-slot card-slot--hero card-slot--cued' : 'card-slot card-slot--hero'}
             >
-              <PlayingCard card={card} />
+              <PlayingCard card={card} copyCue={cued} />
             </AnimatedCard>
           );
         })}

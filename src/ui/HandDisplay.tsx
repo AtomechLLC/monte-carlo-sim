@@ -2,6 +2,7 @@ import { useGameStore } from '../state/gameStore';
 import { OPPONENT_COUNT } from '../engine/cards';
 import { isOpponentRevealed } from '../engine/conditioning';
 import { Seat } from './Seat';
+import { useCopyCuedSlots } from './copyCue';
 
 export function HandDisplay() {
   const heroHole = useGameStore((state) => state.runout?.heroHole);
@@ -14,10 +15,13 @@ export function HandDisplay() {
   const revealedMask = useGameStore((state) => state.revealedMask);
   const dealNonce = useGameStore((state) => state.dealNonce);
   const reveal = useGameStore((state) => state.reveal);
+  // ONE memoised D-08 derivation for every seat this component renders (BoardDisplay
+  // holds the other consumer) — Seat itself stays props-driven and store-free.
+  const cuedSlots = useCopyCuedSlots();
 
   return (
     <>
-      <Seat variant="hero" heroHole={heroHole} dealNonce={dealNonce} />
+      <Seat variant="hero" heroHole={heroHole} dealNonce={dealNonce} cuedSlots={cuedSlots} />
       <div data-testid="opponents">
         {Array.from({ length: OPPONENT_COUNT }, (_, i) => {
           const revealed = opponentHoles !== undefined && isOpponentRevealed(revealedMask, i);
@@ -33,6 +37,7 @@ export function HandDisplay() {
               hasHand={opponentHoles !== undefined}
               dealNonce={dealNonce}
               onReveal={reveal}
+              cuedSlots={cuedSlots}
             />
           );
         })}
