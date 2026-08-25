@@ -16,7 +16,12 @@ findings:
   warning: 4
   info: 3
   total: 7
-status: issues_found
+status: fixes_applied
+fixes_applied_at: 2026-08-25
+fixes_applied:
+  resolved: 7
+  deferred: 0
+  suite_after: "65 files / 924 tests (baseline 919, +5 additive guard pins)"
 ---
 
 # Phase 8: Code Review Report
@@ -24,7 +29,32 @@ status: issues_found
 **Reviewed:** 2026-08-25T04:51:26Z
 **Depth:** standard (weighted, per the review brief, toward correctness-of-preservation: both rewired call sites diffed against `git show b44f6c6:` originals, the reachable DOM-state space enumerated against the nine-state golden, and every new guard amendment probed for falsifiability)
 **Files Reviewed:** 7 (`git diff --name-only b44f6c6..HEAD -- src/`; unchanged dependencies `gameStore.ts`, `blackjackStore.ts`, `pickerStore.ts`, `App.tsx`, `GameModeSwitcher.tsx`, `shoePath.guard.test.ts`, `src/test/setup.ts`, `vite.config.ts` cross-read for call-chain and guard verification)
-**Status:** issues_found (no Critical — 4 Warning, 3 Info)
+**Status:** fixes_applied (no Critical — 4 Warning, 3 Info; **all 7 resolved**, see Fix Status below)
+
+## Fix Status (applied 2026-08-25)
+
+All seven findings resolved, one atomic commit each, guard suites green at every commit.
+
+| ID | Status | Commit | Resolution |
+|----|--------|--------|------------|
+| WR-01 | RESOLVED | `c4e68a4` | Active-segment `disabled`/`title` gated on the segment being inactive (both segments); doc comment restated as an enforced guarantee; "binding rule 6" test extended with the `deckCount={1}` + `oneDeckDisabled` case, asserting operability via a real click, plus the symmetric `twoDecksTitle`-while-active case. Zero rendered bytes change in any reachable state — the nine-state golden stayed green byte-unmodified. |
+| WR-02 | RESOLVED | `2ba6442` | Added a path-level pin (`not.toContain('../state/')`) and a case-insensitive `blackjack`/`holdem` name pin (which is also the previously-missing "no game-specific logic" pin). All seven original token assertions kept as additive defence, message de-overclaimed. |
+| WR-03 | RESOLVED | `3100979` | Sweep now walks all of `src/` with `{ recursive: true }` + separator normalization (the `shoePath.guard.test.ts` precedent), matching the bare `Deck count` literal — quoting-agnostic and catches the hoisted-constant evasion. Added a falsifiability control (the walk must see `App.tsx`) and a canonical-form pin. Both call-site absence pins made quoting-agnostic. `.test.` exclusion kept and still load-bearing. |
+| WR-04 | RESOLVED | `1187299` | Provenance corrected to the procedure actually executed (authored from the serialization rules, then proven by the nine `toBe` assertions passing at `4d85066`), with an independently runnable re-verification recipe and a real regeneration procedure. |
+| IN-01 | RESOLVED | `a940b64` | `HoldemGame.tsx` call-site comment trimmed to call-site concerns, matching `BlackjackControls`; the markup/aria/no-op prose now has one home. |
+| IN-02 | RESOLVED | `0d14f50` | Both tautological `not.toHaveAttribute(name, value)` pairs collapsed into single exact-value assertions. |
+| IN-03 | RESOLVED | `661423e` | `testidPrefix` typed as `DeckTogglePrefix` (hard two-value union, not a widened one — the typo now fails type-check with TS2820). Union lives in `src/ui/deckTogglePrefix.ts` so the component keeps naming neither game and WR-02's pin stays enforceable. |
+
+**Gates after all fixes:** `npx vitest run` 65 files / **924 tests** passing (baseline 919 + 5 additive guard pins: WR-02 +3, IN-03 +2); `tsc -b` clean; `eslint .` clean; `npm run build` clean (pre-existing chunk-size warning only).
+
+**Notes raised while fixing:**
+
+- **Two of WR-04's supporting claims did not survive verification, in both directions.** The executor's stated cause ("the repo's vitest config suppresses console output in run mode") is wrong — the config suppresses nothing. But the reviewer's counter-claim (that a maintainer following the stated procedure "will get output") is also wrong. Verified empirically with a throwaway probe suite at HEAD: **vitest's default reporter surfaces console output only from FAILING tests in run mode**, so the original capture attempt from passing tests genuinely produced nothing. The golden's regeneration procedure and the SUMMARY's retraction both record this verified behaviour rather than either original claim, and the procedure routes through the assertion diff (verified untruncated at these string lengths).
+- **`npx tsc --noEmit` is a vacuous gate in this repo.** Root `tsconfig.json` is solution-style (`files: []` + `references`), so it type-checks nothing. The effective type gate is `tsc -b` (what `npm run build` runs). Both were run; only the latter is meaningful. Worth correcting wherever the gate list is carried forward.
+- **WR-02 and IN-03 conflict as literally written** — the reviewer's IN-03 snippet exports the prefix union from `DeckCountToggle.tsx`, which would put both game names in the file WR-02's new pin forbids. Resolved by giving the union its own module; both rules now hold. IN-03 also uses a hard union rather than the suggested `DeckTogglePrefix | (string & {})`, which would not have caught the typo at all (and would trip `@typescript-eslint/no-empty-object-type`).
+
+Every fix carries a negative control where one is meaningful: WR-01 (revert the gate → the extended test goes red), WR-02 (inject `useBlackjackOddsStore` → all seven original tokens stay green, both new pins fire), WR-03 (three separate controls: a second emitter in `App.tsx`, one in a new `src/ui/shared/`, and a single-quoted `role={'group'}` at a call site), IN-03 (typo'd prefix → TS2820). All reverted, all suites re-verified green afterwards.
+
 
 ## Summary
 
@@ -46,6 +76,8 @@ Reviewed the Phase 8 consolidation: the new `DeckCountToggle`, both rewired call
 ## Warnings
 
 ### WR-01: `DeckCountToggle` honours `oneDeckDisabled` even when segment 1 is the ACTIVE segment — the component advertises an invariant it does not enforce
+
+**Status: RESOLVED** (`c4e68a4`) — gating made structural on both segments; test extended with the `deckCount={1}` + `oneDeckDisabled` case.
 
 **File:** `src/ui/DeckCountToggle.tsx:39-41` (and the doc comment's claim at `:20-22`)
 
@@ -73,6 +105,8 @@ const oneDeckActive = deckCount === 1;
 Then extend `DeckCountToggle.test.tsx` with the case that is currently missing: `deckCount={1}` + `oneDeckDisabled` renders segment 1 **not** disabled and title-free.
 
 ### WR-02: The store-free sweep the phase calls "what makes D-01 enforceable" has a demonstrable hole — `blackjackOddsStore` passes all seven tokens, and "no game-specific logic" is unpinned
+
+**Status: RESOLVED** (`2ba6442`) — path-level `../state/` pin + case-insensitive game-name pin added; the seven tokens kept as additive defence.
 
 **File:** `src/App.modeShell.guard.test.ts:323-337`
 
@@ -107,6 +141,8 @@ Keep the seven token assertions as-is (they are additive and catch aliased re-ex
 
 ### WR-03: The SC1 single-source-of-markup sweep only sees flat, non-test `src/ui/*.tsx` — a second emitter in `src/App.tsx` or any `src/ui` subdirectory passes green
 
+**Status: RESOLVED** (`3100979`) — recursive `src/` walk on the bare `Deck count` literal; call-site absence pins made quoting-agnostic; `.test.` exclusion kept.
+
 **File:** `src/App.modeShell.guard.test.ts:421-441` (the readdir sweep), with `:381-395` (the two call-site absence pins)
 
 **Issue:** SC1's source-level claim is "the deck-count markup lives in exactly ONE component." What is actually pinned is narrower in three ways:
@@ -134,6 +170,8 @@ expect(
 That also makes the two per-call-site absence pins redundant rather than load-bearing — keep them, but they stop being the only thing standing between the repo and a second emitter.
 
 ### WR-04: The DOM golden's committed provenance comments assert a capture procedure that, by the executor's own record, was never performed
+
+**Status: RESOLVED** (`1187299`) — provenance rewritten to the authored-then-proven procedure; regeneration recipe added; the vitest-console claim retracted in 08-01-SUMMARY after empirical verification.
 
 **File:** `src/App.deckToggleDom.golden.test.tsx:26-27` and `:131-138`
 
@@ -164,6 +202,8 @@ Also drop or correct the "vitest suppresses console output in run mode" claim wh
 
 ### IN-01: `HoldemGame`'s JSX comment still owns the extracted component's invariant prose, now duplicated verbatim in `DeckCountToggle`
 
+**Status: RESOLVED** (`a940b64`) — call-site comment trimmed to match `BlackjackControls`.
+
 **File:** `src/ui/HoldemGame.tsx:225-231` vs `src/ui/DeckCountToggle.tsx:19-22`
 
 **Issue:** The call-site comment still opens with "Structural twin of the mode switcher… segment labels never change with state; `aria-pressed` alone carries which count is active. The active segment is never `disabled` — clicking it is a harmless no-op routed through the store's same-value early return." Every one of those sentences now describes `DeckCountToggle`'s internals and appears there almost word-for-word. `BlackjackControls` was correctly trimmed in the same commit to call-site concerns only (guard predicate, precomputed titles, "the second segment never carries a title"), so the two call sites now follow different conventions and the Hold'em copy will drift against the component the moment either changes.
@@ -171,6 +211,8 @@ Also drop or correct the "vitest suppresses console output in run mode" claim wh
 **Fix:** Trim `HoldemGame.tsx:225-231` to the call-site-specific half (the no-confirmation-dialog rationale, "the on-table hand NEVER blocks a switch", and the A4-beats-A3 precedence note at `:235-237`), matching what `BlackjackControls.tsx:68-72` now does. Leave the markup/aria/no-op prose in `DeckCountToggle.tsx` as its single home.
 
 ### IN-02: Two tautological `not.toHaveAttribute(name, value)` assertions in the consolidation suite
+
+**Status: RESOLVED** (`0d14f50`) — both pairs collapsed into single exact-value assertions.
 
 **File:** `src/App.deckToggleConsolidation.test.tsx:576` and `:599-602`
 
@@ -183,6 +225,8 @@ expect(segmentOne.getAttribute('title')).toBe(DUPLICATE_PICK_GUARD_TITLE);
 ```
 
 ### IN-03: `testidPrefix: string` is unconstrained while D-02 makes exactly two prefixes contractual
+
+**Status: RESOLVED** (`661423e`) — hard two-value union in `src/ui/deckTogglePrefix.ts`; typo now fails `tsc -b` with TS2820.
 
 **File:** `src/ui/DeckCountToggle.tsx:4`
 
