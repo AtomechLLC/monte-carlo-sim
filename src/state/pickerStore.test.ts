@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { usePickerStore, pickedCards, SLOT_ORDER, SLOT_LABEL } from './pickerStore';
-import { remainingCopies } from './pickerStore';
+import { remainingCopies, hasDuplicatePick } from './pickerStore';
 
 const EMPTY_PICKS = {
   'hero-0': null,
@@ -185,6 +185,31 @@ describe('pickerStore — seven-slot draft with duplicate rejection', () => {
 
       usePickerStore.getState().clearAll();
       expect(remainingCopies(usePickerStore.getState().picks, 'As', 2)).toBe(2);
+    });
+  });
+
+  describe('hasDuplicatePick — count-aware duplicated-pick predicate (UI-SPEC A4 backstop)', () => {
+    it('is false for an empty draft', () => {
+      expect(hasDuplicatePick(usePickerStore.getState().picks)).toBe(false);
+    });
+
+    it('is false when all seven slots hold distinct cards', () => {
+      usePickerStore.getState().setPick('hero-0', 'As');
+      usePickerStore.getState().setPick('hero-1', 'Ah');
+      usePickerStore.getState().setPick('flop-0', '2c');
+      usePickerStore.getState().setPick('flop-1', '3c');
+      usePickerStore.getState().setPick('flop-2', '4c');
+      usePickerStore.getState().setPick('turn', '5c');
+      usePickerStore.getState().setPick('river', '6c');
+
+      expect(hasDuplicatePick(usePickerStore.getState().picks)).toBe(false);
+    });
+
+    it('is true when two slots hold the same card value', () => {
+      usePickerStore.getState().setPick('hero-0', 'As', 2);
+      usePickerStore.getState().setPick('flop-0', 'As', 2);
+
+      expect(hasDuplicatePick(usePickerStore.getState().picks)).toBe(true);
     });
   });
 });

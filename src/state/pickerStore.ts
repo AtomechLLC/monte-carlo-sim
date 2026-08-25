@@ -63,6 +63,20 @@ export function remainingCopies(picks: PickerDraft, card: Card, deckCount: DeckC
   return Math.max(0, deckCount - used);
 }
 
+/**
+ * True when the current picks hold two copies of any one card value (count-aware, D-01).
+ * The single shared source of "do the picks hold a duplicated value" for both the deck
+ * toggle's disabled guard and the store-boundary refusal in the deck-count switch —
+ * never re-derive this predicate elsewhere. Counts PHYSICAL occurrences via
+ * `cardCounts(pickedCards(picks))`, never a value-collapsing Set.
+ */
+export function hasDuplicatePick(picks: PickerDraft): boolean {
+  for (const count of cardCounts(pickedCards(picks)).values()) {
+    if (count >= 2) return true;
+  }
+  return false;
+}
+
 interface PickerState {
   picks: PickerDraft;
   /**
