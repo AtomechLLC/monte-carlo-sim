@@ -572,8 +572,13 @@ describe('Per-game guards through the shared control: both behave exactly as the
     // A4-beats-A3 precedence, now a CALL-SITE responsibility (the shared component receives
     // one pre-computed title): with a hand on the table this segment would otherwise carry
     // the fresh-deal disclosure — the guard title displaces it entirely.
-    expect(segmentOne).toHaveAttribute('title', DUPLICATE_PICK_GUARD_TITLE);
-    expect(segmentOne).not.toHaveAttribute('title', FRESH_DEAL_TITLE);
+    // COLLAPSED (08-REVIEW IN-02): one exact-value assertion, which excludes FRESH_DEAL_TITLE
+    // by construction. It replaces the previous exact-value line plus a
+    // `not.toHaveAttribute('title', FRESH_DEAL_TITLE)` that could never fail here — the
+    // negated two-argument matcher passes whenever the attribute is absent OR holds any other
+    // value, so directly after an exact-value check it added no coverage while reading like a
+    // second, independent precedence check. Coverage is unchanged; the misleading line is not.
+    expect(segmentOne.getAttribute('title')).toBe(DUPLICATE_PICK_GUARD_TITLE);
     expect(screen.getByTestId('holdem-deck-toggle-2')).not.toBeDisabled();
 
     // A click on the disabled segment modifies nothing: same picks by reference AND value,
@@ -595,11 +600,10 @@ describe('Per-game guards through the shared control: both behave exactly as the
       usePickerStore.getState().clearSlot('hero-1');
     });
     expect(screen.getByTestId('holdem-deck-toggle-1')).not.toBeDisabled();
-    expect(screen.getByTestId('holdem-deck-toggle-1')).toHaveAttribute('title', FRESH_DEAL_TITLE);
-    expect(screen.getByTestId('holdem-deck-toggle-1')).not.toHaveAttribute(
-      'title',
-      DUPLICATE_PICK_GUARD_TITLE,
-    );
+    // COLLAPSED (08-REVIEW IN-02), same shape as above: one exact-value assertion, which
+    // excludes DUPLICATE_PICK_GUARD_TITLE by construction, in place of the exact-value line
+    // plus its tautological negated twin.
+    expect(screen.getByTestId('holdem-deck-toggle-1').getAttribute('title')).toBe(FRESH_DEAL_TITLE);
   });
 
   it("Hold'em idle: clearing the duplicate pick re-enables the segment with NO title attribute left behind (07 A4)", () => {
