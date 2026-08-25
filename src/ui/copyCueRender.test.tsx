@@ -47,6 +47,28 @@ const BOARD_TWIN_RUNOUT: PredeterminedRunout = {
   ],
 };
 
+/** Opponent 0 holds the twin of the hero's Ah in hole slot 0; all else distinct. */
+const OPPONENT_TWIN_RUNOUT: PredeterminedRunout = {
+  heroHole: ['Ah', 'Kd'],
+  board: ['2c', '7d', '9s', 'Jh', '4c'],
+  opponentHoles: [
+    ['Ah', 'Qs'],
+    ['8d', '3s'],
+    ['5h', '6c'],
+  ],
+};
+
+/** All 13 values distinct — no duplicate anywhere, even fully revealed at the river. */
+const ALL_DISTINCT_RUNOUT: PredeterminedRunout = {
+  heroHole: ['As', 'Kd'],
+  board: ['2c', '7d', '9s', 'Jh', '4c'],
+  opponentHoles: [
+    ['Qs', 'Th'],
+    ['8d', '3s'],
+    ['5h', '6c'],
+  ],
+};
+
 function resetStores() {
   useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0, deckCount: 1 });
   // Placed AFTER the store reset (the App-level harness convention, e.g.
@@ -162,6 +184,101 @@ describe('board path (2 decks)', () => {
       useGameStore.setState({ street: 'preflop' });
     });
     expect(screen.queryByTestId('holdem-copy-cue')).toBeNull();
+  });
+});
+
+describe('revealed opponent path (2 decks)', () => {
+  it('a revealed opponent holding the second copy shows exactly one badge inside that seat, on the correct hole slot, inside the face-up flip face', () => {
+    useGameStore.setState({ runout: OPPONENT_TWIN_RUNOUT, street: 'preflop', revealedMask: 0b001, dealNonce: 1, deckCount: 2 });
+    render(<TableScene />);
+    const seat = screen.getByTestId('opponent-seat-0');
+    const badges = within(seat).getAllByTestId('holdem-copy-cue');
+    expect(badges).toHaveLength(1);
+    expect(screen.getAllByTestId('holdem-copy-cue')).toHaveLength(1);
+    const slots = seat.querySelectorAll('.card-slot');
+    expect(slots).toHaveLength(2);
+    expect(slots[0].contains(badges[0])).toBe(true);
+    expect(slots[0]).toHaveClass('card-slot', 'card-slot--opponent', 'card-slot--cued');
+    expect(slots[1]).not.toHaveClass('card-slot--cued');
+    // Inside .flip-card-face--front specifically, so backface-visibility hides the badge
+    // mid-flip along with the face it rides (07-UI-SPEC "Placement & riding").
+    expect(badges[0].closest('.flip-card-face--front')).not.toBeNull();
+  });
+
+  it('the same runout with the seat UNREVEALED produces zero badges anywhere — a hidden card is not a visible card (T-03-12/T-07-18)', () => {
+    useGameStore.setState({ runout: OPPONENT_TWIN_RUNOUT, street: 'preflop', revealedMask: 0, dealNonce: 1, deckCount: 2 });
+    render(<TableScene />);
+    expect(screen.queryByTestId('holdem-copy-cue')).toBeNull();
+    expect(document.querySelector('.card-slot--cued')).toBeNull();
+    expect(screen.queryByText(CUE_SENTENCE)).toBeNull();
+  });
+});
+
+describe('revealed-opponent aria-label (A11 split)', () => {
+  it("appends the second-copy suffix to the revealed seat's aria-label at 2 decks — a button's aria-label overrides its inner content", () => {
+    useGameStore.setState({ runout: OPPONENT_TWIN_RUNOUT, street: 'preflop', revealedMask: 0b001, dealNonce: 1, deckCount: 2 });
+    render(<TableScene />);
+    expect(screen.getByTestId('opponent-seat-0')).toHaveAttribute(
+      'aria-label',
+      'Opponent 1 hole cards: Ah Qs (revealed) — second copy of Ah',
+    );
+  });
+
+  it("renders the exact shipped revealed-seat aria-label at deckCount 1 — no suffix, byte-identical (D-11)", () => {
+    useGameStore.setState({ runout: OPPONENT_TWIN_RUNOUT, street: 'preflop', revealedMask: 0b001, dealNonce: 1, deckCount: 1 });
+    render(<TableScene />);
+    expect(screen.getByTestId('opponent-seat-0')).toHaveAttribute(
+      'aria-label',
+      'Opponent 1 hole cards: Ah Qs (revealed)',
+    );
+    // The whole 1-deck absence contract holds on this path too.
+    expect(screen.queryByTestId('holdem-copy-cue')).toBeNull();
+    expect(document.querySelector('.card-slot--cued')).toBeNull();
+    expect(screen.queryByText(CUE_SENTENCE)).toBeNull();
+  });
+
+  it("keeps the unrevealed seat's aria-label and title byte-identical to shipped at BOTH deck counts", () => {
+    for (const deckCount of [1, 2] as const) {
+      useGameStore.setState({ runout: OPPONENT_TWIN_RUNOUT, street: 'preflop', revealedMask: 0b001, dealNonce: 1, deckCount });
+      const { unmount } = render(<TableScene />);
+      const hiddenSeat = screen.getByTestId('opponent-seat-1');
+      expect(hiddenSeat).toHaveAttribute('aria-label', 'Reveal Opponent 2 hole cards');
+      expect(hiddenSeat).toHaveAttribute('title', "Click to reveal this opponent's hole cards");
+      unmount();
+    }
+  });
+});
+
+describe('DOM absence, pinned both ways', () => {
+  it('renders at least one badge AND at least one cued class at 2 decks with a duplicate visible', () => {
+    useGameStore.setState({ runout: HERO_PAIR_RUNOUT, street: 'preflop', revealedMask: 0, dealNonce: 1, deckCount: 2 });
+    render(<TableScene />);
+    expect(screen.getAllByTestId('holdem-copy-cue').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.card-slot--cued').length).toBeGreaterThan(0);
+  });
+
+  it('renders zero badges and zero cued classes at 2 decks when NO duplicate is visible — the cue is conditioned on an actual duplicate, not the deck count', () => {
+    useGameStore.setState({ runout: ALL_DISTINCT_RUNOUT, street: 'river', revealedMask: 0b111, dealNonce: 1, deckCount: 2 });
+    render(<TableScene />);
+    expect(screen.queryByTestId('holdem-copy-cue')).toBeNull();
+    expect(document.querySelector('.card-slot--cued')).toBeNull();
+    expect(screen.queryByText(CUE_SENTENCE)).toBeNull();
+  });
+});
+
+describe('gate neutrality (A7)', () => {
+  it('badges never arm the animation gate — pendingAnimationCount lands exactly where an equivalent un-cued table leaves it', () => {
+    useGameStore.setState({ runout: HERO_PAIR_RUNOUT, street: 'flop', revealedMask: 0b001, dealNonce: 1, deckCount: 2 });
+    const cuedRender = render(<TableScene />);
+    expect(screen.getAllByTestId('holdem-copy-cue').length).toBeGreaterThan(0);
+    const cuedCount = useUiStore.getState().pendingAnimationCount;
+    cuedRender.unmount();
+
+    resetStores();
+    useGameStore.setState({ runout: HERO_PAIR_RUNOUT, street: 'flop', revealedMask: 0b001, dealNonce: 1, deckCount: 1 });
+    render(<TableScene />);
+    expect(screen.queryByTestId('holdem-copy-cue')).toBeNull();
+    expect(useUiStore.getState().pendingAnimationCount).toBe(cuedCount);
   });
 });
 
