@@ -152,7 +152,7 @@ Plans:
   3. Five of a Kind appears as its own row in the odds table in 2-deck mode, ranked above Royal Flush, with a correct probability.
   4. Two copies of the same card are visually distinguishable on the felt via a visible copy-cue UI badge, so a duplicate never reads as a rendering glitch.
 
-**Plans:** 2/7 plans executed
+**Plans:** 4/7 plans executed
 **UI hint**: yes
 
 Plans:
@@ -163,8 +163,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 07-03-PLAN.md — Category-index spine: hoisted evaluator selection in runTrials, grow-on-merge snapshots, length-tolerant odds guard, D-12 WR-03 retirement, WR-04 guard extension
-- [ ] 07-04-PLAN.md — Copy cue: canonical-scan second-copy derivation, the x2 badge on PlayingCard, and the three felt render paths with A11 accessibility
+- [x] 07-03-PLAN.md — Category-index spine: hoisted evaluator selection in runTrials, grow-on-merge snapshots, length-tolerant odds guard, D-12 WR-03 retirement, WR-04 guard extension
+- [x] 07-04-PLAN.md — Copy cue: canonical-scan second-copy derivation, the x2 badge on PlayingCard, and the three felt render paths with A11 accessibility
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -203,5 +203,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Multiset Deck & Streaming Foundation | v2.0 | 6/6 | Complete   | 2026-08-24 |
 | 5. Game-Mode Shell & Store Separation | v2.0 | 3/3 | Complete   | 2026-08-24 |
 | 6. Blackjack Core Odds Loop | v2.0 | 8/8 | Complete    | 2026-08-25 |
-| 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 2/7 | In Progress|  |
+| 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 4/7 | In Progress|  |
 | 8. Cross-Game Deck-Count Toggle UI | v2.0 | 0/TBD | Not started | - |
