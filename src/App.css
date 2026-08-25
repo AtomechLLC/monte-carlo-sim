@@ -115,13 +115,18 @@ h2 {
   box-shadow: var(--elev-raised);
 }
 
-/* 8px gap between a picker slot button and its adjacent Clear button, and
- * between Rewind / street label / Advance. */
+/* 8px gap between a picker slot button and its adjacent Clear button.
+ *
+ * The companion rule that used to sit here — `[data-testid='street-label'] {
+ * margin-inline: 8px; }`, the 8px between Rewind / street label / Advance —
+ * is RETIRED (260825). It existed because the street transport was a plain
+ * block whose children laid out inline; the reorganization makes that
+ * transport a `.control-group`, a flex container whose own `gap: 8px` states
+ * the same 8px once. Keeping both would have stacked gap on margin and
+ * doubled the label's gutters to 16px. The rhythm is unchanged; only the
+ * mechanism is, and there is now exactly one of them. */
 [data-testid^='picker-slot-'] + [data-testid^='picker-clear-'] {
   margin-left: 8px;
-}
-[data-testid='street-label'] {
-  margin-inline: 8px;
 }
 
 /* 4px gap between rank buttons within a suit group in the 52-card panel —
@@ -481,22 +486,82 @@ h2 {
   border: 0;
 }
 
-/* Control bar: Deal / Set Up Scenario / Street Controls cluster, `sm` (8px)
- * gap, wrapping at narrow widths. */
+/* ---------------------------------------------------------------------------
+ * Control bar (reorganized 260825, at the user's request: "the controls for
+ * running the simulator are haphazard, please reorganize the UI").
+ *
+ * It used to be ONE flat wrapping row holding five unrelated controls, so
+ * choosing a game, starting a hand and stepping through streets all read as
+ * the same kind of action. It is now a COLUMN of two purpose-grouped rows,
+ * identical in both games:
+ *
+ *   .control-bar__row--session   what am I playing — game-mode switcher and
+ *                                shoe size; both persist across hands, so the
+ *                                row pushes them to opposite edges.
+ *   .control-bar__row--hand      what am I doing to the hand on the table —
+ *                                the Deal cluster, then (Hold'em) the street
+ *                                transport, with a decorative rule between.
+ *
+ * `md` (16px) between the rows so the two purposes read as separate; `sm`
+ * (8px) within a row and within a group, which is the shipped rhythm. Nothing
+ * here animates, so there is nothing for the reduced-motion query to opt out
+ * of. No new colour, no new type size or weight.
+ * ------------------------------------------------------------------------- */
 .control-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.control-bar__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 16px;
 }
 
-/* 44px minimum hit area (UI-SPEC D-06 / Spacing Scale exceptions), extended
- * to the control bar's own direct-child buttons — Deal (no testid of its
- * own) and Set Up Scenario (new this phase). Rewind/Advance are nested one
- * level deeper inside StreetControls, so this direct-child selector leaves
- * their existing testid-scoped hit-area rule (above) untouched. */
-.control-bar > button {
+/* Session/context: the switcher anchors the left edge, the shoe the right. */
+.control-bar__row--session {
+  justify-content: space-between;
+}
+
+/* A cluster of controls that act on the same thing. */
+.control-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The separator between the hand actions and the street transport. It is
+ * DECORATIVE and therefore drawn in CSS as a border on the second group —
+ * never a text character (which a screen reader would read out) and never an
+ * element (which could take focus or a tab stop). Written as `+` so it is
+ * self-limiting: Blackjack's hand row has a single group and draws nothing. */
+.control-bar__row--hand > .control-group + .control-group {
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+
+/* 44px minimum hit area (UI-SPEC D-06 / Spacing Scale exceptions) on the bar's
+ * plain action buttons — Deal (no testid of its own), Set Up Scenario,
+ * Blackjack's Deal/Hit/Stand, and now Rewind/Advance, whose own testid-scoped
+ * rule above declares byte-identical values so nothing moves.
+ *
+ * RE-ANCHORED (260825) from the shipped `.control-bar > button`, which the
+ * reorganization would otherwise have silently orphaned by nesting every
+ * button one or two levels deeper. Deliberately NOT widened to the descendant
+ * selector `.control-bar button`: that would also reach the SEGMENTS of the
+ * two segmented controls, and at (0,1,1) it would out-specify their own
+ * `[data-testid^='...']` rule (0,1,0) and reflow both of them from the 8px
+ * 16px padding they ship with. A segment is a child of the segmented WRAPPER
+ * div, which is neither a row nor a `.control-group`, so the two selectors
+ * below provably cannot reach one — see App.controlBarGrouping.test.tsx,
+ * which runs these exact selector strings through `Element.matches()` against
+ * the live DOM in both modes, in both directions. */
+.control-bar__row > button,
+.control-bar__row .control-group > button {
   min-width: 44px;
   min-height: 44px;
   padding: 8px 12px;
@@ -521,7 +586,8 @@ h2 {
  * app's real actions rather than every <button>: the 52 rank buttons inside
  * the picker dialog are a grid of choices on an already-raised surface, and
  * giving each its own shadow would turn one floating panel into 52. */
-.control-bar > button,
+.control-bar__row > button,
+.control-bar__row .control-group > button,
 [data-testid='rewind-button'],
 [data-testid='advance-button'],
 [data-testid^='picker-slot-'] {
@@ -533,7 +599,8 @@ h2 {
  * channel the scale now gives us — an unavailable control is not hovering
  * above the page waiting for a click. Never --destructive: these are not
  * destructive actions (see the disabled-dimming rule above). */
-.control-bar > button:disabled,
+.control-bar__row > button:disabled,
+.control-bar__row .control-group > button:disabled,
 [data-testid='rewind-button']:disabled,
 [data-testid='advance-button']:disabled,
 [data-testid^='picker-slot-']:disabled {
@@ -808,9 +875,18 @@ h2 {
 /* ---------------------------------------------------------------------------
  * Phase 5 game-mode switcher (05-01)
  *
- * The segmented `GameModeSwitcher` control (D-01) that sits as the control
- * bar's first, unconditional child in both Hold'em and Blackjack mode, plus
- * the Blackjack placeholder felt shell (D-03). The active segment's
+ * The segmented `GameModeSwitcher` control (D-01) that leads the control bar
+ * unconditionally in both Hold'em and Blackjack mode — since the 260825
+ * reorganization it is the first child of the bar's session ROW rather than
+ * of the bar itself — plus the Blackjack placeholder felt shell (D-03).
+ *
+ * Note what these rules deliberately do NOT inherit: the bar's hit-area and
+ * elevation rules are anchored on `.control-bar__row > button` and
+ * `.control-bar__row .control-group > button`, and a segment is a child of
+ * the segmented WRAPPER below, so it matches neither. The segments keep the
+ * 8px 16px padding declared here, and the raised shadow stays on the wrapper
+ * (one rocker lifting off the page) instead of landing on each segment
+ * separately. The active segment's
  * "selected" state deliberately uses the secondary/30% `--border` role as a
  * background fill plus a semibold weight bump — never `--accent` — so the
  * switcher introduces zero new accent usage against the existing 3-use
