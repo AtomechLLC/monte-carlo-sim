@@ -322,3 +322,17 @@ No other deviations. **No source file was changed by this plan** (as designed): 
 ---
 *Phase: 07-2-deck-holdem-evaluation*
 *Completed: 2026-08-25*
+
+## Post-Merge Live-Browser Addendum (orchestrator, same day)
+
+After all 7 plans merged, the orchestrating agent drove the real dev server (port 5199, real Chromium, in-app browser). Environmental constraint unchanged: pane `visibilityState: "hidden"`, rAF suspended — frame-dependent choreography and screenshot compositing unavailable.
+
+**Verified LIVE (frame-independent):**
+1. **1-deck absence contract:** toggle present (1-deck active), 10 category rows, zero Five of a Kind trace, zero cue markup.
+2. **D-02 toggle→fresh-deal + D-09 row:** toggling to 2 decks with a hand on the table triggered a fresh deal; the category table grew to 11 rows with `category-five-of-a-kind` as the LAST row (label "Five of a Kind", pct cell pending "—" under the held gate).
+3. **HE2-03 copy cue live:** first 2-deck deal produced a duplicate — exactly two Sevens of Spades visible, the `×2` badge (aria-hidden) on the second copy only, inside a `.card-slot--cued` slot, with the visually-hidden text "Second copy — two physical copies of this card are in play" present.
+4. **Reveal path:** opponent reveal worked normally at 2 decks (revealed a non-duplicate hand; cue count unchanged, correctly).
+5. **Return direction:** toggling back to 1 deck fresh-dealt and restored the 10-row/zero-cue DOM exactly.
+6. **Console:** zero new errors from any Phase 7 interaction (only the two pre-existing stale HMR artifacts from Phase 6's placeholder deletion, cleared by a dev-server restart).
+
+**Still NOT live-verified:** A5 pip-clipping (screenshot compositing blocked while the pane is hidden — remains routed to the recommended 5-minute human walk), odds-convergence display after gate release, deal/flip choreography. Attribution caveat (verbatim): Verification performed by the orchestrating Claude agent under the user's standing no-operator-input directive; a human did not personally observe. Re-verify anytime with npm run dev.
