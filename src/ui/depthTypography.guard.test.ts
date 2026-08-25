@@ -650,3 +650,40 @@ describe('The fonts are self-hosted, offline-safe and latin-only (Felt & Brass v
     expect(fontsCss).toContain('font-display: swap;');
   });
 });
+
+/**
+ * The card back is greyscale art (public/cards/back.svg is a black diamond lattice on a white
+ * rect), and `hue-rotate` is a rotation in colour space: applied to a fully desaturated source
+ * it changes NOTHING. The filter that shipped from Phase 3 until the Felt & Brass pass —
+ * `hue-rotate(200deg) saturate(1.4) brightness(0.95)` — was therefore inert for hue for its
+ * entire life; the "blue" card back it was written to produce never once appeared on screen.
+ *
+ * These pins exist so the fix cannot be quietly undone by someone tidying what looks like a
+ * redundant `sepia(1)`.
+ */
+describe('card-back recolour — sepia() is what makes the tint possible at all', () => {
+  const backSvg = readFileSync(join(REPO_ROOT, 'public', 'cards', 'back.svg'), 'utf8');
+
+  it('the source art really is greyscale, which is why the order matters', () => {
+    // If this ever fails the art gained colour and the reasoning below needs revisiting —
+    // that is a deliberate prompt to re-think, not a test to delete.
+    const colouredFills = backSvg
+      .match(/(?:fill|stroke)="([^"]*)"/g)
+      ?.filter((decl) => !/"(black|white|none|url\(#[^)]*\))"/.test(decl));
+    expect(colouredFills ?? []).toEqual([]);
+  });
+
+  it('--card-back-filter introduces a hue before rotating one', () => {
+    const filter = indexCss.match(/--card-back-filter:\s*([^;]+);/)?.[1];
+    expect(filter, '--card-back-filter must be declared').toBeTruthy();
+
+    const value = filter as string;
+    expect(value, 'sepia() must come first — it is what gives hue-rotate something to rotate').toMatch(
+      /^\s*sepia\(/,
+    );
+    // Order is the whole point: a hue-rotate ahead of the sepia would be the same no-op again.
+    expect(value.indexOf('sepia('), 'sepia() must precede hue-rotate()').toBeLessThan(
+      value.indexOf('hue-rotate('),
+    );
+  });
+});
