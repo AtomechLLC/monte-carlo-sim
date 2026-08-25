@@ -38,11 +38,11 @@ export const POSITIONS: Record<PositionKey, { leftPct: number; topPct: number }>
   'seat-opponent-0': { leftPct: 20.5, topPct: 15.9 },
   'seat-opponent-1': { leftPct: 50, topPct: 9.9 },
   'seat-opponent-2': { leftPct: 79.5, topPct: 15.9 },
-  'community-0': { leftPct: 32.3, topPct: 48.2 },
-  'community-1': { leftPct: 41.2, topPct: 48.2 },
-  'community-2': { leftPct: 50, topPct: 48.2 },
-  'community-3': { leftPct: 58.8, topPct: 48.2 },
-  'community-4': { leftPct: 67.7, topPct: 48.2 },
+  'community-0': { leftPct: 32.3, topPct: 45.2 },
+  'community-1': { leftPct: 41.2, topPct: 45.2 },
+  'community-2': { leftPct: 50, topPct: 45.2 },
+  'community-3': { leftPct: 58.8, topPct: 45.2 },
+  'community-4': { leftPct: 67.7, topPct: 45.2 },
   'deck-origin': { leftPct: 93.1, topPct: 46.9 },
 };
 

@@ -365,7 +365,10 @@ h2 {
 }
 .community-area {
   position: absolute;
-  top: 40%; /* re-centred for the enlarged felt; the hero clearance below is now ~116px */
+  top: 37%; /* raised 3% (within the documented +/-2%..3% fine-tuning budget) to open the
+              bottom-left pocket for the floating action cluster — the ellipse, the 552px
+              community row and the hero seat bound that pocket on three sides, and the
+              cluster needs ~115px of height between them. */
   left: 50%;
   transform: translateX(-50%);
   z-index: var(--z-community);
@@ -528,6 +531,24 @@ h2 {
   gap: 8px;
 }
 
+/* Inside the floating cluster the groups must actually honour its width cap. A flex item's
+ * default `min-width: auto` refuses to shrink below its content, so without this the rows
+ * overflow the cap rightward — into the hero seat — instead of wrapping downward.
+ *
+ * The pocket this cluster lives in is small and hard-bounded on three sides, which is why the
+ * padding here is tighter than the shipped control padding: the ellipse's lower-left curve
+ * limits the left edge (below y~430 the green starts moving RIGHT again), the 552px community
+ * row caps the height from above, and the hero seat caps the width from the right. Two rows at
+ * this padding is what fits; three rows reaches the community, and wider reaches the seat. */
+.felt-controls .control-group {
+  min-width: 0;
+  gap: 6px;
+}
+
+.felt-controls button {
+  padding-inline: 10px;
+}
+
 /* ---------------------------------------------------------------------------
  * The action cluster, floating on the felt at its bottom-left.
  *
@@ -576,14 +597,20 @@ h2 {
  * ------------------------------------------------------------------------- */
 .felt-controls {
   position: absolute;
-  left: 14%;
-  max-width: 26%;
+  /* MEASURED, not derived: at the felt's real rendered width (911px, narrower than the
+   * 1040 reference because the odds cluster takes its share) the previous left:14% /
+   * max-width:26% put the cluster's right edge at x=375 against a hero seat starting at
+   * x=365 — a real 10px x 62px collision, not merely a tight fit. Percentage caps do not
+   * bind on flex items whose content cannot shrink, which is why `min-width: 0` below is
+   * load-bearing rather than decorative. */
+  left: 13%;
+  max-width: 27%;
   z-index: var(--z-felt-controls);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 6px 8px;
   border-radius: 12px;
   background: var(--seat-badge-bg);
   color: var(--seat-badge-text);

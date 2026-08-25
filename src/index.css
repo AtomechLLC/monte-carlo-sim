@@ -64,20 +64,18 @@
    * nothing in the animation choreography contract. */
   --elev-settle: 180ms;
 
-  /* Phase 3 (03-01): card art tokens. Mode-independent — card widths and the card-back recolour
-   * are properties of the physical deck, not of the app's theme.
+  /* Phase 3 (03-01): card art tokens. Mode-independent — card widths are properties of the
+   * physical deck, not of the app's theme.
    *
-   * The `sepia(1)` is LOAD-BEARING and must not be "simplified" away. public/cards/back.svg is
-   * pure black-on-white (a black diamond lattice on a white rect), and `hue-rotate` is a matrix
-   * rotation in colour space: on a fully desaturated source it is a NO-OP. The filter this
-   * replaces — `hue-rotate(200deg) saturate(1.4) brightness(0.95)` — therefore never tinted
-   * anything in its life; it only dimmed the back slightly, and the intended blue never
-   * appeared. Introducing a hue with `sepia()` first is what gives the later rotation something
-   * to rotate. Pinned by depthTypography.guard.test.ts.
-   *
-   * The result is a burgundy back: it reads as a real casino deck against the green felt, and
-   * shares the warm end of the palette with the brass accent instead of fighting it. */
-  --card-back-filter: sepia(1) saturate(4.5) hue-rotate(310deg) brightness(0.72) contrast(1.15);
+   * --card-back-filter is now `none`, and that is the END of a two-step story worth keeping:
+   * the back art used to be pure black-on-white, and the shipped filter tried to tint it with
+   * `hue-rotate`, which is a rotation in colour space and therefore a NO-OP on a desaturated
+   * source — it never tinted anything, it only dimmed. A `sepia()` prefix fixed that by
+   * introducing a hue to rotate. The deck has since been regenerated with `backcolour` set at
+   * the source (see public/cards/PROVENANCE.md), so the back arrives burgundy already and any
+   * filter would now be a SECOND tint stacked on the first. Kept as a token rather than
+   * deleted so the card-back recolour still has one named place to live. */
+  --card-back-filter: none;
   --card-w-hero: 88px;
   --card-w-opponent: 64px;
   --card-w-community: 76px;

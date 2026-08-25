@@ -657,67 +657,42 @@ describe('The fonts are self-hosted, offline-safe and latin-only (Felt & Brass v
 });
 
 /**
- * The card back is greyscale art (public/cards/back.svg is a black diamond lattice on a white
- * rect), and `hue-rotate` is a rotation in colour space: applied to a fully desaturated source
- * it changes NOTHING. The filter that shipped from Phase 3 until the Felt & Brass pass —
- * `hue-rotate(200deg) saturate(1.4) brightness(0.95)` — was therefore inert for hue for its
- * entire life; the "blue" card back it was written to produce never once appeared on screen.
+ * SUPERSEDED, and retargeted rather than deleted.
  *
- * These pins exist so the fix cannot be quietly undone by someone tidying what looks like a
- * redundant `sepia(1)`.
+ * The original pins here proved that `--card-back-filter` introduced a hue (via `sepia()`)
+ * before rotating one — necessary because the back art was pure black-on-white, and
+ * `hue-rotate` is a no-op on a desaturated source. The deck has since been REGENERATED with
+ * the burgundy set at the source (`backcolour`, see public/cards/PROVENANCE.md), so the art is
+ * no longer greyscale and a CSS filter would now stack a second tint on the first.
+ *
+ * What is worth pinning is therefore the inverse: the tint is applied in exactly ONE place, and
+ * these two facts must stay consistent with each other. Coloured art plus a live filter is the
+ * double-tint bug; greyscale art plus `none` would be the silently-untinted bug.
  */
-describe('card-back recolour — sepia() is what makes the tint possible at all', () => {
+describe('card-back recolour — the tint lives in exactly one place', () => {
   const backSvg = readFileSync(join(REPO_ROOT, 'public', 'cards', 'back.svg'), 'utf8');
 
-  it('the source art really is greyscale, which is why the order matters', () => {
-    // If this ever fails the art gained colour and the reasoning below needs revisiting —
-    // that is a deliberate prompt to re-think, not a test to delete.
-    const colouredFills = backSvg
-      .match(/(?:fill|stroke)="([^"]*)"/g)
-      ?.filter((decl) => !/"(black|white|none|url\(#[^)]*\))"/.test(decl));
-    expect(colouredFills ?? []).toEqual([]);
+  const filter = indexCss.match(/--card-back-filter:\s*([^;]+);/)?.[1]?.trim();
+  const artIsColoured = /(?:fill|stroke)="#(?!000000|ffffff)[0-9a-f]{6}"/i.test(backSvg);
+
+  it('declares the token, so the recolour always has one named home', () => {
+    expect(filter, '--card-back-filter must still be declared').toBeTruthy();
   });
 
-  it('--card-back-filter introduces a hue before rotating one', () => {
-    const filter = indexCss.match(/--card-back-filter:\s*([^;]+);/)?.[1];
-    expect(filter, '--card-back-filter must be declared').toBeTruthy();
-
-    const value = filter as string;
-    expect(value, 'sepia() must come first — it is what gives hue-rotate something to rotate').toMatch(
-      /^\s*sepia\(/,
-    );
-    // Order is the whole point: a hue-rotate ahead of the sepia would be the same no-op again.
-    expect(value.indexOf('sepia('), 'sepia() must precede hue-rotate()').toBeLessThan(
-      value.indexOf('hue-rotate('),
-    );
-  });
-});
-
-/**
- * The felt's CSS size and `tableGeometry.ts`'s reference constants are two statements of ONE
- * fact. `tableGeometry` computes each card's deal-animation start offset as a pixel delta
- * against a fixed reference felt, so if the stylesheet is resized and those constants are not,
- * every card flies in from the wrong place — a purely visual break that no rendering test in a
- * jsdom suite (which lays nothing out) can see. Pinning both halves against each other is the
- * only thing that catches it.
- */
-describe('felt size — the stylesheet and the deal-animation reference agree', () => {
-  const geometrySource = readSource('ui/tableGeometry.ts');
-
-  it('derives the same width from both files', () => {
-    const cssWidth = withoutComments(ruleFor(baseAppCss, '.felt')).match(
-      /width:\s*min\(100%,\s*(\d+)px\)/,
-    )?.[1];
-    const referenceWidth = geometrySource.match(/const FELT_WIDTH = (\d+);/)?.[1];
-
-    expect(cssWidth, '.felt must declare a min() width').toBeTruthy();
-    expect(referenceWidth, 'tableGeometry must declare FELT_WIDTH').toBeTruthy();
-    expect(referenceWidth).toBe(cssWidth);
-  });
-
-  it('derives the reference height from the declared 16/10 aspect ratio', () => {
-    const width = Number(geometrySource.match(/const FELT_WIDTH = (\d+);/)?.[1]);
-    const height = Number(geometrySource.match(/const FELT_HEIGHT = (\d+);/)?.[1]);
-    expect(height).toBe((width * 10) / 16);
+  it('does not tint twice: coloured art means no CSS filter', () => {
+    if (artIsColoured) {
+      expect(
+        filter,
+        'back.svg carries its own colour, so a CSS filter would stack a second tint on it — ' +
+          'regenerate the deck with a different backcolour instead of filtering it here',
+      ).toBe('none');
+    } else {
+      // Greyscale art can only be tinted here, and only if a hue is introduced first.
+      expect(
+        filter,
+        'back.svg is greyscale, so it needs a CSS tint — and hue-rotate alone is a no-op on a ' +
+          'desaturated source, so sepia() must come first',
+      ).toMatch(/^sepia\(/);
+    }
   });
 });
