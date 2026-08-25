@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { GameModeSwitcher } from './GameModeSwitcher';
 import { BlackjackControls } from './BlackjackControls';
 import { BlackjackTable } from './BlackjackTable';
 import { BlackjackOddsPanel } from './BlackjackOddsPanel';
@@ -215,8 +214,13 @@ export function BlackjackGame() {
           </p>
         </div>
       )}
+      {/* Control bar, reorganized 260825 at the user's request, kept coherent with Hold'em's:
+          row 1 is session/context (game-mode switcher + shoe size, the two controls that
+          persist across rounds), row 2 is the hand (Deal / Hit / Stand). Both rows are emitted
+          by <BlackjackControls /> — see that file's doc comment for why the switcher moved
+          inside it (Phase 8 SC1 pins the deck-toggle call site to that file, and the two
+          controls have to share a row). */}
       <div className="control-bar">
-        <GameModeSwitcher />
         <BlackjackControls />
       </div>
       <div className="table-row">

@@ -1,17 +1,39 @@
 import { useBlackjackStore } from '../state/blackjackStore';
 import { hasPhysicalDuplicate } from '../engine/blackjackConditioning';
 import { DeckCountToggle } from './DeckCountToggle';
+import { GameModeSwitcher } from './GameModeSwitcher';
 
 /** Locked A3 duplicate-guard `title` (06-UI-SPEC Copywriting Contract — verbatim). */
 const DUPLICATE_GUARD_TITLE = 'The dealt cards include a duplicate — impossible with one deck';
 
 /**
- * The Blackjack control cluster (BJ-05, BJ-07): Deal / Hit / Stand plus the blackjack-local
- * deck-count segmented toggle. Reads ONLY `useBlackjackStore` (D-10) — no Hold'em store, no
- * odds store, and no animation-gate store: the gate is armed by the blackjack store's own
- * actions, never from here (the mode-shell guard pins these absences at source level). The
- * reveal button deliberately does NOT live here — it wraps the hole card itself inside the
- * dealer area (plan 06-05), because its whole affordance IS the card.
+ * The Blackjack control BAR (BJ-05, BJ-07): the game-mode switcher and the blackjack-local
+ * deck-count toggle on the session row, Deal / Hit / Stand on the hand row. Reads ONLY
+ * `useBlackjackStore` (D-10) — no Hold'em state, no odds state, and no animation-gate state:
+ * the gate is armed by the blackjack store's own actions, never from here (the mode-shell guard
+ * pins these absences at source level, by sweeping this file's RAW text for the forbidden
+ * module names — which is why the prose here names none of them). The reveal button
+ * deliberately does NOT live here — it wraps the hole card itself inside the dealer area
+ * (plan 06-05), because its whole affordance IS the card.
+ *
+ * WHY THE SWITCHER MOVED HERE (control-bar reorganization, 260825). The reorganization puts the
+ * two cross-hand "what am I playing" controls — the game-mode switcher and the shoe size — on
+ * one row together, in both games. `<BlackjackGame />` used to render the switcher; Phase 8's
+ * SC1 pins require the deck-toggle call site (with its contractual `blackjack-deck-toggle`
+ * prefix and its A3 guard predicate) to stay in THIS file. Short of a portal, one row holding
+ * both means this component owns both rows, so `<BlackjackGame />`'s bar is now just
+ * `<div className="control-bar"><BlackjackControls /></div>`.
+ *
+ * That costs none of the isolation the guards protect: rendering a shared, self-contained
+ * cross-game control is not reading state, and every D-05/D-10 sweep over this file still holds
+ * verbatim — the only store it touches is still `useBlackjackStore`.
+ *
+ * Note the asymmetry with Hold'em's transport group: the row and cluster wrappers below are
+ * plain class-only divs, because the SC1 pin also forbids grouping-role markup in this file in
+ * ANY quoting style (that pin is how the deck-toggle extraction's single-source claim is
+ * enforced). Nothing is lost — an unnamed grouping role adds nothing to the accessibility tree,
+ * and both segmented controls already carry their own named one from inside the shared
+ * components that render them.
  */
 export function BlackjackControls() {
   const roundPhase = useBlackjackStore((state) => state.roundPhase);
@@ -50,33 +72,40 @@ export function BlackjackControls() {
 
   return (
     <>
-      {/* A2 (06-UI-SPEC, planner decision recorded): Deal is NEVER disabled, in any round
-          phase — a mid-round click silently abandons the current round and deals a new one,
-          matching Phase 3's re-deal-during-animation precedent (03-CONTEXT D-10). A
-          confirmation dialog here would violate both the app's silent-system-behaviour
-          precedent and the copy block-list ("Cancel"/"OK"), and blackjack has no rewind, so
-          Deal-as-escape-hatch is the only way out of a round the user has lost interest in. */}
-      <button type="button" data-testid="blackjack-deal-button" onClick={deal}>
-        Deal
-      </button>
-      <button type="button" data-testid="blackjack-hit-button" disabled={actionsDisabled} onClick={hit}>
-        Hit
-      </button>
-      <button type="button" data-testid="blackjack-stand-button" disabled={actionsDisabled} onClick={stand}>
-        Stand
-      </button>
-      {/* Shared segmented control (Phase 8 D-01, SC1): the markup lives in DeckCountToggle;
-          the A3 guard predicate above and the locked title computation stay at this call
-          site, passed pre-computed — the shared component owns no game logic. The first
-          segment ONLY can ever disable (06-REVIEW WR-01: the hidden hole counts — it is a
-          dealt card), and the second segment never carries a title in any state. */}
-      <DeckCountToggle
-        testidPrefix="blackjack-deck-toggle"
-        deckCount={deckCount}
-        onSelect={setDeckCount}
-        oneDeckDisabled={duplicateOnTable}
-        oneDeckTitle={duplicateOnTable ? DUPLICATE_GUARD_TITLE : undefined}
-      />
+      <div className="control-bar__row control-bar__row--session">
+        <GameModeSwitcher />
+        {/* Shared segmented control (Phase 8 D-01, SC1): the markup lives in DeckCountToggle;
+            the A3 guard predicate above and the locked title computation stay at this call
+            site, passed pre-computed — the shared component owns no game logic. The first
+            segment ONLY can ever disable (06-REVIEW WR-01: the hidden hole counts — it is a
+            dealt card), and the second segment never carries a title in any state. */}
+        <DeckCountToggle
+          testidPrefix="blackjack-deck-toggle"
+          deckCount={deckCount}
+          onSelect={setDeckCount}
+          oneDeckDisabled={duplicateOnTable}
+          oneDeckTitle={duplicateOnTable ? DUPLICATE_GUARD_TITLE : undefined}
+        />
+      </div>
+      <div className="control-bar__row control-bar__row--hand">
+        <div className="control-group control-group--hand-actions">
+          {/* A2 (06-UI-SPEC, planner decision recorded): Deal is NEVER disabled, in any round
+              phase — a mid-round click silently abandons the current round and deals a new one,
+              matching Phase 3's re-deal-during-animation precedent (03-CONTEXT D-10). A
+              confirmation dialog here would violate both the app's silent-system-behaviour
+              precedent and the copy block-list ("Cancel"/"OK"), and blackjack has no rewind, so
+              Deal-as-escape-hatch is the only way out of a round the user has lost interest in. */}
+          <button type="button" data-testid="blackjack-deal-button" onClick={deal}>
+            Deal
+          </button>
+          <button type="button" data-testid="blackjack-hit-button" disabled={actionsDisabled} onClick={hit}>
+            Hit
+          </button>
+          <button type="button" data-testid="blackjack-stand-button" disabled={actionsDisabled} onClick={stand}>
+            Stand
+          </button>
+        </div>
+      </div>
     </>
   );
 }
