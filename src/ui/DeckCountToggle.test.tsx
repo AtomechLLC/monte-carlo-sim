@@ -48,6 +48,11 @@ describe('DeckCountToggle — the shared, props-only deck-count control (Phase 8
     const wrapper = screen.getByTestId(PREFIX);
     expect(wrapper).toHaveAttribute('role', 'group');
     expect(wrapper).toHaveAttribute('aria-label', 'Deck count');
+    // The literal markup string below is deliberate, and it is the reason the SC1
+    // single-source-of-markup sweep in src/App.modeShell.guard.test.ts excludes *.test.tsx:
+    // written this way, that exclusion is genuinely EXERCISED by this file rather than
+    // passing only because no test happened to contain the string.
+    expect(wrapper.outerHTML).toContain('aria-label="Deck count"');
     // The wrapper's children ARE the two segments, in the locked order — asserted as the
     // rendered testid values, not as mere presence (D-09).
     expect(Array.from(wrapper.children).map((child) => child.getAttribute('data-testid'))).toEqual([
