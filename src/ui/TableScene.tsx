@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { HandDisplay } from './HandDisplay';
 import { BoardDisplay } from './BoardDisplay';
 import { CardBack } from './CardBack';
@@ -13,8 +13,16 @@ import { useUiStore } from '../state/uiStore';
  * `TableScene` is the common ancestor of every animated card, and React flushes passive effects
  * child-first, so by the time this effect runs every card that mounted in this commit has
  * already registered with the gate. This is the ONLY store state this component may read.
+ *
+ * `children` (260825) is the slot for on-felt chrome — today the action cluster that floats at
+ * the table's bottom-left, at the user's request. It is a SLOT rather than a component this
+ * file imports, deliberately: `.felt` is the positioning ancestor every on-table element is
+ * anchored against, so anything floating on the table has to be a DOM child of it, but the
+ * cluster's contents are Hold'em game state (deal, streets, the picker disclosure) and must not
+ * become something this pure layout shell knows about. The store-reads rule above is unchanged
+ * — a slot carries no state.
  */
-export function TableScene() {
+export function TableScene({ children }: { children?: ReactNode }) {
   const dealNonce = useGameStore((state) => state.dealNonce);
   const street = useGameStore((state) => state.street);
   const revealedMask = useGameStore((state) => state.revealedMask);
@@ -52,6 +60,7 @@ export function TableScene() {
         <CardBack />
         <CardBack />
       </div>
+      {children}
     </div>
   );
 }

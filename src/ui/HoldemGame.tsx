@@ -29,14 +29,18 @@ const DUPLICATE_PICK_GUARD_TITLE =
 /**
  * The Hold'em game root (D-07, 05-REVIEW WR-03): every Hold'em-scoped effect, state field and
  * JSX block extracted verbatim from App.tsx, so both games are sibling components under the
- * shell's mode fork. Renders its own control bar with <GameModeSwitcher /> leading it.
+ * shell's mode fork. Its controls are split by what they act on, and placed relative to the felt
+ * accordingly (260825, at the user's request): a session bar ABOVE the table (<GameModeSwitcher
+ * /> leading it, then the shoe — the two things that persist across hands), and the action
+ * cluster FLOATING ON the felt at its bottom-left (Deal / Set Up Scenario and the street
+ * transport — the things that act on the hand in front of you).
  *
- * D-08's original wording ("as the first child, keeping the shipped Hold'em DOM order
- * byte-equivalent to the pre-extraction App.tsx") described the flat single-row bar, which the
- * 260825 reorganization deliberately replaced at the user's request. The switcher is still the
- * bar's first control in reading order; it is now the first child of the session ROW rather
- * than of the bar itself. What D-08 was protecting — that the extraction changed no rendered
- * output — was verified at the time and is not what this later, explicit redesign undoes.
+ * D-08's original wording ("<GameModeSwitcher /> as the first child [of the control bar],
+ * keeping the shipped Hold'em DOM order byte-equivalent to the pre-extraction App.tsx")
+ * described the single flat bar that the reorganization deliberately replaced. The switcher is
+ * still the first control in the page's reading order; it is now the first child of the session
+ * BAR. What D-08 was protecting — that the Phase 6 extraction itself changed no rendered output
+ * — was verified at the time and is not what this later, explicit redesign undoes.
  */
 export function HoldemGame() {
   const runout = useGameStore((state) => state.runout);
@@ -215,28 +219,22 @@ export function HoldemGame() {
           </p>
         </div>
       )}
-      {/* Control bar, reorganized 260825 at the user's request ("the controls for running the
-          simulator are haphazard"). Two rows, grouped by WHAT A CONTROL DOES rather than one
-          flat undifferentiated flex line of five unrelated things:
+      {/* SESSION BAR — above the felt (reorganized 260825 at the user's request: "leave the
+          mode buttons above it", the table).
 
-            Row 1 — session/context: which game, which shoe. Both persist across hands, so
-            neither belongs beside the per-hand actions. Space-between pushes the shoe to the
-            far edge; the two segmented controls bracket the row.
-
-            Row 2 — the hand: the actions that operate on the hand currently on the table —
-            the Deal/Set Up Scenario pair, then a DECORATIVE CSS separator (a border-left on
-            the second group; never a text character, never an element, never focusable), then
-            the street transport.
+          What lives here is everything that answers "what am I playing": which game, and which
+          shoe. Both persist across hands, neither acts on the hand on the table, so both stay
+          above it. Space-between pushes the shoe to the far edge and lets the two segmented
+          controls bracket the row.
 
           Structure only. Every handler, disabled rule, copy string, testid and order of
-          operations below is exactly what shipped — this changed where controls sit, not what
-          they do. */}
-      <div className="control-bar">
-        <div className="control-bar__row control-bar__row--session">
-          <GameModeSwitcher />
-          {/* Shared segmented control (Phase 8 D-01, SC1 — the session row's last child,
-            UI-SPEC A2 as retargeted by the 260825 reorganization; it was the last control-bar
-            child when the bar was one flat row):
+          operations is exactly what shipped — this changed where controls sit, not what they
+          do. */}
+      <div className="control-bar control-bar--session">
+        <GameModeSwitcher />
+        {/* Shared segmented control (Phase 8 D-01, SC1 — the session bar's last child, UI-SPEC
+            A2 as retargeted by the 260825 reorganization; it was the last child of the single
+            flat control bar that existed when A2 was written):
             the markup lives in DeckCountToggle; the A4 guard predicate and both pre-computed
             titles — including the A4-beats-A3 precedence on the first segment — stay at this
             call site. There is deliberately NO confirmation dialog for the mid-hand path (A3):
@@ -249,46 +247,67 @@ export function HoldemGame() {
             active-segment-no-op invariants this comment used to restate are properties of the
             shared component and now live once, in DeckCountToggle's doc comment — matching how
             BlackjackControls' call-site comment was trimmed in the extraction commit.) */}
-          <DeckCountToggle
-            testidPrefix="holdem-deck-toggle"
-            deckCount={deckCount}
-            onSelect={setDeckCount}
-            oneDeckDisabled={duplicateInPicks}
-            oneDeckTitle={
-              duplicateInPicks
-                ? DUPLICATE_PICK_GUARD_TITLE
-                : deckCount === 2 && runout !== null
-                  ? FRESH_DEAL_TITLE
-                  : undefined
-            }
-            twoDecksTitle={deckCount === 1 && runout !== null ? FRESH_DEAL_TITLE : undefined}
-          />
-        </div>
-        <div className="control-bar__row control-bar__row--hand">
-          <div className="control-group control-group--hand-actions">
-            <DealButton />
-            <button
-              type="button"
-              data-testid="set-up-scenario-button"
-              aria-expanded={scenarioOpen}
-              aria-controls={CARD_PICKER_REGION_ID}
-              onClick={() => setScenarioOpen((open) => !open)}
-            >
-              Set Up Scenario
-            </button>
-          </div>
-          <StreetControls />
-        </div>
+        <DeckCountToggle
+          testidPrefix="holdem-deck-toggle"
+          deckCount={deckCount}
+          onSelect={setDeckCount}
+          oneDeckDisabled={duplicateInPicks}
+          oneDeckTitle={
+            duplicateInPicks
+              ? DUPLICATE_PICK_GUARD_TITLE
+              : deckCount === 2 && runout !== null
+                ? FRESH_DEAL_TITLE
+                : undefined
+          }
+          twoDecksTitle={deckCount === 1 && runout !== null ? FRESH_DEAL_TITLE : undefined}
+        />
       </div>
+      <div className="table-row">
+        {/* ACTION CLUSTER — floating ON the felt, anchored bottom-left (260825, at the user's
+            request: "move the action buttons to float over the bottom left of the table").
+
+            It is passed to <TableScene /> as its on-felt chrome slot because `.felt` is the
+            positioning ancestor every on-table element anchors against — the seats, the
+            community row and the deck all use the same discipline. That makes `.felt` the
+            cluster's DOM PARENT, which is a real structural change: anything that asserted
+            these controls were control-bar members has been retargeted (see
+            App.controlBarGrouping.test.tsx and App.modeSwitch.test.tsx's felt-subtree census).
+
+            Placement is percentage offsets against `.felt`, and the felt is an ELLIPSE, so a
+            literal bottom-left corner would be off the table — see the `.felt-controls` block
+            in App.css for the geometry that keeps the whole cluster on the green and clear of
+            the hero seat.
+
+            Structure only: same handlers, same disabled logic, same copy, same testids. */}
+        <TableScene>
+          <div className="felt-controls felt-controls--holdem">
+            <div className="control-group control-group--hand-actions">
+              <DealButton />
+              <button
+                type="button"
+                data-testid="set-up-scenario-button"
+                aria-expanded={scenarioOpen}
+                aria-controls={CARD_PICKER_REGION_ID}
+                onClick={() => setScenarioOpen((open) => !open)}
+              >
+                Set Up Scenario
+              </button>
+            </div>
+            <StreetControls />
+          </div>
+        </TableScene>
+        <OddsPanel />
+      </div>
+      {/* The picker follows its own trigger. It used to sit ABOVE the felt, back when the
+          button that discloses it did too; now that the trigger floats on the table, the panel
+          reads after it — `aria-controls`/`aria-expanded` describe a relationship that document
+          order should reflect, and a full-width picker panel cannot itself live on the felt.
+          Its `id`, its testids and its markup are untouched. */}
       {scenarioOpen && (
         <div id={CARD_PICKER_REGION_ID}>
           <CardPicker />
         </div>
       )}
-      <div className="table-row">
-        <TableScene />
-        <OddsPanel />
-      </div>
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { BlackjackControls } from './BlackjackControls';
+import { GameModeSwitcher } from './GameModeSwitcher';
+import { BlackjackControls, BlackjackSessionControls } from './BlackjackControls';
 import { BlackjackTable } from './BlackjackTable';
 import { BlackjackOddsPanel } from './BlackjackOddsPanel';
 import { useBlackjackStore } from '../state/blackjackStore';
@@ -214,17 +215,22 @@ export function BlackjackGame() {
           </p>
         </div>
       )}
-      {/* Control bar, reorganized 260825 at the user's request, kept coherent with Hold'em's:
-          row 1 is session/context (game-mode switcher + shoe size, the two controls that
-          persist across rounds), row 2 is the hand (Deal / Hit / Stand). Both rows are emitted
-          by <BlackjackControls /> — see that file's doc comment for why the switcher moved
-          inside it (Phase 8 SC1 pins the deck-toggle call site to that file, and the two
-          controls have to share a row). */}
-      <div className="control-bar">
-        <BlackjackControls />
+      {/* Controls, reorganized 260825 at the user's request and kept coherent with Hold'em's:
+          split by what they act on, and placed where they act. Above the felt, the two things
+          that persist across rounds and touch no card on the table — the game-mode switcher and
+          the shoe. */}
+      <div className="control-bar control-bar--session">
+        <GameModeSwitcher />
+        <BlackjackSessionControls />
       </div>
       <div className="table-row">
-        <BlackjackTable />
+        {/* …and floating ON the felt at its bottom-left, the round's actions, passed to the
+            table's on-felt chrome slot (`.felt` is the positioning ancestor every on-table
+            element anchors against, so this makes it their DOM parent — App.modeSwitch.test.tsx's
+            felt-subtree control census was retargeted for exactly that reason). */}
+        <BlackjackTable>
+          <BlackjackControls />
+        </BlackjackTable>
         <BlackjackOddsPanel />
       </div>
     </>

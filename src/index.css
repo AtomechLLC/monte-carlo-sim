@@ -112,6 +112,20 @@
   /* Phase 6 (06-05): the blackjack outcome banner — above settled cards (--z-seat: 2) and
    * badges (--z-seat-label: 3), below any in-flight card (--z-in-flight: 50). */
   --z-outcome: 4;
+  /* 260825: the action cluster that floats on the felt, bottom-left. Deliberately the SAME
+   * LEVEL as --z-outcome rather than a fourth step — this scale already names two roles at one
+   * value (--z-deck and --z-community are both 1), because a token here names WHAT a thing is,
+   * not just how high it sits. Both are chrome laid over the table, they never overlap (the
+   * banner is centred at top 40%, this cluster is bottom-left), and giving the controls their
+   * own name keeps a future move of either from silently dragging the other with it.
+   *
+   * Honest note on "below --z-in-flight": that ordering holds only where the two are siblings
+   * in the same stacking context. An in-flight card carries z-index 50 INSIDE its seat's own
+   * context (.seat-hero and friends are positioned with a z-index, so they establish one), so
+   * across contexts the seat's 2 is what actually competes with this 4. The cluster is placed
+   * clear of every deal path — the deck sits far right and the seats are centre/top — so no
+   * flying card passes through its box; the placement, not the number, is what guarantees it. */
+  --z-felt-controls: 4;
   --z-in-flight: 50;
 
   /* -------------------------------------------------------------------------

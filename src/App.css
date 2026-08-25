@@ -487,42 +487,36 @@ h2 {
 }
 
 /* ---------------------------------------------------------------------------
- * Control bar (reorganized 260825, at the user's request: "the controls for
- * running the simulator are haphazard, please reorganize the UI").
+ * Controls, reorganized 260825 at the user's request — first "the controls for
+ * running the simulator are haphazard, please reorganize the UI", then the
+ * placement that settled it: "leave the mode buttons above [the table]" and
+ * "move the action buttons to float over the bottom left of the table".
  *
- * It used to be ONE flat wrapping row holding five unrelated controls, so
+ * There used to be ONE flat wrapping row holding five unrelated controls, so
  * choosing a game, starting a hand and stepping through streets all read as
- * the same kind of action. It is now a COLUMN of two purpose-grouped rows,
- * identical in both games:
+ * the same kind of action. They are now split by WHAT THEY ACT ON, and each
+ * half is placed where it acts — the same split in both games:
  *
- *   .control-bar__row--session   what am I playing — game-mode switcher and
- *                                shoe size; both persist across hands, so the
- *                                row pushes them to opposite edges.
- *   .control-bar__row--hand      what am I doing to the hand on the table —
- *                                the Deal cluster, then (Hold'em) the street
- *                                transport, with a decorative rule between.
+ *   .control-bar--session   above the felt: game-mode switcher and shoe size,
+ *                           the two things that persist across hands and touch
+ *                           no card on the table. Pushed to opposite edges.
+ *   .felt-controls          ON the felt, bottom-left: the things that act on
+ *                           the hand in front of you (see the block below).
  *
- * `md` (16px) between the rows so the two purposes read as separate; `sm`
- * (8px) within a row and within a group, which is the shipped rhythm. Nothing
- * here animates, so there is nothing for the reduced-motion query to opt out
- * of. No new colour, no new type size or weight.
+ * `sm` (8px) within a bar and within a group, which is the shipped rhythm.
+ * Nothing here animates, so there is nothing for the reduced-motion query to
+ * opt out of. No new colour, no new type size or weight.
  * ------------------------------------------------------------------------- */
 .control-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.control-bar__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  margin-top: 16px;
 }
 
 /* Session/context: the switcher anchors the left edge, the shoe the right. */
-.control-bar__row--session {
+.control-bar--session {
   justify-content: space-between;
 }
 
@@ -534,34 +528,114 @@ h2 {
   gap: 8px;
 }
 
+/* ---------------------------------------------------------------------------
+ * The action cluster, floating on the felt at its bottom-left.
+ *
+ * GEOMETRY — why these two percentages and not "bottom: 0; left: 0".
+ *
+ * `.felt` is an ELLIPSE (border-radius: 50%), so its bounding box's bottom-left
+ * corner is off the table entirely. Working in the reference felt's own units
+ * (1040 x 650, semi-axes a=520 b=325, centred), a point is on the green when
+ * ((x-520)/520)^2 + ((y-325)/325)^2 < 1, and the shipped 12px rail ring eats a
+ * further margin inside that curve.
+ *
+ * Anchoring at left:14% / bottom:20% puts the cluster's bottom-left corner at
+ * (145.6, 520): 0.49 + 0.36 = 0.85 of the way out, i.e. comfortably inside the
+ * curve with ~40px of green between the corner and the rail. The band it
+ * occupies is also the widest part of the table's lower half — at that height
+ * the green spans x = 104..936, against x = 374..666 down at the very bottom,
+ * which is why "lower" would have been much worse, not better.
+ *
+ * CLEARANCES, at the reference size:
+ *   hero seat      starts at x=430 (bottom-centre, 180px of cards). The cluster
+ *                  runs to ~x=392 at its natural width, and `max-width: 26%`
+ *                  caps it at x=416 even if the labels render wider than
+ *                  measured — so it cannot grow into the seat.
+ *   community row  ends at y=366; the cluster's top sits at ~y=408.
+ *   opponents      top 9%, and the deck is far right at left:90% — nowhere near.
+ * Blackjack's cluster is shorter (one row) and sits higher still, so it clears
+ * a wide multi-card player hand at bottom-centre; see its modifier below.
+ *
+ * The inner groups wrap, deliberately: if the labels do render wider than
+ * measured, the cluster grows DOWNWARD (where there is headroom) rather than
+ * rightward into the hero seat.
+ *
+ * LEGIBILITY — the buttons used to sit on the dark page ground and now sit on
+ * lit green, so the cluster takes its own surface: `--seat-badge-bg`, the
+ * token that exists for exactly this (UI on the felt), with `--seat-badge-text`
+ * for anything plain inside it. Measured against the composited surface at
+ * this position (rgba(0,0,0,0.45) over the felt gradient's outer end, #072214,
+ * through to #0E3320 nearer the centre): white 16.8:1 -> 13.9:1, and the
+ * street label's reserved brass 7.0:1 -> 5.7:1 — all clear AA, white clear
+ * AAA. No new colour token, and the accent budget is untouched: the label's
+ * `var(--accent)` rule is the shipped one, and every selector here is lower
+ * specificity than it, so Advance and the street label keep their brass.
+ *
+ * `--elev-raised` is what makes the cluster read as floating above the table
+ * rather than printed on it, which over a lit felt is the whole illusion.
+ * ------------------------------------------------------------------------- */
+.felt-controls {
+  position: absolute;
+  left: 14%;
+  max-width: 26%;
+  z-index: var(--z-felt-controls);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--seat-badge-bg);
+  color: var(--seat-badge-text);
+  box-shadow: var(--elev-raised);
+}
+
+/* Hold'em carries two rows (the Deal pair, then the transport), so it sits
+ * lower to keep its top clear of the community row. */
+.felt-controls--holdem {
+  bottom: 20%;
+}
+
+/* Blackjack carries one row, and the player's hand at bottom-centre can reach
+ * five or six cards wide (x=292..748 at five), whose tops reach y=507. Sitting
+ * higher — bottom edge y=481 — clears that entirely rather than by a sliver. */
+.felt-controls--blackjack {
+  bottom: 26%;
+}
+
 /* The separator between the hand actions and the street transport. It is
  * DECORATIVE and therefore drawn in CSS as a border on the second group —
  * never a text character (which a screen reader would read out) and never an
  * element (which could take focus or a tab stop). Written as `+` so it is
- * self-limiting: Blackjack's hand row has a single group and draws nothing. */
-.control-bar__row--hand > .control-group + .control-group {
-  padding-left: 8px;
-  border-left: 1px solid var(--border);
+ * self-limiting: Blackjack's cluster has a single group and draws nothing.
+ *
+ * A block-start border rather than an inline-start one, because the cluster
+ * stacks its groups vertically — the rule still separates "start a hand" from
+ * "step through it", which is what it is for. */
+.felt-controls > .control-group + .control-group {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
-/* 44px minimum hit area (UI-SPEC D-06 / Spacing Scale exceptions) on the bar's
- * plain action buttons — Deal (no testid of its own), Set Up Scenario,
- * Blackjack's Deal/Hit/Stand, and now Rewind/Advance, whose own testid-scoped
- * rule above declares byte-identical values so nothing moves.
+/* 44px minimum hit area (UI-SPEC D-06 / Spacing Scale exceptions) on the plain
+ * action buttons — Deal (no testid of its own), Set Up Scenario, Blackjack's
+ * Deal/Hit/Stand, and now Rewind/Advance, whose own testid-scoped rule above
+ * declares byte-identical values so nothing moves.
  *
  * RE-ANCHORED (260825) from the shipped `.control-bar > button`, which the
- * reorganization would otherwise have silently orphaned by nesting every
- * button one or two levels deeper. Deliberately NOT widened to the descendant
- * selector `.control-bar button`: that would also reach the SEGMENTS of the
- * two segmented controls, and at (0,1,1) it would out-specify their own
- * `[data-testid^='...']` rule (0,1,0) and reflow both of them from the 8px
- * 16px padding they ship with. A segment is a child of the segmented WRAPPER
- * div, which is neither a row nor a `.control-group`, so the two selectors
- * below provably cannot reach one — see App.controlBarGrouping.test.tsx,
- * which runs these exact selector strings through `Element.matches()` against
- * the live DOM in both modes, in both directions. */
-.control-bar__row > button,
-.control-bar__row .control-group > button {
+ * reorganization would otherwise have silently orphaned: every plain button
+ * moved out of the bar and onto the felt, nested inside a `.control-group`.
+ * Deliberately NOT written as a descendant selector reaching into the bar:
+ * that would also reach the SEGMENTS of the two segmented controls, and at
+ * (0,1,1) it would out-specify their own `[data-testid^='...']` rule (0,1,0)
+ * and reflow both of them from the 8px 16px padding they ship with. The
+ * session bar now holds nothing BUT those two segmented controls, so scoping
+ * this rule to `.felt-controls` makes the collision structurally impossible
+ * rather than merely avoided — see App.controlBarGrouping.test.tsx, which runs
+ * these exact selector strings through `Element.matches()` against the live DOM
+ * in both modes, in both directions. */
+.felt-controls > button,
+.felt-controls .control-group > button {
   min-width: 44px;
   min-height: 44px;
   padding: 8px 12px;
@@ -586,8 +660,8 @@ h2 {
  * app's real actions rather than every <button>: the 52 rank buttons inside
  * the picker dialog are a grid of choices on an already-raised surface, and
  * giving each its own shadow would turn one floating panel into 52. */
-.control-bar__row > button,
-.control-bar__row .control-group > button,
+.felt-controls > button,
+.felt-controls .control-group > button,
 [data-testid='rewind-button'],
 [data-testid='advance-button'],
 [data-testid^='picker-slot-'] {
@@ -599,8 +673,8 @@ h2 {
  * channel the scale now gives us — an unavailable control is not hovering
  * above the page waiting for a click. Never --destructive: these are not
  * destructive actions (see the disabled-dimming rule above). */
-.control-bar__row > button:disabled,
-.control-bar__row .control-group > button:disabled,
+.felt-controls > button:disabled,
+.felt-controls .control-group > button:disabled,
 [data-testid='rewind-button']:disabled,
 [data-testid='advance-button']:disabled,
 [data-testid^='picker-slot-']:disabled {
@@ -875,18 +949,18 @@ h2 {
 /* ---------------------------------------------------------------------------
  * Phase 5 game-mode switcher (05-01)
  *
- * The segmented `GameModeSwitcher` control (D-01) that leads the control bar
+ * The segmented `GameModeSwitcher` control (D-01) that leads the session bar
  * unconditionally in both Hold'em and Blackjack mode — since the 260825
- * reorganization it is the first child of the bar's session ROW rather than
- * of the bar itself — plus the Blackjack placeholder felt shell (D-03).
+ * reorganization that bar sits above the felt and holds nothing but this
+ * control and the shoe toggle — plus the Blackjack placeholder felt shell
+ * (D-03).
  *
- * Note what these rules deliberately do NOT inherit: the bar's hit-area and
- * elevation rules are anchored on `.control-bar__row > button` and
- * `.control-bar__row .control-group > button`, and a segment is a child of
- * the segmented WRAPPER below, so it matches neither. The segments keep the
- * 8px 16px padding declared here, and the raised shadow stays on the wrapper
- * (one rocker lifting off the page) instead of landing on each segment
- * separately. The active segment's
+ * Note what these rules deliberately do NOT inherit: the plain-button hit-area
+ * and elevation rules are scoped to `.felt-controls`, the cluster on the felt,
+ * so nothing in this bar can match them. The segments keep the 8px 16px
+ * padding declared here, and the raised shadow stays on the wrapper (one
+ * rocker lifting off the page) instead of landing on each segment separately.
+ * The active segment's
  * "selected" state deliberately uses the secondary/30% `--border` role as a
  * background fill plus a semibold weight bump — never `--accent` — so the
  * switcher introduces zero new accent usage against the existing 3-use

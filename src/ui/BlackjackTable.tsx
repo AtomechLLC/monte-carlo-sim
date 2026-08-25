@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { BlackjackDealerArea } from './BlackjackDealerArea';
 import { BlackjackPlayerArea } from './BlackjackPlayerArea';
 import { BlackjackOutcomeBanner } from './BlackjackOutcomeBanner';
@@ -15,8 +15,14 @@ import { useUiStore } from '../state/uiStore';
  * card, and React flushes passive effects child-first, so by the time this effect runs every
  * card that mounted in this commit has already registered with the gate. This is the ONLY
  * store state this component may read.
+ *
+ * `children` (260825) is the on-felt chrome slot, mirroring TableScene's: the Deal/Hit/Stand
+ * cluster now floats at the table's bottom-left, and `.felt` is the positioning ancestor every
+ * on-table element anchors against, so it has to be a DOM child of this element. A slot rather
+ * than an import, so this pure layout shell still knows nothing about the round's actions —
+ * the store-reads rule above is unchanged.
  */
-export function BlackjackTable() {
+export function BlackjackTable({ children }: { children?: ReactNode }) {
   const roundNonce = useBlackjackStore((state) => state.roundNonce);
   const playerHandLength = useBlackjackStore((state) => state.playerHand.length);
   const roundPhase = useBlackjackStore((state) => state.roundPhase);
@@ -65,6 +71,7 @@ export function BlackjackTable() {
         <CardBack />
         <CardBack />
       </div>
+      {children}
     </div>
   );
 }
