@@ -15,6 +15,12 @@ interface FlipCardProps {
   faceUp: boolean;
   /** Stable identity for gate registration, e.g. `opp-0-slot-1-${dealNonce}`. */
   flipKey: string;
+  /** D-08 second-copy badge flag, threaded to the face-up PlayingCard. The badge lives
+   * inside `.flip-card-face--front` specifically so `backface-visibility: hidden` hides
+   * it correctly mid-flip along with the face it rides — and, because the face itself
+   * only mounts on reveal (the T-03-12 leak guard below), a badge on an opponent copy
+   * can only ever exist in the DOM after that seat is revealed. */
+  copyCue?: boolean;
 }
 
 /**
@@ -33,7 +39,7 @@ interface FlipCardProps {
  * whose own width/aspect-ratio come from the card-slot tokens, never from either face's own
  * intrinsic image size — so a reveal never changes the seat's box dimensions (no layout shift).
  */
-export function FlipCard({ card, faceUp, flipKey }: FlipCardProps) {
+export function FlipCard({ card, faceUp, flipKey, copyCue }: FlipCardProps) {
   const reduce = useReducedMotion();
   const enabled = !reduce;
   // WR-02/D-07 fix (05-REVIEW): captured ONCE at mount. Registration is for exactly the
@@ -73,7 +79,8 @@ export function FlipCard({ card, faceUp, flipKey }: FlipCardProps) {
             className="flip-card-face flip-card-face--front"
             style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
           >
-            <PlayingCard card={card} decorative />
+            {/* copyCue rides THIS face (see the prop's doc comment) — never the back. */}
+            <PlayingCard card={card} decorative copyCue={copyCue} />
           </span>
         )}
       </motion.span>
