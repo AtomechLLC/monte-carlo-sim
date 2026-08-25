@@ -61,8 +61,9 @@ which may not be edited) keep passing byte-untouched.
 
 ### Task 2 — Build-and-deploy workflow
 
-Adapt `.github/workflows/static.yml` (content is on `origin/main`; recreate it locally with the
-adaptation). KEEP: filename, `name:`, the `on:` push-to-`main` + `workflow_dispatch` triggers, the
+Adapt `.github/workflows/static.yml` — as of the `2dbb9bc` history merge this file EXISTS in the
+working tree (the repository's original web-UI commit was merged in, preserving it), so edit it in
+place rather than creating it. KEEP: filename, `name:`, the `on:` push-to-`main` + `workflow_dispatch` triggers, the
 `permissions:` block, and the `concurrency:` block. CHANGE the job to build first:
 `actions/checkout@v4` → `actions/setup-node@v4` (node-version `24`, `cache: npm`) → `npm ci` →
 `npm run build` → `actions/configure-pages@v5` → `actions/upload-pages-artifact@v3` with
