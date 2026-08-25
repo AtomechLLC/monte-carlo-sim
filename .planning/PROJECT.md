@@ -57,7 +57,7 @@ Validated in Phase 6: blackjack-core-odds-loop (2026-08-25):
 
 - [x] BJ-01 — Hold'em/Blackjack mode switcher with proven store/DOM/race isolation (Phase 5, 2026-08-24)
 - [x] BJ-02..07 — Blackjack gameplay & odds (Phase 6, 2026-08-25)
-- [ ] HE2-01..03 — 2-deck Hold'em variant (Phase 7)
+- [x] HE2-01..03 — 2-deck Hold'em variant (Phase 7, 2026-08-25: duplicate-aware evaluation via oracle-validated suit-remap wrapper, Five of a Kind row, ×2 copy cue, Hold'em-local deck toggle)
 - [ ] DECK-02 — Cross-game deck-count toggle (Phase 8)
 
 ### Out of Scope

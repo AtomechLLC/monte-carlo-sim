@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Blackjack & Multi-Deck
-status: executing
-stopped_at: Phase 6 context gathered
-last_updated: "2026-08-25T01:32:10.116Z"
+status: ready_to_plan
+stopped_at: Phase 7 complete (7/7) — ready to discuss Phase 8
+last_updated: 2026-08-25T03:19:09.744Z
 last_activity: 2026-08-25 -- Phase 7 execution started
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 24
-  completed_plans: 17
+  completed_plans: 24
   percent: 60
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-24)
 
 **Core value:** Probability made visible — the user can watch odds converge in real time and see exactly how each new piece of information reshapes the numbers.
-**Current focus:** Phase 7
+**Current focus:** Phase 8 — cross game deck count toggle ui
 
 ## Current Position
 
-Phase: 7 — EXECUTING
-Plan: 1 of ?
-Status: Executing Phase 7
-Last activity: 2026-08-25 -- Phase 7 execution started
+Phase: 8
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-25
 
 Progress: [██░░░░░░░░] 20% (1/5 v2.0 phases; 6/6 plans so far)
 
@@ -36,7 +36,7 @@ Progress: [██░░░░░░░░] 20% (1/5 v2.0 phases; 6/6 plans so fa
 
 **Velocity:**
 
-- Total plans completed: 33
+- Total plans completed: 40
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -50,6 +50,7 @@ Progress: [██░░░░░░░░] 20% (1/5 v2.0 phases; 6/6 plans so fa
 | 04 | 6 | - | - |
 | 05 | 3 | - | - |
 | 6 | 8 | - | - |
+| 7 | 7 | - | - |
 
 **Recent Trend:**
 
@@ -80,7 +81,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- ⚠️ [Phase 4→7/8] Remaining 04-REVIEW.md traps: WR-01 Phase 8 MUST pass deckCount into setPick (comment corrected in c29091a); WR-03 nothing may pass deckCount:2 into the HOLD'EM trial path until Phase 7's duplicate-aware evaluator exists (evaluator crashes on duplicates — Phase 6 verified compliance: conditioning default =1, zero hits in gameStore); WR-04 Phase 7 should strengthen the shoe-path guard against .includes() membership and add behavioral 2-deck CardPicker tests.
+- (Resolved) ALL 04-REVIEW traps now closed: WR-01 CLOSED early in Phase 7 (07-02 — CardPicker live deckCount subscription + setPick third arg + behavioral tests); WR-03 RETIRED in Phase 7 (07-03 — duplicate-aware evaluator shipped; the old rejection preserved as its own test; E2E 2-deck run green); WR-04 CLOSED in Phase 7 (07-03 — .includes() prohibition sweep over the five shoe-path files + evaluateHand( call-site allowlist).
 - (Resolved) 04-REVIEW WR-02 deckCount wire-shape validation — CLOSED in Phase 6 (06-03, both poker and blackjack worker APIs reject 0/>2/non-integers with rejection tests).
 - (Resolved) 05-REVIEW WR-03 HoldemGame extraction — CLOSED in Phase 6 (06-02, commit 4551bb9: <HoldemGame /> extracted verbatim, guards retargeted same-commit, testid arrays consolidated into src/test/holdemTestids.ts).
 - ⚠️ [Phase 7+ note] 06-REVIEW WR-01 resolution accepted a documented ~one-bit D-02 leak: the blackjack "1 deck" toggle segment disables when the HIDDEN hole duplicates a visible card (impossible-state prevention outweighed the leak; store-boundary refusal is the backstop). Carry this convention if Phase 8's cross-game toggle absorbs the blackjack-local toggle.

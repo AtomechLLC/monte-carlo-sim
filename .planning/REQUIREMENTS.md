@@ -23,9 +23,9 @@ Defined 2026-08-24 from the confirmed milestone scope (Blackjack + 1/2-deck shoe
 
 ### 2-Deck Hold'em (HE2)
 
-- [ ] **HE2-01**: User can enable a 2-deck Hold'em variant; dealing, the picker, street navigation, and opponent reveal all work over the 104-card shoe
-- [ ] **HE2-02**: Hands containing duplicate cards evaluate correctly via a duplicate-aware evaluation layer — any duplicate co-occurrence is detected BEFORE delegating to the stock evaluator (which crashes on duplicates), and Five of a Kind ranks above Royal Flush with its own category-table row in 2-deck mode
-- [ ] **HE2-03**: Two copies of the same card are visually legible on the felt (a copy cue), so a duplicate never reads as a rendering bug
+- [x] **HE2-01**: User can enable a 2-deck Hold'em variant; dealing, the picker, street navigation, and opponent reveal all work over the 104-card shoe
+- [x] **HE2-02**: Hands containing duplicate cards evaluate correctly via a duplicate-aware evaluation layer — any duplicate co-occurrence is detected BEFORE delegating to the stock evaluator (which crashes on duplicates), and Five of a Kind ranks above Royal Flush with its own category-table row in 2-deck mode
+- [x] **HE2-03**: Two copies of the same card are visually legible on the felt (a copy cue), so a duplicate never reads as a rendering bug
 
 ## Future Requirements (deferred, not in v2.0)
 
@@ -56,6 +56,6 @@ Defined 2026-08-24 from the confirmed milestone scope (Blackjack + 1/2-deck shoe
 | BJ-05 | Phase 6 | Complete |
 | BJ-06 | Phase 6 | Complete |
 | BJ-07 | Phase 6 | Complete |
-| HE2-01 | Phase 7 | Pending |
-| HE2-02 | Phase 7 | Pending |
-| HE2-03 | Phase 7 | Pending |
+| HE2-01 | Phase 7 | Complete |
+| HE2-02 | Phase 7 | Complete |
+| HE2-03 | Phase 7 | Complete |
