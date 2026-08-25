@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DeckCountToggle } from './DeckCountToggle';
+import type { DeckTogglePrefix } from './deckTogglePrefix';
 import { useGameStore } from '../state/gameStore';
 import { useBlackjackStore } from '../state/blackjackStore';
 
@@ -23,7 +24,13 @@ import { useBlackjackStore } from '../state/blackjackStore';
 // parameter rather than accidentally coupled to either game's contractual value; one dedicated
 // case uses the two real prefixes, since D-02 makes those strings contractual.
 
-const PREFIX = 'test-deck-toggle';
+// `testidPrefix` is typed as the two-value DeckTogglePrefix union in production (D-02,
+// 08-REVIEW IN-03). The widening happens HERE, at the test boundary, and only here: the
+// fabricated prefixes below are the whole reason this suite can prove the prefix is genuinely
+// a runtime parameter rather than accidentally coupled to either game's contractual value, so
+// they must stay fabricated. The cast affects nothing at runtime — the rendered attributes
+// asserted throughout this file are the real proof.
+const PREFIX = 'test-deck-toggle' as DeckTogglePrefix;
 
 /** Locked title copy from the two CALL SITES (06/07 Copywriting Contracts, carried verbatim by
  * 08-UI-SPEC). Used here purely as realistic fixtures: the component hard-codes no title
@@ -99,7 +106,9 @@ describe('DeckCountToggle — the shared, props-only deck-count control (Phase 8
     expect(screen.getByTestId(`${PREFIX}-2`)).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it.each(['blackjack-deck-toggle', 'holdem-deck-toggle'])(
+  // Explicitly typed as the union rather than cast: these two ARE the contractual values, so
+  // this case now also type-checks that DeckTogglePrefix still admits both of them (D-02).
+  it.each<DeckTogglePrefix>(['blackjack-deck-toggle', 'holdem-deck-toggle'])(
     'derives all three contractual testids from the "%s" prefix (D-02)',
     (prefix) => {
       render(<DeckCountToggle testidPrefix={prefix} deckCount={1} onSelect={noop} />);
@@ -271,7 +280,8 @@ describe('DeckCountToggle — the shared, props-only deck-count control (Phase 8
     useGameStore.setState({ deckCount: 1 });
     useBlackjackStore.setState({ deckCount: 2 });
 
-    const unrelatedPrefix = 'props-only-deck-toggle';
+    // Second fabricated prefix, widened at the test boundary for the same reason as PREFIX.
+    const unrelatedPrefix = 'props-only-deck-toggle' as DeckTogglePrefix;
     const { rerender } = render(
       <DeckCountToggle testidPrefix={unrelatedPrefix} deckCount={2} onSelect={noop} />,
     );

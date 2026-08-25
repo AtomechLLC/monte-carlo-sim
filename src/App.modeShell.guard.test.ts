@@ -470,6 +470,24 @@ describe('SC1 — the deck-count markup lives in exactly ONE shared component, r
     ).toContain('${testidPrefix}-2');
   });
 
+  it.each(['blackjack-deck-toggle', 'holdem-deck-toggle'])(
+    'ui/deckTogglePrefix.ts still admits the contractual prefix %s (D-02)',
+    (prefix) => {
+      // ADDED (08-REVIEW IN-03): the prefix prop is typed as a two-value union instead of a
+      // bare string, so a typo fails at the boundary where D-02 is stated rather than as a
+      // downstream "unable to find an element by data-testid". The union lives in its own
+      // module because ui/DeckCountToggle.tsx is pinned above to name neither game — see that
+      // module's header. This pin keeps the union's MEMBERS contractual: narrowing or
+      // renaming one silently would break the isolation sweeps and both testid registries.
+      expect(
+        readSource('ui/deckTogglePrefix.ts'),
+        `ui/deckTogglePrefix.ts must keep "${prefix}" in the DeckTogglePrefix union — D-02 ` +
+          'makes exactly these two prefixes contractual, and the union is what type-checks ' +
+          'them at the shared control\'s prop boundary',
+      ).toContain(prefix);
+    },
+  );
+
   it('exactly ONE production .tsx file in ALL of src/ contains the deck-count group markup — and it is ui/DeckCountToggle.tsx', () => {
     // WIDENED (08-REVIEW WR-03). This sweep previously read a FLAT, non-test listing of
     // src/ui only, which pinned SC1's "the markup lives in exactly ONE component" claim three

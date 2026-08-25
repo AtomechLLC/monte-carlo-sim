@@ -1,7 +1,11 @@
 import type { DeckCount } from '../engine/shoe';
+import type { DeckTogglePrefix } from './deckTogglePrefix';
 
 interface DeckCountToggleProps {
-  testidPrefix: string;
+  /** D-02's two contractual prefixes, not a bare string (08-REVIEW IN-03). The union is
+   *  declared in its own module so this component keeps naming neither game — see
+   *  ./deckTogglePrefix.ts for why both rules have to hold at once. */
+  testidPrefix: DeckTogglePrefix;
   deckCount: DeckCount;
   onSelect: (deckCount: DeckCount) => void;
   oneDeckDisabled?: boolean;
