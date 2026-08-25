@@ -458,15 +458,21 @@ describe('App.css - two accents, with strictly separate jobs', () => {
     ).toContain('[data-next-action=');
   });
 
-  it('accent is a background only where the element IS the bar', () => {
-    // The leading probability bar paints accent as a fill by nature — it is a bar, not text.
-    // Everywhere else the accent is ink, per the reservation rule: a filled accent button
-    // would swamp a palette whose whole discipline is that the accent stays scarce.
+  it('accent fills exactly the two things that ARE the highlight, never a plain surface', () => {
+    // RETARGETED (user: fill the next-action button, don't outline it). The rule was "accent is
+    // never a background". There are now exactly TWO fills, and both are cases where the accent
+    // IS the object rather than decoration on one:
+    //   - the leading probability bar, which is a bar
+    //   - the next-action button, the single control the app is pointing at
+    // Everywhere else the accent stays ink. Pinned as an exact pair, so a third fill — an
+    // accent-coloured panel, a highlighted row — has to come here and argue for itself.
     const fills = [...brass, ...lilac].filter((chunk) =>
       /background(?:-color)?:\s*var[(]--accent/.test(chunk),
     );
-    expect(fills).toHaveLength(1);
-    expect(fills[0]).toContain('.category-bar__fill--leading');
+    expect(fills).toHaveLength(2);
+    const joined = fills.join(' ');
+    expect(joined).toContain('.category-bar__fill--leading');
+    expect(joined).toContain('[data-next-action=');
   });
 });
 

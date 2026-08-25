@@ -91,12 +91,42 @@ h2 {
   color: var(--accent);
 }
 
-/* The next action: accent text plus an outline, so it is the one control that reads as raised
- * and chosen among a row of neutral buttons. */
+/* The next action is FILLED, not outlined (user: "I want it to change the color of the button,
+ * with an appropriate text color and some feather around the outside to highlight it").
+ *
+ * This is a deliberate exception to the accent's never-a-background-fill rule, and the only
+ * one: that rule exists so a scarce accent stays scarce, and exactly one control on screen
+ * carries this treatment at a time — which is the same scarcity argument, spent on the single
+ * thing the app most wants you to see.
+ *
+ * Ink on lilac measures 8.62:1 (white would be 2.23:1 — the fill is a LIGHT colour, so the
+ * label has to go dark; keeping --seat-badge-text here would have been unreadable).
+ *
+ * The feather is two stacked shadows: a tight ring that reads as a rim of light on the button
+ * itself, then a wide soft bloom that spills onto the felt. Both are the accent at low alpha,
+ * so the glow is the same colour as the fill rather than a second hue. */
+/* SPECIFICITY, deliberately matched rather than fought with !important: the plate's own
+ * elevation and weight rules are `.felt-controls .control-group > button` (0,2,1), so a bare
+ * `[data-next-action]` (0,1,0) loses and the glow silently never paints — which is exactly
+ * what happened on the first attempt. These selectors mirror that structure and add the
+ * attribute, so the highlight wins on merit. The bare selector stays last as the fallback for
+ * any future call site outside the plate. */
+.felt-controls .control-group > button[data-next-action='true'],
+.felt-controls > button[data-next-action='true'],
 [data-next-action='true'] {
-  color: var(--accent-next);
+  background: var(--accent-next);
+  color: var(--hand-icon-ink);
   border: 1px solid var(--accent-next);
+  font-weight: 600;
+  box-shadow:
+    0 0 0 3px rgba(181, 160, 255, 0.3),
+    0 0 20px 6px rgba(181, 160, 255, 0.4),
+    var(--elev-raised);
 }
+
+/* Reduced motion gets the same treatment — there is nothing animated here to opt out of, and
+ * the glow is a static affordance rather than an effect. Stated so the absence is a decision
+ * rather than an oversight. */
 
 /* Minimum 44x44px hit area (an accessibility touch-target floor, not a
  * visual design choice) on every interactive control introduced this phase,
