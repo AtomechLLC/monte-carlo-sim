@@ -1,6 +1,9 @@
-// Type-only import: equity.ts imports the runtime value CATEGORY_COUNT from this module, so a
-// value-level import back here would create a runtime cycle.
+// Type-only imports: equity.ts imports runtime values (CATEGORY_COUNT, categoryCountFor)
+// from this module, so a value-level import back into the engine would create a runtime
+// cycle. This module exports runtime values INTO the engine and takes only type-only
+// imports back (the same cycle-avoidance discipline as ./blackjackProtocol).
 import type { ConditionedState } from '../engine/equity';
+import type { DeckCount } from '../engine/shoe';
 
 /**
  * `HandStrength` has TEN values (HighCard=0 .. StraightFlush=8, RoyalFlush=9).
@@ -8,6 +11,26 @@ import type { ConditionedState } from '../engine/equity';
  * table must have 10 rows, not 9.
  */
 export const CATEGORY_COUNT = 10;
+
+/**
+ * The extended index Five of a Kind occupies at deckCount 2 (D-05) — DERIVED from
+ * `CATEGORY_COUNT`, never a second hand-written literal, so the two can never drift
+ * (the `BUCKET_INDEX` derivation discipline of ./blackjackProtocol). The index-10 row
+ * exists ONLY where `deckCount === 2` flows; every 1-deck histogram stays 10 long.
+ */
+export const FIVE_OF_A_KIND_INDEX = CATEGORY_COUNT;
+
+/**
+ * Histogram length for a given shoe: 10 at one deck, 11 at two (the Five of a Kind row).
+ *
+ * Widening `CATEGORY_COUNT` itself to 11 is explicitly FORBIDDEN (07-RESEARCH
+ * Anti-Patterns): it would silently change 1-deck snapshot length and break both parity
+ * goldens, the odds-store dev consistency guard, and the `CATEGORY_LABELS` exhaustiveness
+ * convention. The extended length exists only through this function, at 2-deck call sites.
+ */
+export function categoryCountFor(deckCount: DeckCount): number {
+  return deckCount === 2 ? CATEGORY_COUNT + 1 : CATEGORY_COUNT;
+}
 
 /** Trials executed per batch inside the worker before checking for cancellation/emission. */
 export const DEFAULT_BATCH_SIZE = 4000;
