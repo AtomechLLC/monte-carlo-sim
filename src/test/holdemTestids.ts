@@ -44,4 +44,9 @@ export const HOLDEM_ONLY_TESTIDS: readonly string[] = [
   'picker-slot-hero-0',
   'picker-clear-hero-0',
   'picker-clear-all',
+  // Phase 7 deck toggle (07-05, D-01/D-10) — rendered in Hold'em mode in BOTH deck states, so
+  // each entry is non-vacuously present after a deal and DOM-absent in the other mode.
+  'holdem-deck-toggle',
+  'holdem-deck-toggle-1',
+  'holdem-deck-toggle-2',
 ];

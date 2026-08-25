@@ -225,7 +225,10 @@ h2 {
  * destructive colour — these are not destructive actions. Phase 6 (06-05)
  * extends the list with Hit/Stand (disabled outside player-turn) and the
  * "1 deck" segment (A3 duplicate guard). blackjack-hole-reveal is DELIBERATELY
- * absent — its disabled state is cursor-only (A9, see the Phase 6 block). */
+ * absent — its disabled state is cursor-only (A9, see the Phase 6 block).
+ * Phase 7 (07-05) extends the list with the Hold'em toggle's "1 deck" segment
+ * by the same guard logic (A4 duplicate-pick guard) — one disabled-dimming
+ * convention app-wide, selector-list extension only. */
 [data-testid^='picker-card-']:disabled,
 [data-testid='rewind-button']:disabled,
 [data-testid='advance-button']:disabled,
@@ -233,7 +236,8 @@ h2 {
 [data-testid^='opponent-seat-']:disabled,
 [data-testid='blackjack-hit-button']:disabled,
 [data-testid='blackjack-stand-button']:disabled,
-[data-testid='blackjack-deck-toggle-1']:disabled {
+[data-testid='blackjack-deck-toggle-1']:disabled,
+[data-testid='holdem-deck-toggle-1']:disabled {
   color: var(--text);
   opacity: 0.4;
   cursor: not-allowed;
@@ -620,9 +624,14 @@ h2 {
 /* Phase 6 (06-05) extends these segmented-control rules with the blackjack
  * deck toggle (emitted by plan 06-07): identical treatment by A4 — one
  * selected-state convention app-wide, zero new accent usage — so the toggle
- * joins these selectors instead of duplicating the declarations. */
+ * joins these selectors instead of duplicating the declarations.
+ * Phase 7 (07-05) extends them again with the Hold'em deck toggle (D-01) by
+ * the same logic Phase 6's did — one selected-state convention app-wide, zero
+ * new accent usage, selector-list extension only so the shipped declarations
+ * (and blackjack's computed styles) stay provably untouched. */
 [data-testid='game-mode-switcher'],
-[data-testid='blackjack-deck-toggle'] {
+[data-testid='blackjack-deck-toggle'],
+[data-testid='holdem-deck-toggle'] {
   display: inline-flex;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -630,7 +639,8 @@ h2 {
 }
 
 [data-testid^='game-mode-switch-'],
-[data-testid^='blackjack-deck-toggle-'] {
+[data-testid^='blackjack-deck-toggle-'],
+[data-testid^='holdem-deck-toggle-'] {
   min-width: 44px;
   min-height: 44px;
   padding: 8px 16px;
@@ -644,12 +654,14 @@ h2 {
 }
 
 [data-testid='game-mode-switch-holdem'],
-[data-testid='blackjack-deck-toggle-1'] {
+[data-testid='blackjack-deck-toggle-1'],
+[data-testid='holdem-deck-toggle-1'] {
   border-right: 1px solid var(--border);
 }
 
 [data-testid^='game-mode-switch-'][aria-pressed='true'],
-[data-testid^='blackjack-deck-toggle-'][aria-pressed='true'] {
+[data-testid^='blackjack-deck-toggle-'][aria-pressed='true'],
+[data-testid^='holdem-deck-toggle-'][aria-pressed='true'] {
   background: var(--border);
   color: var(--text-h);
   font-weight: 600;
@@ -862,4 +874,50 @@ h2 {
   font-size: 16px;
   font-weight: 400;
   line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------------------
+ * Phase 7 copy cue (07-05)
+ *
+ * The x2 badge on the second visible copy of a duplicated card on the felt
+ * (D-08, HE2-03; UI-SPEC A5/A6/A7/A12). Markup emitted by plan 07-04, which
+ * wrote no CSS — the two class names below are that plan's binding contract.
+ * Every other Phase 7 style is a selector-list extension of the shared
+ * segmented-control and disabled-dimming rules above; this is the phase's ONE
+ * new scoped block. Tokens only: existing spacing (xs), the Label size at the
+ * app's existing semibold weight, the shipped felt/badge colour tokens, zero
+ * accent and zero destructive usage anywhere in this block, and no new custom
+ * property declared. 2-deck only; the shipped .card-slot rules are untouched.
+ * ------------------------------------------------------------------------- */
+
+/* Co-applied on the slot hosting a badge (2-deck only): position: relative so
+ * the badge's absolute positioning always resolves against the card box, even
+ * after Motion clears its inline transform at animation end (A12) — without
+ * it, a settled slot would let the badge resolve against a distant positioned
+ * ancestor and detach from its card. */
+.card-slot--cued {
+  position: relative;
+}
+
+/* The badge itself. Solid var(--felt-dark) fill instead of the translucent
+ * seat-badge background: that token was designed for text on the dark felt —
+ * composited over a WHITE card face it lands near #8c8c8c, putting white text
+ * at roughly 3.4:1, below AA for 14px text (A6, checker-corrected). White on
+ * the solid felt-dark token is ~12:1 on the card face, and ties the cue to
+ * the table's own palette — a chip of the felt riding the card, a physical
+ * table fact, never a warning. No new z-index token: the badge paints above
+ * the card image by source order within its slot's own stacking context, and
+ * inherits the in-flight/settled stacking by riding its slot (A12). */
+.copy-cue {
+  position: absolute;
+  top: 4px; /* xs */
+  right: 4px; /* xs — top-right: the empty corner on the card faces */
+  padding: 0 4px; /* xs */
+  font-size: 14px; /* Label size */
+  font-weight: 600; /* existing semibold */
+  line-height: 1.4; /* Label line-height */
+  background: var(--felt-dark); /* solid felt token — AA on white card faces (A6) */
+  color: var(--seat-badge-text);
+  border-radius: 12px; /* badge-radius precedent */
+  pointer-events: none;
 }

@@ -19,9 +19,10 @@ import { dirname, join } from 'node:path';
 //     mechanisms Plan 01 already wired, never a second one (D-07, D-08).
 //   - The mode-scoped odds effect's early-return guard and its dependency array both exist —
 //     one without the other is a silent bug (D-05).
-//   - No Phase 5 file mentions `deckCount` at all — the wire path is Phase 6/8's, and nothing
-//     here may pass `deckCount: 2` into the Hold'em trial path before Phase 7's duplicate-aware
-//     evaluator exists (D-10, WR-02, WR-03).
+//   - The cross-game shell (App.tsx, gameModeStore.ts, GameModeSwitcher.tsx) stays
+//     `deckCount`-free FOREVER — each game's deck count lives in its own game-local store
+//     (D-10; Phase 7 D-14), and the only sanctioned Hold'em wire is ui/HoldemGame.tsx's deck
+//     toggle (Phase 7 D-01; WR-03 retired by D-12).
 //   - oddsStore's `knowledgeKey` stays the exact poker-shaped two-part key, no game discriminant
 //     bolted on (Pitfall 11 — Phase 6 gets its OWN store instead of widening this one).
 //   - The UI-SPEC's locked copy and label strings stay verbatim.
@@ -47,6 +48,13 @@ import { dirname, join } from 'node:path';
 // track the Phase 6 Copywriting Contract, and NEW pins land for the blackjack odds effect
 // (single cancellation owner, mode gate, dependency tail — D-02/D-07/CR-01) and D-10's
 // no-key/field-sharing rule between the two games' store pairs.
+//
+// AMENDED 2026-08-25 (Phase 7 plan 07-05, D-01/D-12): ui/HoldemGame.tsx left the deckCount-zero
+// sweep in the SAME COMMIT that added the Hold'em-local deck toggle — the duplicate-aware
+// evaluator now ships, so WR-03 (which kept the 2-deck trial path off-limits) is RETIRED and
+// the game root legitimately owns the toggle wire (D-01), its deck count living in gameStore
+// (D-14, the D-10 store-locality precedent). The three cross-game shell files keep the sweep
+// forever; the assertion was retargeted, never deleted or weakened.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = __dirname;
@@ -223,21 +231,24 @@ describe('App.tsx (shell) + ui/HoldemGame.tsx — single cancellation owner, no 
   });
 });
 
-describe('No deckCount anywhere in the cross-game shell or the Hold\'em game root (D-10, WR-02, WR-03)', () => {
-  // RETARGETED (06-07, D-13): ui/BlackjackScene.tsx was retired, and its successors
-  // (BlackjackGame/BlackjackControls, blackjackStore) legitimately OWN the blackjack-local
-  // deckCount wire-through (D-10, BJ-07) — so its slot in this sweep passes to
-  // ui/HoldemGame.tsx instead: the Hold'em game root must never grow a deckCount wire until
-  // Phase 7's duplicate-aware evaluator exists (WR-03), and the cross-game shell files stay
-  // deckCount-free forever (the blackjack deck count lives in blackjackStore, D-10).
-  const files = ['App.tsx', 'state/gameModeStore.ts', 'ui/GameModeSwitcher.tsx', 'ui/HoldemGame.tsx'];
+describe('No deckCount anywhere in the cross-game shell (D-10, D-14 — WR-03 retired, D-12)', () => {
+  // RETARGETED (07-05, D-01/D-12): ui/HoldemGame.tsx left this sweep in the SAME COMMIT that
+  // added the Hold'em-local deck toggle — Phase 7's duplicate-aware evaluator ships, so WR-03
+  // is retired (D-12) and the game root legitimately owns the toggle wire (D-01). What
+  // survives forever is the cross-game shell's deckCount-freedom: Hold'em's deck count lives
+  // in gameStore (D-14) and the blackjack deck count in blackjackStore (D-10), so no shell
+  // file ever carries a deck-count field, prop or read — mode plumbing and deck plumbing stay
+  // permanently disjoint.
+  const files = ['App.tsx', 'state/gameModeStore.ts', 'ui/GameModeSwitcher.tsx'];
 
   it.each(files)('%s contains zero occurrences of deckCount', (relativePath) => {
     expect(
       readSource(relativePath),
-      `${relativePath} must never mention deckCount — the blackjack-local deck count lives in ` +
-        'blackjackStore (D-10), and nothing may pass deckCount: 2 into the Hold\'em trial path ' +
-        'before Phase 7\'s duplicate-aware evaluator exists (WR-02, WR-03)',
+      `${relativePath} must never mention deckCount — the cross-game shell stays deckCount-free ` +
+        'forever: each game\'s deck count lives in its own game-local store (blackjackStore per ' +
+        'D-10, gameStore per Phase 7 D-14), and the only sanctioned Hold\'em wire is ' +
+        'ui/HoldemGame.tsx\'s deck toggle (D-01, plan 07-05 — WR-03 retired by D-12 now that ' +
+        'the duplicate-aware evaluator ships)',
     ).not.toContain('deckCount');
   });
 });
@@ -468,5 +479,106 @@ describe('oddsStore.ts — knowledgeKey stays the exact two-part poker-shaped ke
         'discriminant may be bolted onto this key this phase; Phase 6 gets its OWN store ' +
         'instead of widening this one',
     ).toContain('return `${street}|${revealedMask}`;');
+  });
+});
+
+describe('App.css — Phase 7 styles are selector-list extensions of the shared rules, never duplicated blocks (D-11, 07-05)', () => {
+  // What this block protects: the D-11 isolation contract requires blackjack's computed styles
+  // to be PROVABLY unchanged by Phase 7. A duplicated rule block (a second copy of the
+  // segmented-control or disabled-dimming declarations carrying only holdem selectors) would
+  // pass every behavioral test while silently letting the two games' appearance diverge on the
+  // next edit — so each shared rule is pinned at source level to contain BOTH games' selectors
+  // in ONE selector list. Same readSource technique as every other pin in this file: it reads
+  // App.css's source text, never its own.
+  const cssSource = readSource('App.css');
+  // Each chunk produced by splitting on `}` carries exactly one rule's selector prelude (plus
+  // any preceding comments) and its declarations — two selectors landing in the SAME chunk
+  // therefore share one rule, which is what "extension, not duplication" means at source level.
+  const ruleChunks = cssSource.split('}');
+
+  function theChunkWith(...tokens: string[]): string {
+    const matches = ruleChunks.filter((chunk) => tokens.every((token) => chunk.includes(token)));
+    expect(
+      matches,
+      `expected exactly one App.css rule containing all of: ${tokens.join(' + ')} — zero means ` +
+        'the shared rule was removed; more than one means a duplicated rule block appeared (D-11)',
+    ).toHaveLength(1);
+    return matches[0];
+  }
+
+  it('the segmented-control wrapper rule carries both deck toggles in one selector list', () => {
+    const chunk = theChunkWith("[data-testid='blackjack-deck-toggle']", 'display: inline-flex');
+    expect(
+      chunk,
+      "the wrapper rule must gain [data-testid='holdem-deck-toggle'] as a selector-list " +
+        'extension of the SHARED rule — a second holdem-only rule block would violate D-11',
+    ).toContain("[data-testid='holdem-deck-toggle']");
+  });
+
+  it('the segment sizing/typography rule carries both deck toggles in one selector list', () => {
+    const chunk = theChunkWith("[data-testid^='blackjack-deck-toggle-']", 'min-width: 44px');
+    expect(
+      chunk,
+      "the segment sizing rule must gain [data-testid^='holdem-deck-toggle-'] as a " +
+        'selector-list extension of the SHARED rule (D-11)',
+    ).toContain("[data-testid^='holdem-deck-toggle-']");
+  });
+
+  it('the internal-divider rule carries both first segments in one selector list', () => {
+    const chunk = theChunkWith("[data-testid='blackjack-deck-toggle-1']", 'border-right');
+    expect(
+      chunk,
+      "the internal-divider rule must gain [data-testid='holdem-deck-toggle-1'] as a " +
+        'selector-list extension of the SHARED rule (D-11)',
+    ).toContain("[data-testid='holdem-deck-toggle-1']");
+  });
+
+  it('the active-segment rule carries both deck toggles in one selector list', () => {
+    const chunk = theChunkWith("[data-testid^='blackjack-deck-toggle-'][aria-pressed='true']");
+    expect(
+      chunk,
+      "the active-segment rule must gain [data-testid^='holdem-deck-toggle-'][aria-pressed='true'] " +
+        'as a selector-list extension of the SHARED rule (D-11)',
+    ).toContain("[data-testid^='holdem-deck-toggle-'][aria-pressed='true']");
+  });
+
+  it('the disabled-dimming list carries the A4 guard segment alongside the blackjack one', () => {
+    const chunk = theChunkWith("[data-testid='blackjack-deck-toggle-1']:disabled");
+    expect(
+      chunk,
+      "the shipped disabled-dimming selector list must gain [data-testid='holdem-deck-toggle-1']" +
+        ':disabled (UI-SPEC A4) — in the SAME rule as the blackjack guard segment, never a ' +
+        'duplicated dimming block (D-11)',
+    ).toContain("[data-testid='holdem-deck-toggle-1']:disabled");
+  });
+
+  it('the copy-cue block exists, uses only the felt/badge tokens, and touches no reserved colour', () => {
+    expect(cssSource, 'plan 07-04 emitted .card-slot--cued as a binding class contract — 07-05 must style it').toContain(
+      '.card-slot--cued {',
+    );
+    expect(cssSource, 'plan 07-04 emitted .copy-cue as a binding class contract — 07-05 must style it').toContain(
+      '.copy-cue {',
+    );
+    const cueChunk = theChunkWith('.copy-cue {');
+    expect(
+      cueChunk,
+      'the copy-cue badge must use the solid felt-dark token as its fill (UI-SPEC A6: the ' +
+        'translucent seat-badge background composites below AA on a white card face)',
+    ).toContain('var(--felt-dark)');
+    expect(
+      cueChunk,
+      'the copy-cue badge must use the shipped seat-badge text token (A6) — no new colour token',
+    ).toContain('var(--seat-badge-text)');
+    expect(
+      cueChunk,
+      'the copy cue is a physical table fact, never an error state — the reserved accent ' +
+        'colour role must not appear anywhere in its block (07-UI-SPEC Color: Phase 7 ' +
+        'introduces ZERO accent usage)',
+    ).not.toContain('--accent');
+    expect(
+      cueChunk,
+      'the copy cue is a physical table fact, never an error state — the reserved destructive ' +
+        'colour role must not appear anywhere in its block (07-UI-SPEC Color)',
+    ).not.toContain('--destructive');
   });
 });
