@@ -538,9 +538,18 @@ h2 {
  * lifting cards that cannot be clicked would promise an interaction that no
  * longer exists. The lift lands on the card art rather than on the button box
  * so the felt keeps its own edges — the cards rise off the table, the seat
- * does not. */
-[data-testid^='opponent-seat-']:not(:disabled):hover .playing-card,
-[data-testid^='opponent-seat-']:not(:disabled):focus-visible .playing-card {
+ * does not.
+ *
+ * `.card-slot:not(.card-in-flight)` is load-bearing, not decoration. This
+ * selector is (0,6,0) and the in-flight rule is only (0,2,0), so without the
+ * exclusion a pointer left resting over a seat during a deal would out-specify
+ * the in-flight elevation and draw an airborne card as merely raised — the one
+ * state in the scale that is about physics rather than about the pointer,
+ * silently defeated by where the mouse happened to be. Excluding the class
+ * outright is stronger than any specificity tuning: the two states cannot
+ * contend at all. */
+[data-testid^='opponent-seat-']:not(:disabled):hover .card-slot:not(.card-in-flight) .playing-card,
+[data-testid^='opponent-seat-']:not(:disabled):focus-visible .card-slot:not(.card-in-flight) .playing-card {
   box-shadow: var(--elev-raised);
 }
 

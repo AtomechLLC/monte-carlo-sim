@@ -240,6 +240,23 @@ describe('App.css — settled cards rest, cards in flight are lifted (Felt & Bra
     ).toContain("'card-in-flight'");
   });
 
+  it('nothing else in the scale can out-specify the in-flight state', () => {
+    // The hover lift is a far more specific selector than `.card-in-flight .playing-card`
+    // ((0,6,0) against (0,2,0)), so a pointer left resting over a seat during a deal would
+    // otherwise draw an airborne card as merely raised — the one level in the scale that is
+    // about physics rather than about the pointer, defeated by where the mouse happened to be.
+    for (const chunk of withoutComments(baseAppCss).split('}')) {
+      if (!/:hover|:focus-visible/.test(chunk)) continue;
+      if (!chunk.includes('.playing-card')) continue;
+      expect(
+        chunk,
+        'an interactive elevation rule that reaches .playing-card must exclude ' +
+          '.card-in-flight — excluding the class outright is stronger than specificity ' +
+          'tuning, because then the two states cannot contend at all',
+      ).toContain(':not(.card-in-flight)');
+    }
+  });
+
   it('the settle is a CSS transition on one non-layout property', () => {
     const transition = /transition:\s*([^;]+);/.exec(playingCard)?.[1] ?? '';
     expect(transition, '.playing-card must transition its box-shadow').toContain('box-shadow');
