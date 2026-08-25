@@ -67,6 +67,8 @@ Reviewed the full Phase 6 blackjack vertical slice against `7b9ca13..HEAD`: rule
 
 ### CR-01: Post-reveal odds ignore the revealed hole card's identity — trials resample a hypothetical hole from a pool that excludes the real one
 
+**Status:** FIXED — commit `4c16c78` (2026-08-24). `BlackjackConditionedState.knownDealerHole` threaded from the sole reader through the trial loop (`state.knownDealerHole ?? drawn[cursor++]`); validation budgets the known hole; guard docs strengthened in-place. RED tests: known-hole script, Natural-bucket-exactly-0, seeded pre/post-reveal bust% direction, derive/validate/loop-suite pins.
+
 **File:** `src/engine/blackjackEquity.ts:123` (hypothetical hole draw), `src/engine/blackjackEquity.ts:18-35` (`BlackjackConditionedState` has no dealer-hole field), `src/engine/blackjackConditioning.ts:72-89` (reveal only moves the hole into the exclusion set), `src/ui/BlackjackGame.tsx:117` (call site)
 
 **Issue:** After `revealHole()`, `deriveBlackjackConditionedState` removes the hole from `remainingDeck` (pool 49 → 48) — but the trial loop still executes `const dealerHole = drawn[cursor++]` for every trial, sampling a *hypothetical* hole from the 48-card pool. The revealed hole's *value* never reaches the worker: `BlackjackConditionedState` carries no field for it. So post-reveal, every displayed statistic is conditioned on "the dealer's hole is some card *other than* the one face-up on the table":
@@ -96,6 +98,8 @@ const dealerHole = state.knownDealerHole ?? drawn[cursor++];
 `deriveBlackjackConditionedState` sets `knownDealerHole: revealedHole ? round.dealerHole : undefined` (it is already the sole reader). Budget arithmetic is unaffected (the known-hole path consumes one *fewer* drawn card). Add `knownDealerHole` presence/shape to `validateBlackjackConditionedState` (must be absent from `remainingDeck`'s copy budget when present), and extend the loop suite's BJ-06 case to assert the Natural bucket is exactly 0 and the dealer distribution collapses toward the known-hole conditional after a reveal.
 
 ### CR-02: Settled-cache poisoning race — a late snapshot landing between a store action's `clearCache()` and the effect cleanup files stale odds under a fresh generation's key, which then cache-hits and suppresses the re-run
+
+**Status:** FIXED — commit `09563b8` (2026-08-24). Generation guard in both game roots' `onProgress` before `applySnapshot` AND `cacheIfSettled`: blackjack checks live `roundNonce` + `deckCount` against the effect closure; Hold'em checks `dealNonce` (already in the closure — no store change needed). Goldens and the five frozen v1 suites byte-untouched and green (D-08). RED tests: scripted late-snapshot delivery inside the pre-cleanup window per game, plus the BJ-07 mid-turn deck-toggle variant.
 
 **File:** `src/ui/BlackjackGame.tsx:120-133` (onProgress live until cleanup), `src/state/blackjackOddsStore.ts:21-23` (key has no round/deck dimension), `src/state/blackjackStore.ts:107-118` (deal's clearCache/reset), `src/state/blackjackStore.ts:188-201` (setDeckCount's clearCache/reset); same mechanism carried in `src/ui/HoldemGame.tsx:104-124` with `src/state/oddsStore.ts:10-12`
 
@@ -129,6 +133,8 @@ The closure-captured key dimensions (the comment at lines 127-131) defend agains
 
 ### WR-01: Deck-toggle duplicate guard ignores the hidden hole card — a 2→1 toggle can silently create an impossible one-deck table and corrupt the shoe ledger
 
+**Status:** FIXED — commit `07d4624` (2026-08-24). New count-only sole reader `hasPhysicalDuplicate(round, hand, playout)` in `blackjackConditioning.ts`; `setDeckCount` refuses the impossible 2→1 switch at the store boundary (complete no-op, the correctness backstop) and `BlackjackControls` disables "1 deck" via the same reader with the locked A3 title. The ~one-bit D-02 leak is accepted and DOCUMENTED at both surfaces (comment citing this finding); 06-UI-SPEC A3 wording amended from "visible cards" to the physical set. Both directions tested (hidden-duplicate refusal, revealed-duplicate refusal, clean 2→1 allowed).
+
 **File:** `src/ui/BlackjackControls.tsx:41-56` (guard over visible cards only), enabled by `src/engine/shoe.ts:70-82` (`shoeWithout` silently ignores excess exclusion budget)
 
 **Issue:** The A3 guard disables the "1 deck" segment only when the *visible* cards contain a duplicate. The predetermined hole is a real physical card too, and while hidden it is excluded from `visibleCards`. Concrete scenario: 2-deck round deals player 5♣ 8♦, upcard 9♠, hole 5♣ (hidden) — hole duplicating a visible card happens in roughly 3% of 2-deck rounds. Visible cards have no duplicate, so "1 deck" stays enabled; the user toggles mid-turn (the exact interaction A3 sanctions). Now `deckCount === 1` with two physical 5♣ on the table. Every subsequent shoe read is silently wrong: `liveShoeLedger` asks `shoeWithout(1, [5c, 8d, 9s, 5c])` to remove two 5♣ from a one-copy shoe — `shoeWithout` drops the one copy and *silently ignores* the second, yielding a 49-card ledger (table + ledger = 53 cards ≠ 52). Hits/stand playout draw from that over-full pool; post-reveal, `deriveBlackjackConditionedState` under-excludes the same way, and the worker's overlap validation cannot catch it (the hole isn't in its `knownCards`, and the pool holds zero copies of the over-spent value — no budget violation fires). No crash, no error — just an impossible physical state and quietly skewed odds, the exact silent-wrongness class the dual-exclusion-set module header warns about.
@@ -145,6 +151,8 @@ const physicalCards =
 (If touching `round.dealerHole` outside the engine is unacceptable, export a third narrow reader from `blackjackConditioning.ts` — e.g. `hasPhysicalDuplicate(round, playerHand, playout): boolean` — and pin it as a sole reader.) Update the guard test with the hidden-hole-duplicate fixture. Note the 06-UI-SPEC A3 row says "visible cards", so amend the spec wording in the same change — the spec's own purpose (impossible-under-one-deck states) requires the physical set.
 
 ### WR-02: A hard worker crash leaves `getApi()` returning a dead proxy forever — the error banner's "Deal a new round to try again" recovery is unfulfillable
+
+**Status:** FIXED — commit `d6c2b72` (2026-08-24). `onHardFailure` wired through both listeners: nulls the cached handle (next `start*` call constructs a fresh worker, listeners re-attach in `ensureWorker`), terminates the dead thread, then fans the failure out as before. Identity-guarded so a zombie event from an already-replaced worker never tears down its replacement. Lazy-singleton pins (zero-on-import, one-on-first-call) untouched and green, extended with crash-then-restart streaming and the stale-event case.
 
 **File:** `src/state/workerClient.ts:49-77` (`handle` never invalidated on `error`/`messageerror`), `src/ui/BlackjackGame.tsx:17-18` and `src/ui/HoldemGame.tsx:15-16` (recovery copy)
 
@@ -167,6 +175,8 @@ Wire both listeners through `onHardFailure`. Each service's generation invalidat
 
 ### IN-01: Selector-less whole-store subscriptions in the odds-cluster components
 
+**Status:** FIXED — commit `efb9699` (2026-08-24). Per-field selectors: four in `BustEvDisplay`, three in `DealerDistributionDisplay`; behavior unchanged.
+
 **File:** `src/ui/BustEvDisplay.tsx:37`, `src/ui/DealerDistributionDisplay.tsx:13`
 
 **Issue:** Both components call `useBlackjackOddsStore()` with no selector, subscribing to the entire store. Every store write re-renders them — including `settledCache` copy-on-write Map replacements and `clearCache()` calls that change nothing they display. Harmless at this scale, but it diverges from the per-field selector discipline every other store consumer in the codebase follows (`BlackjackGame`, `BlackjackTable`, `BlackjackControls`, all Hold'em components), which makes these two the odd files out for future readers and forfeits Zustand's equality bail-outs.
@@ -178,3 +188,10 @@ Wire both listeners through `onHardFailure`. Each service's generation invalidat
 _Reviewed: 2026-08-24T23:39:42Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+## Fix Record (2026-08-24)
+
+All 5 findings FIXED — one atomic commit per finding, RED test first: CR-01 `4c16c78`, CR-02 `09563b8`, WR-01 `07d4624`, WR-02 `d6c2b72`, IN-01 `efb9699`. Suite grew 679 → 697 tests (51 → 52 files; new sibling `App.holdemCachePoison.test.tsx` — the five frozen v1 suites and both golden gates byte-untouched). Final gate green at every commit and at HEAD: `vitest run`, `tsc --noEmit`, `eslint .`, `npm run build`.
+
+_Fixed: 2026-08-24_
+_Fixer: Claude (gsd-code-fixer)_
