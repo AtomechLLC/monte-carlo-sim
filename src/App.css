@@ -752,7 +752,48 @@ h2 {
   border-radius: 18px 18px 50% 50% / 18px 18px 88% 88%;
 }
 
-/* The shoe moves with the shape. `.deck-origin`'s shared anchor (left 90%, top 40%) is a
+/* Table furniture: the betting arc and the printed rules.
+ *
+ * The middle of a blackjack felt was a large empty green void, and a real table never is —
+ * it carries an arc separating the dealer's side from the players', with the house rules
+ * printed on it. Adding them is authenticity AND information: this app's rules (dealer stands
+ * on soft 17, blackjack pays 3:2) are LOCKED and currently stated nowhere the user can see,
+ * only in the EV tile's sub-copy. Printing them on the felt is where a player would actually
+ * look for them.
+ *
+ * Drawn entirely in the ::before/::after of the scene — no DOM, no testid, nothing for a test
+ * to bind to, and `aria-hidden` is unnecessary because pseudo-element content is not exposed
+ * as text here. Both sit under the cards: the scene's children carry --z-seat and above. */
+[data-testid='blackjack-scene']::before {
+  content: '';
+  position: absolute;
+  inset: 26% 12% auto 12%;
+  aspect-ratio: 2 / 1;
+  border-radius: 50%;
+  border-top: 2px solid rgba(255, 249, 235, 0.16);
+  z-index: var(--z-felt);
+  pointer-events: none;
+}
+
+[data-testid='blackjack-scene']::after {
+  /* Literal middot, not a B7 escape: CSS hex escapes need an explicit terminator, and
+   * without one the parser swallowed the following characters and printed a tofu box plus
+   * stray text on the felt. */
+  content: 'BLACKJACK PAYS 3 TO 2 \B7  DEALER MUST STAND ON 17';
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  color: rgba(255, 249, 235, 0.34);
+  white-space: nowrap;
+  z-index: var(--z-felt);
+  pointer-events: none;
+}
+
+/* The shoe moves with the shape./* The shoe moves with the shape. `.deck-origin`'s shared anchor (left 90%, top 40%) is a
  * point on Hold'em's oval but OUTSIDE the half-moon: the bottom corners' 88% vertical radius
  * starts pulling the right edge inward from 12% of the height down, so at 40% the deck was
  * straddling the rail. Top-right is both inside the flat part of the shape and where a shoe
@@ -926,6 +967,20 @@ h2 {
   line-height: 1.4;
 }
 
+/* The hero figure. Display size (32px) at weight 600 — both already in the locked 4-size /
+ * 2-weight scale, so this is a REASSIGNMENT of existing roles, not a new one. The label stays
+ * at 14px, which is what creates the hierarchy: before this, the win percentage and the word
+ * "Win" were the same size, so the panel read as four equal facts rather than one answer with
+ * three footnotes. Sans rather than the Didone: this is data, and --display is fenced to
+ * headings. */
+.odds-stat--hero .odds-stat__value {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--text-h);
+  letter-spacing: -0.01em;
+}
+
 .odds-stat__value {
   margin: 0;
   font-size: 16px;
@@ -1003,6 +1058,17 @@ h2 {
     width: 62px;
     height: 16.7px;
   }
+}
+
+/* Column headings do not break. "Hand Category", "Three of a Kind" and "Locked In" were each
+ * wrapping onto two lines, which made the header row taller than three data rows and read as
+ * cramped however good the numbers were. The row labels get the same treatment: a category
+ * NAME is a single thing, and breaking "Three of a / Kind" makes the table look like it is
+ * running out of room even when it is not. The panel is the flex item that yields, so the
+ * space comes out of the felt rather than out of the table. */
+[data-testid='category-table'] thead th,
+[data-testid='category-table'] tbody th {
+  white-space: nowrap;
 }
 
 /* Tabular figures for the category percentages. These are the digits that move most while a
@@ -1096,6 +1162,12 @@ h2 {
  * added to the SHARED rule, so both games' panels stay pixel-identical (D-11). */
 [data-testid='odds-panel'],
 [data-testid='blackjack-odds-panel'] {
+  /* The panel gets a floor and the felt yields, rather than the other way round. When the felt
+   * grew to 1040px it took the space out of this column, and every multi-word heading in the
+   * category table started wrapping onto two lines — a table of numbers whose headings are
+   * taller than its rows reads as cramped no matter how good the numbers are. */
+  flex: 0 1 auto;
+  min-width: 460px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;

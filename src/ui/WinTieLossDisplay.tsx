@@ -14,7 +14,10 @@ export function WinTieLossDisplay() {
           {pending ? '—' : trialsCompleted.toLocaleString()}
         </dd>
       </div>
-      <div className="odds-stat">
+      {/* Win is the HERO figure: it is the answer to the question the whole app exists to
+          answer, and it used to render at the same size as its own label. Marked here rather
+          than selected positionally in CSS so the intent survives a reordering. */}
+      <div className="odds-stat odds-stat--hero">
         <dt className="odds-stat__label">Win</dt>
         <dd className="odds-stat__value" data-testid="win-pct">
           {formatPct(outcomes.win, trialsCompleted, pending)}
