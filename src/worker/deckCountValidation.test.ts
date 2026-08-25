@@ -16,6 +16,15 @@ import type { BlackjackProgressSnapshot } from './blackjackProtocol';
 // that must not be edited); both game APIs' deckCount rejections are pinned here in one
 // place. The absent-means-1 acceptance below is what keeps the byte-frozen golden fixtures
 // (which omit `deckCount`) valid.
+//
+// AMENDED 2026-08-24 (Phase 7 plan 07-03, D-12): the WR-03 validation-boundary proxy test
+// ("accepts an explicit deckCount of 2 at the validation boundary") was RETARGETED to a
+// real end-to-end 2-deck run. The duplicate-aware evaluator (plan 07-01) plus runTrials'
+// hoisted evaluator selection and the worker's grow-on-merge histogram (plan 07-03) made
+// `deckCount: 2` legal all the way through the trial path, retiring WR-03. Retargeted per
+// the standing same-commit amendment rule, never deleted — and the frozen
+// `102 cards, got 101` rejection string the proxy used to ride keeps its own plainly-titled
+// test directly below the retargeted one.
 
 const heroHole: [(typeof FULL_DECK)[number], (typeof FULL_DECK)[number]] = [
   FULL_DECK[0],
@@ -94,21 +103,47 @@ describe('poker API — deckCount shape validation (WR-02, D-09)', () => {
     expect(snapshots[snapshots.length - 1].done).toBe(true);
   });
 
-  it('accepts an explicit deckCount of 2 at the validation boundary (WR-03 keeps the 2-deck TRIAL path off-limits)', async () => {
-    // WR-03 (STATE.md Blockers): nothing may pass deckCount:2 into the HOLD'EM trial path
-    // until Phase 7's duplicate-aware evaluator exists — the evaluator crashes on duplicate
-    // cards. So deckCount=2 acceptance is asserted at the VALIDATION layer instead of by
-    // running trials: a deliberately short 101-card remainingDeck sails PAST the deckCount
-    // shape check and trips the NEXT check (remainingDeck length, computed from
-    // shoeSize(2) = 104), proving 2 was accepted as a value. The blackjack API's
-    // deckCount=2 case below runs a real simulation — no evaluator involvement (D-08).
-    const api = createSimulationApi();
+  it('accepts deckCount 2 END-TO-END: a real 2-deck run completes with an 11-length reconciling categoryCounts (D-12, WR-03 retired)', async () => {
+    // RETARGETED 2026-08-24 (Phase 7 plan 07-03, D-12): WR-03 (STATE.md Blockers) held the
+    // 2-deck TRIAL path closed until Phase 7's duplicate-aware evaluator existed, so this
+    // test used to prove deckCount=2 survived validation by riding the NEXT check's
+    // rejection (a deliberately short 101-card remainingDeck). That evaluator now ships
+    // (evaluatorTwoDeck.ts, plan 07-01) and runTrials hoists it in at deckCount=2 (plan
+    // 07-03), so the acceptance is asserted by RUNNING trials to completion — the final
+    // snapshot must be done, carry the extended 11-length histogram (index 10 = Five of a
+    // Kind, D-05) and reconcile its category sum against trialsCompleted. The rejection
+    // string the old proxy rode keeps its own coverage in the next test.
+    const api = createSimulationApi({ maxTrials: 1000, batchSize: 500, progressIntervalMs: 0 });
     const twoDeckState: ConditionedState = {
+      ...pokerState(2),
+      remainingDeck: shoeWithout(2, heroHole),
+    };
+    expect(twoDeckState.remainingDeck).toHaveLength(102);
+
+    const snapshots: ProgressSnapshot[] = [];
+    await api.runSimulation(twoDeckState, 1, (s) => {
+      snapshots.push(s);
+    });
+
+    expect(snapshots.length).toBeGreaterThan(0);
+    const last = snapshots[snapshots.length - 1];
+    expect(last.done).toBe(true);
+    expect(last.categoryCounts).toHaveLength(11);
+    expect(last.categoryCounts.reduce((a, b) => a + b, 0)).toBe(last.trialsCompleted);
+  });
+
+  it('still rejects a malformed 2-deck remainingDeck length with the exact frozen boundary message', async () => {
+    // Preserved from the retired WR-03 proxy test (D-12: retarget, never delete): the
+    // malformed-length rejection is a real boundary contract in its own right, and the
+    // exact `102 cards, got 101` string must keep its coverage now that the acceptance
+    // test above no longer rides it.
+    const api = createSimulationApi();
+    const shortState: ConditionedState = {
       ...pokerState(2),
       remainingDeck: shoeWithout(2, heroHole).slice(1),
     };
-    expect(twoDeckState.remainingDeck).toHaveLength(101);
-    await expect(api.runSimulation(twoDeckState, 1, () => {})).rejects.toThrow(
+    expect(shortState.remainingDeck).toHaveLength(101);
+    await expect(api.runSimulation(shortState, 1, () => {})).rejects.toThrow(
       'runSimulation: remainingDeck must have exactly 102 cards, got 101',
     );
   });
