@@ -168,7 +168,9 @@
  * pair, which is what the card art and badge contrast were tuned against. */
 
 #root {
-  width: 1126px;
+  /* Widened with the enlarged felt: the scene is 1040px of table plus a ~420px
+   * odds cluster beside it at >=1024px, which no longer fits the old 1126px. */
+  width: min(100%, 1560px);
   max-width: 100%;
   margin: 0 auto;
   text-align: center;

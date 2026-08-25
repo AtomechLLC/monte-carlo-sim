@@ -297,7 +297,7 @@ h2 {
  * before), and 12.12:1 at the lamp's absolute core — comfortably AAA either way. */
 .felt {
   position: relative;
-  width: min(100%, 760px);
+  width: min(100%, 1040px);
   aspect-ratio: 16 / 10;
   margin-inline: auto;
   border-radius: 50%;
@@ -322,37 +322,45 @@ h2 {
 /* Seat/community/deck placement (UI-SPEC Table Geometry) — hero bottom-centre,
  * 3 opponents arced across the top, community centred, deck at the right.
  * Percentages are relative to .felt's own box; ±2% fine-tuning is allowed,
- * this hero/3-opponent-arc/community/deck structure is not (D-04). */
+ * this hero/3-opponent-arc/community/deck structure is not (D-04).
+ *
+ * RE-SPACED for the enlarged felt (1040x650). The felt grew but the cards did
+ * not, so the vertical budget was re-cut rather than merely scaled: opponents
+ * moved DOWN off the rim (at top:0% the ellipse's own boundary runs through the
+ * card, so the top-centre pair hung half outside the green), and the hero moved
+ * DOWN and away from the community row, which previously cleared it by ~17px.
+ * Gaps at the reference size are now ~80px opponents-to-community and ~116px
+ * community-to-hero. */
 .seat-hero {
   position: absolute;
-  bottom: 3%;
+  bottom: 2%;
   left: 50%;
   transform: translateX(-50%);
   z-index: var(--z-seat);
 }
 .seat-opponent-0 {
   position: absolute;
-  top: 6%;
+  top: 9%;
   left: 14%;
   z-index: var(--z-seat);
 }
 .seat-opponent-1 {
   position: absolute;
-  top: 0%;
+  top: 3%;
   left: 50%;
   transform: translateX(-50%);
   z-index: var(--z-seat);
 }
 .seat-opponent-2 {
   position: absolute;
-  top: 6%;
+  top: 9%;
   left: 86%;
   transform: translateX(-100%);
   z-index: var(--z-seat);
 }
 .community-area {
   position: absolute;
-  top: 38%; /* within the ±2% fine-tuning budget — reduces hero overlap at narrow viewports */
+  top: 40%; /* re-centred for the enlarged felt; the hero clearance below is now ~116px */
   left: 50%;
   transform: translateX(-50%);
   z-index: var(--z-community);

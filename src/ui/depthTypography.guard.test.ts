@@ -338,8 +338,13 @@ describe('App.css — reduced motion removes the settle, never the state (Felt &
 describe('App.css — the felt is lit and framed, not re-laid-out (Felt & Brass iv)', () => {
   const felt = withoutComments(ruleFor(baseAppCss, '.felt'));
 
+  // RETARGETED (not relaxed): the felt was deliberately enlarged 760 -> 1040 at the user's
+  // request. That pin existed because the depth pass was scoped to lighting only; a later,
+  // explicit resize is a different thing from that pass drifting. The declaration is still
+  // pinned, and `tableGeometry.ts` is pinned to the SAME number below so the two cannot
+  // silently disagree — which is the failure this guard actually exists to prevent.
   it.each([
-    'width: min(100%, 760px)',
+    'width: min(100%, 1040px)',
     'aspect-ratio: 16 / 10',
     'margin-inline: auto',
     'border-radius: 50%',
@@ -347,8 +352,8 @@ describe('App.css — the felt is lit and framed, not re-laid-out (Felt & Brass 
   ])('keeps the shipped geometry declaration `%s`', (declaration) => {
     expect(
       felt,
-      'this pass is lighting and framing (03-02 D-04 owns the table geometry) — a changed ' +
-        'dimension here would move every percentage-positioned seat on the table',
+      'a changed dimension here moves every percentage-positioned seat on the table, and ' +
+        'desynchronises the deal-animation origins in tableGeometry.ts',
     ).toContain(declaration);
   });
 
@@ -685,5 +690,34 @@ describe('card-back recolour — sepia() is what makes the tint possible at all'
     expect(value.indexOf('sepia('), 'sepia() must precede hue-rotate()').toBeLessThan(
       value.indexOf('hue-rotate('),
     );
+  });
+});
+
+/**
+ * The felt's CSS size and `tableGeometry.ts`'s reference constants are two statements of ONE
+ * fact. `tableGeometry` computes each card's deal-animation start offset as a pixel delta
+ * against a fixed reference felt, so if the stylesheet is resized and those constants are not,
+ * every card flies in from the wrong place — a purely visual break that no rendering test in a
+ * jsdom suite (which lays nothing out) can see. Pinning both halves against each other is the
+ * only thing that catches it.
+ */
+describe('felt size — the stylesheet and the deal-animation reference agree', () => {
+  const geometrySource = readSource('ui/tableGeometry.ts');
+
+  it('derives the same width from both files', () => {
+    const cssWidth = withoutComments(ruleFor(baseAppCss, '.felt')).match(
+      /width:\s*min\(100%,\s*(\d+)px\)/,
+    )?.[1];
+    const referenceWidth = geometrySource.match(/const FELT_WIDTH = (\d+);/)?.[1];
+
+    expect(cssWidth, '.felt must declare a min() width').toBeTruthy();
+    expect(referenceWidth, 'tableGeometry must declare FELT_WIDTH').toBeTruthy();
+    expect(referenceWidth).toBe(cssWidth);
+  });
+
+  it('derives the reference height from the declared 16/10 aspect ratio', () => {
+    const width = Number(geometrySource.match(/const FELT_WIDTH = (\d+);/)?.[1]);
+    const height = Number(geometrySource.match(/const FELT_HEIGHT = (\d+);/)?.[1]);
+    expect(height).toBe((width * 10) / 16);
   });
 });

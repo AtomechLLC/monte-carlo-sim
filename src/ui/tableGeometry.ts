@@ -18,10 +18,10 @@ export type PositionKey =
   | 'community-4'
   | 'deck-origin';
 
-/** The reference felt's locked dimensions (`.felt` in src/App.css: `width: min(100%, 760px)`,
- * `aspect-ratio: 16 / 10` -> height = 760 * 10 / 16 = 475). */
-const FELT_WIDTH = 760;
-const FELT_HEIGHT = 475;
+/** The reference felt's locked dimensions (`.felt` in src/App.css: `width: min(100%, 1040px)`,
+ * `aspect-ratio: 16 / 10` -> height = 1040 * 10 / 16 = 650). */
+const FELT_WIDTH = 1040;
+const FELT_HEIGHT = 650;
 
 /**
  * Approximate centre of each slot, as a percentage of the felt's own box — mirroring the
@@ -34,16 +34,16 @@ const FELT_HEIGHT = 475;
  * separate CSS rules.
  */
 export const POSITIONS: Record<PositionKey, { leftPct: number; topPct: number }> = {
-  'seat-hero': { leftPct: 50, topPct: 77.3 },
-  'seat-opponent-0': { leftPct: 22.7, topPct: 15.4 },
-  'seat-opponent-1': { leftPct: 50, topPct: 9.4 },
-  'seat-opponent-2': { leftPct: 77.3, topPct: 15.4 },
-  'community-0': { leftPct: 25.8, topPct: 51.2 },
-  'community-1': { leftPct: 37.9, topPct: 51.2 },
-  'community-2': { leftPct: 50, topPct: 51.2 },
-  'community-3': { leftPct: 62.1, topPct: 51.2 },
-  'community-4': { leftPct: 74.2, topPct: 51.2 },
-  'deck-origin': { leftPct: 94.2, topPct: 49.4 },
+  'seat-hero': { leftPct: 50, topPct: 83.6 },
+  'seat-opponent-0': { leftPct: 20.5, topPct: 15.9 },
+  'seat-opponent-1': { leftPct: 50, topPct: 9.9 },
+  'seat-opponent-2': { leftPct: 79.5, topPct: 15.9 },
+  'community-0': { leftPct: 32.3, topPct: 48.2 },
+  'community-1': { leftPct: 41.2, topPct: 48.2 },
+  'community-2': { leftPct: 50, topPct: 48.2 },
+  'community-3': { leftPct: 58.8, topPct: 48.2 },
+  'community-4': { leftPct: 67.7, topPct: 48.2 },
+  'deck-origin': { leftPct: 93.1, topPct: 46.9 },
 };
 
 function toPx(position: { leftPct: number; topPct: number }): { x: number; y: number } {
