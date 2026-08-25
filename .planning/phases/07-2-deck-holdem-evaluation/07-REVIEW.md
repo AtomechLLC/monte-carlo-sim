@@ -110,3 +110,10 @@ categoryCounts: number[];
 _Reviewed: 2026-08-25T03:09:18Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+
+## Fix Record (orchestrator, same day)
+
+- **IN-01 — FIXED:** `OddsTable.tsx` now subscribes via per-field selectors (`categoryCounts`, `trialsCompleted`) instead of the whole store.
+- **IN-02 — FIXED:** `protocol.ts` `ProgressSnapshot.categoryCounts` doc rewritten: length is CATEGORY_COUNT at 1 deck / CATEGORY_COUNT+1 at 2 decks; consumers must iterate by array length.
+- Suite re-verified after fixes: 62 files / 863 tests green; tsc/eslint clean.

@@ -9,7 +9,8 @@ import { formatPct } from './formatPct';
 import { lockedInCategory } from './lockedCategory';
 
 export function OddsTable() {
-  const { categoryCounts, trialsCompleted } = useOddsStore();
+  const categoryCounts = useOddsStore((state) => state.categoryCounts);
+  const trialsCompleted = useOddsStore((state) => state.trialsCompleted);
   const pending = useUiStore((state) => state.pendingAnimationCount > 0);
 
   const runout = useGameStore((state) => state.runout);

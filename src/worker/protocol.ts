@@ -45,7 +45,11 @@ export const DEFAULT_MAX_TRIALS = 200000;
 export interface ProgressSnapshot {
   /** The generation this snapshot belongs to — must match the caller's in-flight requestId. */
   requestId: number;
-  /** Length `CATEGORY_COUNT`, indexed by `HandStrength` enum value. */
+  /**
+   * Indexed by `HandStrength` enum value, extended by `FIVE_OF_A_KIND_INDEX` (10) at two
+   * decks: length `CATEGORY_COUNT` for 1-deck runs, `CATEGORY_COUNT + 1` for 2-deck runs
+   * (07-03 grow-on-merge). Consumers must iterate by ARRAY LENGTH, never `0..CATEGORY_COUNT-1`.
+   */
   categoryCounts: number[];
   outcomes: { win: number; tie: number; lose: number };
   trialsCompleted: number;
