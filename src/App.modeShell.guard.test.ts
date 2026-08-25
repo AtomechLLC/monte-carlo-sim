@@ -481,3 +481,104 @@ describe('oddsStore.ts — knowledgeKey stays the exact two-part poker-shaped ke
     ).toContain('return `${street}|${revealedMask}`;');
   });
 });
+
+describe('App.css — Phase 7 styles are selector-list extensions of the shared rules, never duplicated blocks (D-11, 07-05)', () => {
+  // What this block protects: the D-11 isolation contract requires blackjack's computed styles
+  // to be PROVABLY unchanged by Phase 7. A duplicated rule block (a second copy of the
+  // segmented-control or disabled-dimming declarations carrying only holdem selectors) would
+  // pass every behavioral test while silently letting the two games' appearance diverge on the
+  // next edit — so each shared rule is pinned at source level to contain BOTH games' selectors
+  // in ONE selector list. Same readSource technique as every other pin in this file: it reads
+  // App.css's source text, never its own.
+  const cssSource = readSource('App.css');
+  // Each chunk produced by splitting on `}` carries exactly one rule's selector prelude (plus
+  // any preceding comments) and its declarations — two selectors landing in the SAME chunk
+  // therefore share one rule, which is what "extension, not duplication" means at source level.
+  const ruleChunks = cssSource.split('}');
+
+  function theChunkWith(...tokens: string[]): string {
+    const matches = ruleChunks.filter((chunk) => tokens.every((token) => chunk.includes(token)));
+    expect(
+      matches,
+      `expected exactly one App.css rule containing all of: ${tokens.join(' + ')} — zero means ` +
+        'the shared rule was removed; more than one means a duplicated rule block appeared (D-11)',
+    ).toHaveLength(1);
+    return matches[0];
+  }
+
+  it('the segmented-control wrapper rule carries both deck toggles in one selector list', () => {
+    const chunk = theChunkWith("[data-testid='blackjack-deck-toggle']", 'display: inline-flex');
+    expect(
+      chunk,
+      "the wrapper rule must gain [data-testid='holdem-deck-toggle'] as a selector-list " +
+        'extension of the SHARED rule — a second holdem-only rule block would violate D-11',
+    ).toContain("[data-testid='holdem-deck-toggle']");
+  });
+
+  it('the segment sizing/typography rule carries both deck toggles in one selector list', () => {
+    const chunk = theChunkWith("[data-testid^='blackjack-deck-toggle-']", 'min-width: 44px');
+    expect(
+      chunk,
+      "the segment sizing rule must gain [data-testid^='holdem-deck-toggle-'] as a " +
+        'selector-list extension of the SHARED rule (D-11)',
+    ).toContain("[data-testid^='holdem-deck-toggle-']");
+  });
+
+  it('the internal-divider rule carries both first segments in one selector list', () => {
+    const chunk = theChunkWith("[data-testid='blackjack-deck-toggle-1']", 'border-right');
+    expect(
+      chunk,
+      "the internal-divider rule must gain [data-testid='holdem-deck-toggle-1'] as a " +
+        'selector-list extension of the SHARED rule (D-11)',
+    ).toContain("[data-testid='holdem-deck-toggle-1']");
+  });
+
+  it('the active-segment rule carries both deck toggles in one selector list', () => {
+    const chunk = theChunkWith("[data-testid^='blackjack-deck-toggle-'][aria-pressed='true']");
+    expect(
+      chunk,
+      "the active-segment rule must gain [data-testid^='holdem-deck-toggle-'][aria-pressed='true'] " +
+        'as a selector-list extension of the SHARED rule (D-11)',
+    ).toContain("[data-testid^='holdem-deck-toggle-'][aria-pressed='true']");
+  });
+
+  it('the disabled-dimming list carries the A4 guard segment alongside the blackjack one', () => {
+    const chunk = theChunkWith("[data-testid='blackjack-deck-toggle-1']:disabled");
+    expect(
+      chunk,
+      "the shipped disabled-dimming selector list must gain [data-testid='holdem-deck-toggle-1']" +
+        ':disabled (UI-SPEC A4) — in the SAME rule as the blackjack guard segment, never a ' +
+        'duplicated dimming block (D-11)',
+    ).toContain("[data-testid='holdem-deck-toggle-1']:disabled");
+  });
+
+  it('the copy-cue block exists, uses only the felt/badge tokens, and touches no reserved colour', () => {
+    expect(cssSource, 'plan 07-04 emitted .card-slot--cued as a binding class contract — 07-05 must style it').toContain(
+      '.card-slot--cued {',
+    );
+    expect(cssSource, 'plan 07-04 emitted .copy-cue as a binding class contract — 07-05 must style it').toContain(
+      '.copy-cue {',
+    );
+    const cueChunk = theChunkWith('.copy-cue {');
+    expect(
+      cueChunk,
+      'the copy-cue badge must use the solid felt-dark token as its fill (UI-SPEC A6: the ' +
+        'translucent seat-badge background composites below AA on a white card face)',
+    ).toContain('var(--felt-dark)');
+    expect(
+      cueChunk,
+      'the copy-cue badge must use the shipped seat-badge text token (A6) — no new colour token',
+    ).toContain('var(--seat-badge-text)');
+    expect(
+      cueChunk,
+      'the copy cue is a physical table fact, never an error state — the reserved accent ' +
+        'colour role must not appear anywhere in its block (07-UI-SPEC Color: Phase 7 ' +
+        'introduces ZERO accent usage)',
+    ).not.toContain('--accent');
+    expect(
+      cueChunk,
+      'the copy cue is a physical table fact, never an error state — the reserved destructive ' +
+        'colour role must not appear anywhere in its block (07-UI-SPEC Color)',
+    ).not.toContain('--destructive');
+  });
+});
