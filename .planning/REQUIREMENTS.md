@@ -6,14 +6,14 @@ Defined 2026-08-24 from the confirmed milestone scope (Blackjack + 1/2-deck shoe
 
 ### Multi-Deck Foundation (DECK)
 
-- [ ] **DECK-01**: The deck/shoe model supports 1 or 2 physical decks with physical-card identity — two copies of the same card are distinct objects that never collapse in deck math, drawing, or conditioning (no value-based `Set` dedup anywhere in the shoe path)
-- [ ] **DECK-02**: User can toggle deck count (1 or 2) per game; changing it cancels any in-flight simulation and recomputes all odds under the new shoe
-- [ ] **DECK-03**: All trial sampling draws WITHOUT replacement from the finite shoe (deckCount×52 − known cards), so deck count measurably changes the odds — with-replacement shortcuts are prohibited
-- [ ] **DECK-04**: The card picker's duplicate blocking is count-aware — with 2 decks a card can be picked twice, is visibly blocked only when all copies are used, and shows remaining-copy state
+- [x] **DECK-01**: The deck/shoe model supports 1 or 2 physical decks with physical-card identity — two copies of the same card are distinct objects that never collapse in deck math, drawing, or conditioning (no value-based `Set` dedup anywhere in the shoe path)
+- [x] **DECK-02**: User can toggle deck count (1 or 2) per game; changing it cancels any in-flight simulation and recomputes all odds under the new shoe
+- [x] **DECK-03**: All trial sampling draws WITHOUT replacement from the finite shoe (deckCount×52 − known cards), so deck count measurably changes the odds — with-replacement shortcuts are prohibited
+- [x] **DECK-04**: The card picker's duplicate blocking is count-aware — with 2 decks a card can be picked twice, is visibly blocked only when all copies are used, and shows remaining-copy state
 
 ### Blackjack (BJ)
 
-- [ ] **BJ-01**: User can switch between Hold'em and Blackjack; each game keeps its own state and odds (no mode leakage, no shared odds-cache keys)
+- [x] **BJ-01**: User can switch between Hold'em and Blackjack; each game keeps its own state and odds (no mode leakage, no shared odds-cache keys)
 - [x] **BJ-02**: User can deal a blackjack round — player hand face-up, dealer upcard face-up, dealer hole card face-down — with live Monte Carlo odds streaming off the main thread with the visible trial counter (same convergence experience as Hold'em)
 - [x] **BJ-03**: User sees the player bust-if-hit probability and the dealer final-outcome distribution (17, 18, 19, 20, 21, natural, bust) conditioned on the visible upcard
 - [x] **BJ-04**: User sees win/push/lose probabilities and per-unit EV for Stand vs Hit at the current decision point (EV per unit wagered, no bankroll/chips — fixed conventions: dealer stands on soft 17, natural pays 3:2)
@@ -45,11 +45,11 @@ Defined 2026-08-24 from the confirmed milestone scope (Blackjack + 1/2-deck shoe
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| DECK-01 | Phase 4 | Pending |
-| DECK-02 | Phase 8 | Pending |
-| DECK-03 | Phase 4 | Pending |
-| DECK-04 | Phase 4 | Pending |
-| BJ-01 | Phase 5 | Pending |
+| DECK-01 | Phase 4 | Complete |
+| DECK-02 | Phase 8 | Complete |
+| DECK-03 | Phase 4 | Complete |
+| DECK-04 | Phase 4 | Complete |
+| BJ-01 | Phase 5 | Complete |
 | BJ-02 | Phase 6 | Complete |
 | BJ-03 | Phase 6 | Complete |
 | BJ-04 | Phase 6 | Complete |
