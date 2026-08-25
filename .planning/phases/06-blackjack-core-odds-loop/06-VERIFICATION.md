@@ -131,3 +131,5 @@ None. All 5 ROADMAP success criteria hold in the codebase as it exists at HEAD; 
 
 _Verified: 2026-08-25T00:10:00Z_
 _Verifier: Claude (gsd-verifier)_
+
+> **Correction (2026-08-25, v2.0 milestone audit W-01):** this report cites `npx tsc --noEmit` as its typecheck evidence. That gate is **vacuous in this repo** — the root `tsconfig.json` is solution-style (`files: []` + `references`), so it type-checks nothing and passes against deliberately broken code. The type-safety evidence recorded here is therefore void as written. Re-run at the time of the audit, `npx tsc -b` (the real gate) exits 0 across the whole project, so the CONCLUSION holds — but the evidence cited for it did not support it.
