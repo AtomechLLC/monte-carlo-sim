@@ -3,7 +3,7 @@ import type { Card, Suit } from '@poker-apprentice/types';
 import { ALL_RANKS, ALL_SUITS } from '@poker-apprentice/types';
 import { usePickerStore, pickedCards, remainingCopies, SLOT_ORDER, SLOT_LABEL } from '../state/pickerStore';
 import type { SlotId } from '../state/pickerStore';
-import type { DeckCount } from '../engine/shoe';
+import { useGameStore } from '../state/gameStore';
 
 /** UI-SPEC A6 — full English suit-group headings, in `ALL_SUITS` order (c, d, h, s). */
 const SUIT_LABEL: Record<Suit, string> = {
@@ -13,21 +13,21 @@ const SUIT_LABEL: Record<Suit, string> = {
   s: 'Spades',
 };
 
-/**
- * Fixed deck count for this phase (D-09): the picker's blocking is count-aware but this phase
- * ships no visible UI for it, so `deckCount` stays pinned to 1 here — identical to v1's every-
- * card-unique behaviour. Phase 8 (cross-game deck-count toggle): replacing this const with a
- * `gameModeStore` read is NOT sufficient on its own — the `setPick(openSlot, card)` call below
- * MUST also pass `deckCount` as its third argument, or the store keeps blocking at its default
- * of 1 while `isUsed` shows a second copy as available (silent lost picks — 04-REVIEW WR-01).
- */
-const deckCount: DeckCount = 1;
-
 export function CardPicker() {
   const picks = usePickerStore((state) => state.picks);
   const setPick = usePickerStore((state) => state.setPick);
   const clearSlot = usePickerStore((state) => state.clearSlot);
   const clearAll = usePickerStore((state) => state.clearAll);
+  /**
+   * WR-01 CLOSURE (D-15): the deck count pinned to 1 since Phase 4 is now a live read of
+   * HOLD'EM's deckCount — D-14 places it in `gameStore`, correcting this comment's earlier
+   * speculation about a cross-game source. Both halves of the fix landed together: this
+   * subscription AND `setPick(openSlot, card, deckCount)` below. Shipping only one half is
+   * the silent-lost-picks bug the old pinned-const comment warned about — the store would
+   * keep blocking at its default of 1 while the availability check showed a second copy as
+   * pickable (04-REVIEW WR-01).
+   */
+  const deckCount = useGameStore((state) => state.deckCount);
 
   const [openSlot, setOpenSlot] = useState<SlotId | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -41,7 +41,11 @@ export function CardPicker() {
 
   function handlePick(card: Card) {
     if (openSlot === null) return;
-    setPick(openSlot, card);
+    // Deal-time consequence (07-RESEARCH §7): picks holding two copies of a value flow
+    // into deal()'s `shoeWithout(deckCount, picked)` correctly, because `pickedCards`
+    // preserves duplicates and `shoeWithout` removes exactly one physical copy per
+    // occurrence.
+    setPick(openSlot, card, deckCount);
     dialogRef.current?.close();
   }
 
@@ -51,10 +55,23 @@ export function CardPicker() {
   // remainingCopies rather than re-deriving a second duplicate-counting helper (Task 1
   // constraint) — no value-based Set of card values survives in the picker path.
   const ownCard = openSlot !== null ? picks[openSlot] : null;
-  function isUsed(card: Card): boolean {
+  function cardAvailability(card: Card): { used: boolean; title: string | undefined } {
     let available = remainingCopies(picks, card, deckCount);
     if (ownCard === card) available += 1;
-    return available <= 0;
+    const used = available <= 0;
+    // A9 title states, derived from the same single counting source: the consumed count
+    // selects the title, while the visible `{card} (used)` suffix stays deliberately
+    // identical at both deck counts (UI-SPEC A9 test continuity).
+    const consumed = deckCount - available;
+    let title: string | undefined;
+    if (consumed <= 0) {
+      title = undefined;
+    } else if (deckCount === 2) {
+      title = used ? 'Both copies already used in this hand' : '1 of 2 copies used';
+    } else {
+      title = 'Already used in this hand';
+    }
+    return { used, title };
   }
 
   return (
@@ -93,14 +110,14 @@ export function CardPicker() {
                 <h3>{SUIT_LABEL[suit]}</h3>
                 {ALL_RANKS.map((rank) => {
                   const card = `${rank}${suit}` as Card;
-                  const used = isUsed(card);
+                  const { used, title } = cardAvailability(card);
                   return (
                     <button
                       key={card}
                       type="button"
                       data-testid={`picker-card-${card}`}
                       disabled={used}
-                      title={used ? 'Already used in this hand' : undefined}
+                      title={title}
                       onClick={() => handlePick(card)}
                     >
                       {used ? `${card} (used)` : card}
