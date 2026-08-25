@@ -161,12 +161,16 @@ describe('DeckCountToggle — the shared, props-only deck-count control (Phase 8
     }
   });
 
-  it('oneDeckDisabled + oneDeckTitle guard segment 1 only, with the supplied title as a VALUE (binding rule 6)', () => {
+  it('oneDeckDisabled + oneDeckTitle guard segment 1 only, with the supplied title as a VALUE (binding rule 6)', async () => {
+    // `noop` was replaced with a spy and a real user here so the ACTIVE-segment case added at
+    // the end of this test can assert OPERABILITY, not just attribute absence.
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
     const { rerender } = render(
       <DeckCountToggle
         testidPrefix={PREFIX}
         deckCount={2}
-        onSelect={noop}
+        onSelect={onSelect}
         oneDeckDisabled
         oneDeckTitle={BLACKJACK_GUARD_TITLE}
       />,
@@ -186,17 +190,48 @@ describe('DeckCountToggle — the shared, props-only deck-count control (Phase 8
       <DeckCountToggle
         testidPrefix={PREFIX}
         deckCount={2}
-        onSelect={noop}
+        onSelect={onSelect}
         oneDeckDisabled
         oneDeckTitle={HOLDEM_GUARD_TITLE}
       />,
     );
 
     expect(screen.getByTestId(`${PREFIX}-1`)).toHaveAttribute('title', HOLDEM_GUARD_TITLE);
+
+    // ADDED (08-REVIEW WR-01): the case this test was named for but never rendered. Same
+    // guarded props, segment 1 now ACTIVE. Neither shipped call site can reach this state —
+    // both guard predicates are one-directional 2 -> 1 — and that is exactly why the
+    // COMPONENT, not call-site discipline, has to be what forbids it: a pressed segment that
+    // is disabled is an inoperable toggle with no visible way back (a WCAG operable-toggle
+    // violation), and 07 A3 forbids a title on the active segment. Rendering only
+    // deckCount={2} above could not distinguish the enforced invariant from an unenforced one.
+    rerender(
+      <DeckCountToggle
+        testidPrefix={PREFIX}
+        deckCount={1}
+        onSelect={onSelect}
+        oneDeckDisabled
+        oneDeckTitle={HOLDEM_GUARD_TITLE}
+      />,
+    );
+
+    const activeSegmentOne = screen.getByTestId(`${PREFIX}-1`);
+    expect(activeSegmentOne).toHaveAttribute('aria-pressed', 'true');
+    expect(activeSegmentOne).not.toBeDisabled();
+    expect(activeSegmentOne, 'the active segment must carry NO disabled attribute at all').not.toHaveAttribute(
+      'disabled',
+    );
+    expect(activeSegmentOne, 'the active segment must carry no title (07 A3)').not.toHaveAttribute('title');
+
+    // Operable, not merely un-disabled: the click still reaches onSelect with its own count,
+    // so the store's same-value early return stays the only no-op mechanism (A4).
+    onSelect.mockClear();
+    await user.click(activeSegmentOne);
+    expect(onSelect.mock.calls).toEqual([[1]]);
   });
 
   it('twoDecksTitle renders on segment 2 as a value and never disables it', () => {
-    render(
+    const { rerender } = render(
       <DeckCountToggle
         testidPrefix={PREFIX}
         deckCount={1}
@@ -209,6 +244,24 @@ describe('DeckCountToggle — the shared, props-only deck-count control (Phase 8
     expect(screen.getByTestId(`${PREFIX}-2`)).not.toBeDisabled();
     // A title on one segment must not bleed onto the other.
     expect(screen.getByTestId(`${PREFIX}-1`)).not.toHaveAttribute('title');
+
+    // ADDED (08-REVIEW WR-01), the symmetric half: the SAME title prop while segment 2 is the
+    // ACTIVE segment renders no attribute. 07 A3 puts the pre-click affordance on the inactive
+    // segment only, and the shipped call site already computes it that way — this pins that the
+    // component enforces it too, so the rule survives a call site that forgets the direction.
+    rerender(
+      <DeckCountToggle
+        testidPrefix={PREFIX}
+        deckCount={2}
+        onSelect={noop}
+        twoDecksTitle={FRESH_DEAL_TITLE}
+      />,
+    );
+
+    const activeSegmentTwo = screen.getByTestId(`${PREFIX}-2`);
+    expect(activeSegmentTwo).toHaveAttribute('aria-pressed', 'true');
+    expect(activeSegmentTwo, 'the active segment must carry no title (07 A3)').not.toHaveAttribute('title');
+    expect(activeSegmentTwo).not.toBeDisabled();
   });
 
   it('renders from its prop alone while both game stores hold a contradicting deck count (D-01)', () => {
