@@ -437,3 +437,16 @@ None — no network endpoint, auth path, file-access pattern or schema at a trus
 - VERIFIED: every structural grep returned its stated result; both testid registries byte-unmodified
 - VERIFIED: STATE.md and ROADMAP.md NOT modified by this plan
 - VERIFIED: no preview/dev process started by this plan survives
+
+## Post-Merge Live-Browser Addendum (orchestrator, same day)
+
+After all 3 plans merged, the orchestrating agent drove the real dev server (port 5199, real Chromium, in-app browser). Environmental constraint unchanged: pane hidden, rAF suspended, screenshot compositing unavailable — pixels still unviewed.
+
+**Verified LIVE (frame-independent):**
+1. **SC1 shared component:** both games render structurally identical toggle markup — `<div data-testid="{prefix}-deck-toggle" role="group" aria-label="Deck count">` + two `<button type="button" data-testid="{prefix}-deck-toggle-{n}" aria-pressed=...>` with labels "1 deck"/"2 decks". The ONLY difference between the two games' outerHTML is the testid prefix. Hold'em's toggle confirmed as last control-bar child.
+2. **Per-game independence (no cross-write):** blackjack set to 2 decks while Hold'em stayed at 1 simultaneously; each retained its own selection across two mode round trips; zero cross-game testid leakage in either direction.
+3. **SC2 blackjack (mid-round, through the shared segments):** subtitle moved "· 2-deck shoe" → "· 1-deck shoe" in the same frame, trial counter and all sampled stat cells blanked to em dashes, `aria-busy="true"` — synchronous reset + restart with no stale numbers.
+4. **SC2/D-02 Hold'em (mid-hand):** the pre-click disclosure `title="Switching the shoe deals a fresh hand"` was present on the inactive segment while a hand was on the table; clicking it replaced the hero hand with different cards (fresh deal, verified by alt-text comparison) and the category table went 11 → 10 rows with the Five of a Kind row correctly gone.
+5. **Console:** zero new errors from any Phase 8 interaction (only the two pre-existing stale HMR artifacts from Phase 6's placeholder deletion on this long-lived dev server).
+
+**Still NOT live-verified:** visual/pixel inspection (compositing blocked while the pane is hidden) — the empty-CSS-diff proof plus byte-identical attributes make a visual change structurally impossible, but nobody has looked. Attribution caveat (verbatim): Verification performed by the orchestrating Claude agent under the user's standing no-operator-input directive; a human did not personally observe. Re-verify anytime with npm run dev.
