@@ -152,8 +152,28 @@ Plans:
   3. Five of a Kind appears as its own row in the odds table in 2-deck mode, ranked above Royal Flush, with a correct probability.
   4. Two copies of the same card are visually distinguishable on the felt via a visible copy-cue UI badge, so a duplicate never reads as a rendering glitch.
 
-**Plans**: TBD
+**Plans:** 7 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 07-01-PLAN.md — Duplicate-aware evaluation module: stamped gate, five-of-a-kind branch, suit-remap proxy, flush-zone scorer, extended comparator, brute-force oracle and both seeded frequency anchors
+- [ ] 07-02-PLAN.md — Hold'em deckCount in gameStore with D-02 toggle lifecycle, count-aware deal pool, and the CardPicker deckCount wire closing WR-01
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 07-03-PLAN.md — Category-index spine: hoisted evaluator selection in runTrials, grow-on-merge snapshots, length-tolerant odds guard, D-12 WR-03 retirement, WR-04 guard extension
+- [ ] 07-04-PLAN.md — Copy cue: canonical-scan second-copy derivation, the x2 badge on PlayingCard, and the three felt render paths with A11 accessibility
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 07-05-PLAN.md — Hold'em deck toggle with the same-commit modeShell guard retarget, every Phase 7 style, and the D-03 cache guard suite
+- [ ] 07-06-PLAN.md — Five of a Kind row at the strength end, derived 11-row label source, and deck-count-aware lockedInCategory routing
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 07-07-PLAN.md — Full regression sweep, blocker-ledger reconciliation, multi-source coverage audit and browser acceptance checkpoint
 
 ### Phase 8: Cross-Game Deck-Count Toggle UI
 
@@ -183,5 +203,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Multiset Deck & Streaming Foundation | v2.0 | 6/6 | Complete   | 2026-08-24 |
 | 5. Game-Mode Shell & Store Separation | v2.0 | 3/3 | Complete   | 2026-08-24 |
 | 6. Blackjack Core Odds Loop | v2.0 | 8/8 | Complete    | 2026-08-25 |
-| 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 0/TBD | Not started | - |
+| 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 0/7 | Not started | - |
 | 8. Cross-Game Deck-Count Toggle UI | v2.0 | 0/TBD | Not started | - |
