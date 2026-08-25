@@ -6,6 +6,7 @@ import { PlayingCard } from './PlayingCard';
 import { AnimatedCard } from './AnimatedCard';
 import { dealOriginOffset, type PositionKey } from './tableGeometry';
 import { useExitGate } from './useAnimationGate';
+import { useCopyCuedSlots, communityCueKey } from './copyCue';
 
 /** `0` -> `'community-0'` ... `4` -> `'community-4'` — the only cast site for this narrowing,
  * mirroring Seat.tsx's `${...} as const as 'seat-opponent-0' | ...` pattern for the same reason:
@@ -43,6 +44,14 @@ export function BoardDisplay() {
   const visibleBoard = runout ? runout.board.slice(0, STREET_BOARD_COUNT[street]) : [];
   const placeholderCount = BOARD_SIZE - visibleBoard.length;
   const previouslyVisibleCount = STREET_BOARD_COUNT[previousStreet(street)];
+  // D-08: the badge renders as content INSIDE AnimatedCard (via PlayingCard's copyCue prop),
+  // never as a sibling of the motion span — AnimatedCard renders the motion span that carries
+  // every transform, so content inside it inherits fly-in, rewind-exit and the restore-mount
+  // `initial={false}` path automatically ("badge rides the card, not the slot"); a sibling
+  // would detach from the card mid-animation. The `--cued` class is APPENDED to the shipped
+  // slot classes, never a replacement.
+  const cuedSlots = useCopyCuedSlots();
+  const communityCued = (index: number): boolean => cuedSlots.has(communityCueKey(index));
 
   // Container-level exit gate (03-04, D-08/D-12): registers when visibleBoard.length DROPS (a
   // rewind removing board cards) so the earlier street's cached odds wait for the departing
@@ -81,9 +90,9 @@ export function BoardDisplay() {
                 animationKey={`community-${index}-${dealNonce}`}
                 origin={dealOriginOffset(communityPositionKey(index))}
                 dealIndex={communityDealIndex(index, previouslyVisibleCount)}
-                className="card-slot card-slot--community"
+                className={communityCued(index) ? 'card-slot card-slot--community card-slot--cued' : 'card-slot card-slot--community'}
               >
-                <PlayingCard card={card} />
+                <PlayingCard card={card} copyCue={communityCued(index)} />
               </AnimatedCard>
             ))}
           </AnimatePresence>

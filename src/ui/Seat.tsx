@@ -3,6 +3,7 @@ import { PlayingCard } from './PlayingCard';
 import { AnimatedCard } from './AnimatedCard';
 import { FlipCard } from './FlipCard';
 import { dealOriginOffset, dealIndex } from './tableGeometry';
+import { heroCueKey, opponentCueKey } from './copyCue';
 
 const HERO_HOLE_SLOTS = [0, 1] as const;
 
@@ -10,6 +11,10 @@ interface HeroSeatProps {
   variant: 'hero';
   heroHole: readonly [Card, Card] | undefined;
   dealNonce: number;
+  /** D-08 copy-cue slot keys from useCopyCuedSlots (HandDisplay's single derivation) —
+   * a props-driven read, keeping Seat store-free. Optional: absent means no cues, so
+   * direct render call sites without the prop keep the shipped 1-deck output. */
+  cuedSlots?: ReadonlySet<string>;
 }
 
 interface OpponentSeatProps {
@@ -20,6 +25,8 @@ interface OpponentSeatProps {
   hasHand: boolean;
   dealNonce: number;
   onReveal: (index: number) => void;
+  /** Same D-08 cued-slot set as HeroSeatProps — see that doc comment. */
+  cuedSlots?: ReadonlySet<string>;
 }
 
 type SeatProps = HeroSeatProps | OpponentSeatProps;
@@ -33,7 +40,7 @@ type SeatProps = HeroSeatProps | OpponentSeatProps;
  */
 export function Seat(props: SeatProps) {
   if (props.variant === 'hero') {
-    return <HeroSeat heroHole={props.heroHole} dealNonce={props.dealNonce} />;
+    return <HeroSeat heroHole={props.heroHole} dealNonce={props.dealNonce} cuedSlots={props.cuedSlots} />;
   }
   return (
     <OpponentSeat
@@ -43,6 +50,7 @@ export function Seat(props: SeatProps) {
       hasHand={props.hasHand}
       dealNonce={props.dealNonce}
       onReveal={props.onReveal}
+      cuedSlots={props.cuedSlots}
     />
   );
 }
@@ -52,9 +60,11 @@ const HERO_SEAT_KEY = 'hero';
 function HeroSeat({
   heroHole,
   dealNonce,
+  cuedSlots,
 }: {
   heroHole: readonly [Card, Card] | undefined;
   dealNonce: number;
+  cuedSlots?: ReadonlySet<string>;
 }) {
   return (
     <div className="seat seat-hero">
@@ -68,6 +78,13 @@ function HeroSeat({
           if (!card) {
             return <span key={slot} className="card-slot card-slot--hero" />;
           }
+          // D-08: the badge renders as content INSIDE AnimatedCard (via PlayingCard's copyCue
+          // prop), never as a sibling of the motion span — AnimatedCard renders the motion span
+          // that carries every transform, so content inside it inherits fly-in, rewind-exit and
+          // the restore-mount `initial={false}` path automatically ("badge rides the card, not
+          // the slot"); a sibling would detach from the card mid-animation. The `--cued` class
+          // is APPENDED to the shipped slot classes, never a replacement.
+          const cued = cuedSlots?.has(heroCueKey(slot)) ?? false;
           // Keyed by `${seatKey}-${slotIndex}-${dealNonce}` (never card identity, 03-RESEARCH
           // Anti-Patterns): a re-deal fully unmounts/remounts this element rather than Motion
           // retargeting an in-flight card into a different card.
@@ -77,9 +94,9 @@ function HeroSeat({
               animationKey={`${HERO_SEAT_KEY}-${slot}-${dealNonce}`}
               origin={dealOriginOffset('seat-hero')}
               dealIndex={dealIndex('hero', slot)}
-              className="card-slot card-slot--hero"
+              className={cued ? 'card-slot card-slot--hero card-slot--cued' : 'card-slot card-slot--hero'}
             >
-              <PlayingCard card={card} />
+              <PlayingCard card={card} copyCue={cued} />
             </AnimatedCard>
           );
         })}
@@ -98,6 +115,7 @@ function OpponentSeat({
   hasHand,
   dealNonce,
   onReveal,
+  cuedSlots,
 }: {
   index: number;
   hole: readonly [Card, Card] | undefined;
@@ -105,6 +123,7 @@ function OpponentSeat({
   hasHand: boolean;
   dealNonce: number;
   onReveal: (index: number) => void;
+  cuedSlots?: ReadonlySet<string>;
 }) {
   const label = `Opponent ${index + 1}`;
   const seatKey = `opponent-${index}`;
@@ -125,8 +144,17 @@ function OpponentSeat({
   // which is what keeps a hidden opponent's hole cards out of the DOM entirely (T-03-12).
   function renderHoleSlot(slotIndex: 0 | 1) {
     const flipKey = `${seatKey}-${slotIndex}-${dealNonce}`;
-    const flip = <FlipCard flipKey={flipKey} faceUp={revealed} card={revealed ? hole?.[slotIndex] : undefined} />;
+    // D-08: the badge is threaded INTO FlipCard (which mounts it inside the face-up flip
+    // face), never rendered beside it — content inside the animated wrappers inherits every
+    // flip/fly-in/restore transform ("badge rides the card, not the slot"). The flip
+    // identity expression on the line below is byte-identical to shipped — only the
+    // additive copyCue prop is new; felt keys stay positional (07-PATTERNS trap 10).
+    const cued = cuedSlots?.has(opponentCueKey(index, slotIndex)) ?? false;
+    const flip = <FlipCard flipKey={flipKey} faceUp={revealed} card={revealed ? hole?.[slotIndex] : undefined} copyCue={cued} />;
 
+    // The pre-deal branch below needs no `--cued` co-apply: a badge cannot appear there —
+    // `hasHand` is false only while no hand exists, and with no runout the cued set is
+    // empty by construction. Left untouched (D-11).
     if (!hasHand) {
       return (
         <span key={slotIndex} className="card-slot card-slot--opponent">
@@ -143,12 +171,26 @@ function OpponentSeat({
         animationKey={`${seatKey}-${slotIndex}-${dealNonce}`}
         origin={dealOriginOffset(seatPositionKey)}
         dealIndex={dealIndex(seatDealIndex, slotIndex)}
-        className="card-slot card-slot--opponent"
+        className={cued ? 'card-slot card-slot--opponent card-slot--cued' : 'card-slot card-slot--opponent'}
       >
         {flip}
       </AnimatedCard>
     );
   }
+
+  // A11 (07-UI-SPEC): a button's `aria-label` overrides its inner content for the
+  // accessible name, so the badge's visually-hidden sibling is never announced inside this
+  // labelled button — without this suffix a screen-reader user would never learn a
+  // duplicate sits in the seat. Appended once per badged card, in slot order, AFTER the
+  // shipped string, which stays exactly as composed today. The suffix branch is
+  // unreachable at one deck (copyCuedSlots is empty there), keeping the shipped label
+  // byte-identical (D-11). The UNREVEALED variant's aria-label and title below are
+  // completely untouched (the byte-identical Phase 1-2 contract).
+  const cueSuffixFor = (slotIndex: 0 | 1): string =>
+    hole !== undefined && cuedSlots !== undefined && cuedSlots.has(opponentCueKey(index, slotIndex))
+      ? ` — second copy of ${hole[slotIndex]}`
+      : '';
+  const cueSuffix = cueSuffixFor(0) + cueSuffixFor(1);
 
   return (
     <div className={`seat seat-opponent-${index}`}>
@@ -157,7 +199,7 @@ function OpponentSeat({
           type="button"
           data-testid={`opponent-seat-${index}`}
           disabled
-          aria-label={`${label} hole cards: ${hole[0]} ${hole[1]} (revealed)`}
+          aria-label={`${label} hole cards: ${hole[0]} ${hole[1]} (revealed)${cueSuffix}`}
         >
           {renderHoleSlot(0)}
           {renderHoleSlot(1)}

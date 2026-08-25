@@ -87,10 +87,41 @@ interface PlayingCardProps {
   faceUp?: boolean;
   /** When true the image is alt="" (an ancestor already carries the accessible name). */
   decorative?: boolean;
+  /** Renders the D-08 second-copy badge beside the card face (HE2-03, 2-deck only —
+   * callers derive it from copyCuedSlots). Ignored when faceUp is false: a face-down
+   * card can never show a cue. When absent or false, the rendered output is byte-
+   * identical to the shipped single <img> — no wrapper, no siblings (D-11). */
+  copyCue?: boolean;
 }
 
-export function PlayingCard({ card, faceUp = true, decorative = false }: PlayingCardProps) {
+export function PlayingCard({ card, faceUp = true, decorative = false, copyCue = false }: PlayingCardProps) {
   if (!faceUp) return <CardBack />;
+
+  if (copyCue) {
+    // The badge is a fragment SIBLING of the shipped <img>, never a wrapper around it,
+    // so the no-cue path below stays the shipped expression untouched. Aria reasoning
+    // (07-UI-SPEC A11, adapting BlackjackDealerArea's in-comment convention): the
+    // visible ×2 glyph is aria-hidden because it is a symbol; its meaning is delivered
+    // by the visually-hidden sibling sentence in unlabelled containers (hero-hole,
+    // board-cards) — and, inside a revealed-opponent button whose aria-label overrides
+    // inner content for the accessible name, by the aria-label suffix Seat.tsx appends.
+    // The D-03 alt bridge stays the single card-code-to-art source: cardAssetPath/
+    // cardAltText are untouched and the cue deliberately composes NO alt text.
+    return (
+      <>
+        <img
+          className="playing-card"
+          src={cardAssetPath(card)}
+          alt={decorative ? '' : cardAltText(card)}
+          draggable={false}
+        />
+        <span className="copy-cue" data-testid="holdem-copy-cue" aria-hidden="true">
+          ×2
+        </span>
+        <span className="visually-hidden">Second copy — two physical copies of this card are in play</span>
+      </>
+    );
+  }
 
   return (
     <img
