@@ -334,9 +334,50 @@ describe('ui/DeckCountToggle.tsx — store-free by construction, locked labels v
       `ui/DeckCountToggle.tsx must never contain "${token}" — Phase 8 D-01 makes the shared ` +
         'control props-driven by construction: both games\' deck counts stay in their own ' +
         'game-local stores (D-10, D-14) and reach the component only as props from the call ' +
-        'sites; this raw-source sweep (comments included) is what makes D-01 enforceable',
+        'sites. NOTE (08-REVIEW WR-02): this enumerated list is no longer the only line of ' +
+        'defence — it cannot be out-enumerated any more, because the path-level pin below ' +
+        'catches every src/state import regardless of the store\'s name',
     ).not.toContain(token);
   });
+
+  // ADDED (08-REVIEW WR-02). The seven-token list above is an ENUMERATION, and substring
+  // matching is case-sensitive, so it had a demonstrable hole: `blackjackOddsStore` — a real
+  // store in this repo — matches none of the seven ('oddsStore' !== 'OddsStore', and
+  // 'blackjackStore' is not a substring of 'blackjackOddsStore'). A future phase reaching for
+  // `useBlackjackOddsStore((s) => s.trialsCompleted)` to dim the control mid-run would make it
+  // both store-coupled and game-aware — the exact D-01 violation this describe block exists to
+  // prevent — while passing all seven assertions, the SC1 pins, the DOM golden and tsc/eslint.
+  // The two pins below cannot be out-enumerated: one keys on the import PATH, the other on the
+  // game names themselves. Both pass against the shipped component (its only import is
+  // '../engine/shoe' and it names neither game). The token list is kept as-is above: it is
+  // additive, and it still catches an aliased re-export that never spells '../state/'.
+  it('imports nothing from src/state — no store, named or renamed, can reach the shared control (D-01)', () => {
+    expect(
+      toggleSource,
+      'ui/DeckCountToggle.tsx must contain no "../state/" path — D-01 makes the shared control ' +
+        'props-driven BY CONSTRUCTION, and a path-level pin is the only form of that rule an ' +
+        'enumerated store-name list cannot be smuggled past (08-REVIEW WR-02: blackjackOddsStore ' +
+        'passes all seven name tokens)',
+    ).not.toContain('../state/');
+  });
+
+  it.each(['blackjack', 'holdem'])(
+    'contains no reference to %s in any casing — the component holds no game-specific logic (08-UI-SPEC Prop Contract)',
+    (game) => {
+      // The 08-UI-SPEC Prop Contract's second binding constraint ("The component contains no
+      // game-specific logic") had NO pin at all before this: a
+      // `testidPrefix === 'blackjack-deck-toggle' ? … : …` branch inside the component would
+      // violate the spec and trip nothing. Case-insensitive, so it also catches the
+      // capitalised store/component spellings the seven-token sweep above misses.
+      expect(
+        toggleSource.toLowerCase(),
+        `ui/DeckCountToggle.tsx must never mention "${game}" in any casing — every behavioural ` +
+          'difference between the two instances arrives via props from the call site ' +
+          '(08-UI-SPEC Prop Contract, D-01). The contractual testid prefixes deliberately live ' +
+          'at the CALL SITES, never inside the component that renders them',
+      ).not.toContain(game);
+    },
+  );
 
   it.each(['1 deck', '2 decks', 'Deck count'])(
     'contains the locked string %s verbatim',
