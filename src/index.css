@@ -1,16 +1,31 @@
+/* ---------------------------------------------------------------------------
+ * "Felt & Brass" palette.
+ *
+ * ONE committed theme, deliberately: this app is a casino table at night, and
+ * the felt was always dark in both former modes — the light chrome around it
+ * was the incoherence, not the table. Committing also makes the accent legible:
+ * brass on ink measures 7.93:1, while the same brass on the old white ground
+ * measures 2.42:1, which fails AA for the text role the accent actually has
+ * (street label, filled picker slot, enabled Advance).
+ *
+ * Retired with the scaffold: --code-bg and --social-bg (no <code> element and
+ * no social buttons exist in this UI) and the purple --accent that arrived with
+ * the Vite template. Measured against --bg #0B100D: --text 7.26:1,
+ * --text-h 16.57:1, --accent 7.93:1, --destructive 5.99:1 — all clear AA, most
+ * clear AAA.
+ * ------------------------------------------------------------------------- */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --destructive: #b91c1c;
-  --social-bg: rgba(244, 243, 236, 0.5);
+  --text: #93a399;
+  --text-h: #f2eee4;
+  --bg: #0b100d;
+  --surface: #131b16;
+  --border: #26332b;
+  --accent: #c9a227;
+  --accent-bg: rgba(201, 162, 39, 0.12);
+  --accent-border: rgba(201, 162, 39, 0.5);
+  --destructive: #e36a6e;
   --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+    rgba(0, 0, 0, 0.55) 0 10px 15px -3px, rgba(0, 0, 0, 0.35) 0 4px 6px -2px;
 
   /* Phase 3 (03-01): card art tokens. Same value in light and dark mode (UI-SPEC Color) — the
    * card-back recolor and card widths don't depend on the app's light/dark theme. */
@@ -57,7 +72,9 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  /* Single committed theme — the UA must not paint light form controls or
+   * scrollbars over a dark casino ground. */
+  color-scheme: dark;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -70,29 +87,11 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --destructive: #f87171;
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-
-    /* Phase 3 (03-02): dark-mode felt palette. Rail and badge tokens are deliberately NOT
-     * overridden here — --felt-rail's dark value is set below, --seat-badge-* stay identical
-     * in both modes (UI-SPEC Color). */
-    --felt: #12432a;
-    --felt-dark: #081f14;
-    --felt-rail: #241509;
-  }
-}
+/* The former `prefers-color-scheme: dark` override block is gone: with one committed theme
+ * there is no second palette to switch to, and a media query that only ever restated the same
+ * intent is a place for the two palettes to silently drift apart. The felt values it carried
+ * were a touch darker than the light-mode ones; the single palette above keeps the lighter
+ * pair, which is what the card art and badge contrast were tuned against. */
 
 #root {
   width: 1126px;
@@ -140,17 +139,6 @@ p {
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
-}
+/* The scaffold's `code` / `.counter` rules are removed with the palette that fed them: this UI
+ * renders no <code> element and no `.counter`, and they were the only consumers of --code-bg.
+ * --mono survives — the hand-category illustrations set their card ranks in it. */
