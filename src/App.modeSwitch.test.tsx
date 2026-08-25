@@ -115,26 +115,40 @@ describe('App mode switch — clicking Blackjack mounts the real Blackjack tree 
     expect(body?.textContent?.replace(/\s+/g, ' ').trim()).toBe(BLACKJACK_IDLE_BODY);
   });
 
-  it('the blackjack-scene subtree contains exactly the Phase 6 controls: one button, the hole reveal', async () => {
-    // RETARGETED, not deleted (06-07, the guard file's standing rule applied to a behavioural
-    // suite): the old zero-<button> assertion encoded Phase 5's D-03 ("the placeholder has no
-    // controls"), which Phase 6's D-13 supersedes BY DESIGN — the real table HAS controls.
-    // The felt subtree itself still contains exactly ONE button (the hole-card reveal that
-    // wraps the hole FlipCard, 06-UI-SPEC Layout inventory); Deal/Hit/Stand and the deck
-    // toggle live in the control bar OUTSIDE the scene, asserted below.
+  it('the blackjack-scene subtree contains exactly the on-felt controls: the hole reveal and the floating action cluster', async () => {
+    // RETARGETED TWICE, never deleted (the guard file's standing rule applied to a behavioural
+    // suite). Round one (06-07): the original zero-<button> assertion encoded Phase 5's D-03
+    // ("the placeholder has no controls"), which Phase 6's D-13 superseded BY DESIGN — the real
+    // table HAS controls — so it became "exactly ONE button, the hole reveal", with
+    // Deal/Hit/Stand and the deck toggle asserted to live in the control bar OUTSIDE the scene.
+    //
+    // Round two (260825), the reason for this edit: the user asked to "move the action buttons
+    // to float over the bottom left of the table". `.felt` is the positioning ancestor every
+    // on-table element is anchored against, so floating ON the table means being a DOM CHILD of
+    // this subtree — Deal/Hit/Stand moved inside it, and the census went 1 -> 4.
+    //
+    // What this test is FOR survives intact and is deliberately still an EXACT census rather
+    // than a relaxed `toBeGreaterThan`: the felt subtree must contain precisely the controls
+    // that belong on the table and nothing else. The shoe toggle in particular must NOT be here
+    // — it is session context, it stays above the felt, and the explicit absence assertion
+    // below is what keeps this retarget from quietly becoming "any number of buttons".
     const user = userEvent.setup();
     render(<App />);
 
     await user.click(screen.getByTestId('game-mode-switch-blackjack'));
 
     const scene = screen.getByTestId('blackjack-scene');
-    const sceneButtons = scene.querySelectorAll('button');
-    expect(sceneButtons).toHaveLength(1);
-    expect(sceneButtons[0]).toHaveAttribute('data-testid', 'blackjack-hole-reveal');
+    const sceneButtons = Array.from(scene.querySelectorAll('button'));
+    expect(sceneButtons.map((button) => button.getAttribute('data-testid'))).toEqual([
+      'blackjack-hole-reveal',
+      'blackjack-deal-button',
+      'blackjack-hit-button',
+      'blackjack-stand-button',
+    ]);
 
-    expect(screen.getByTestId('blackjack-deal-button')).toBeInTheDocument();
-    expect(screen.getByTestId('blackjack-hit-button')).toBeInTheDocument();
-    expect(screen.getByTestId('blackjack-stand-button')).toBeInTheDocument();
+    // The session controls stay OFF the felt, above it — the other half of the user's split.
+    expect(scene.contains(screen.getByTestId('blackjack-deck-toggle'))).toBe(false);
+    expect(scene.contains(screen.getByTestId('game-mode-switcher'))).toBe(false);
     expect(screen.getByTestId('blackjack-deck-toggle')).toBeInTheDocument();
   });
 

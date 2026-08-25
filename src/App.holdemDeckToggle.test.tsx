@@ -254,27 +254,32 @@ describe('A2/A3/A4 affordances: placement, fresh-deal disclosure, duplicate-pick
   // WHY: A2 pinned the toggle as `.control-bar`'s LAST ELEMENT CHILD, which was the only way to
   // say "the shoe control sits at the end of the context cluster" while the bar was ONE FLAT
   // ROW of five unrelated controls. The user asked for that row to be reorganized ("the
-  // controls for running the simulator are haphazard, please reorganize the UI"), so the bar is
-  // now two purpose-grouped rows and the flat-row phrasing has no referent — the toggle's LAST
-  // position is unchanged, the parent it is last in is not. A2's substance is preserved
-  // verbatim by re-anchoring on the session row: the toggle is still the trailing control of
-  // the "what am I playing" cluster, still pushed to the far edge (now by the row's
-  // space-between rather than by being the flat bar's tail), and every semantic half of this
-  // assertion — role, accessible name, both segment labels — is untouched below.
+  // controls for running the simulator are haphazard, please reorganize the UI"), and then for
+  // a specific placement: "leave the mode buttons above [the table]" while "the action buttons
+  // ... float over the bottom left of the table". So the flat bar is gone. What is left above
+  // the felt is the SESSION bar — the game-mode switcher and the shoe — and the toggle is still
+  // its last child, still the trailing control of the "what am I playing" cluster, now pushed
+  // to the far edge by the bar's space-between. Every semantic half of this assertion — role,
+  // accessible name, both segment labels — is untouched below.
   //
   // This is the obsolete-by-intent case, not a drifted-implementation case: the assertion is
   // red because the user changed the design, and the retarget records that. It must NOT be
   // relaxed to a bare `toBeInTheDocument()` — placement is the whole point of A2.
-  it("the toggle is the LAST child of the control bar's session row, with the locked group semantics and labels (A2, retargeted)", () => {
+  it("the toggle is the LAST child of the session bar above the felt, with the locked group semantics and labels (A2, retargeted)", () => {
     render(<App />);
 
     const toggle = screen.getByTestId('holdem-deck-toggle');
-    const sessionRow = document.querySelector('.control-bar__row--session');
-    expect(sessionRow).not.toBeNull();
-    expect(sessionRow!.lastElementChild).toBe(toggle);
-    // The session row really is inside the control bar — without this the pin above could pass
-    // against a row that had floated out of the bar entirely.
-    expect(sessionRow!.parentElement).toBe(document.querySelector('.control-bar'));
+    const sessionBar = document.querySelector('.control-bar--session');
+    expect(sessionBar).not.toBeNull();
+    expect(sessionBar!.lastElementChild).toBe(toggle);
+    // …and that bar really is ABOVE the felt, which is the other half of what the user asked
+    // for. compareDocumentPosition is the honest form of "above" available in a harness that
+    // lays nothing out: the bar must PRECEDE the table scene in document order.
+    const scene = screen.getByTestId('table-scene');
+    expect(
+      sessionBar!.compareDocumentPosition(scene) & Node.DOCUMENT_POSITION_FOLLOWING,
+      'the session bar must come before the felt — "leave the mode buttons above it"',
+    ).toBeTruthy();
     expect(toggle).toHaveAttribute('role', 'group');
     expect(toggle).toHaveAttribute('aria-label', 'Deck count');
     expect(screen.getByTestId('holdem-deck-toggle-1')).toHaveTextContent('1 deck');
