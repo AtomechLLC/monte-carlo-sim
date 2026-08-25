@@ -14,12 +14,12 @@ Defined 2026-08-24 from the confirmed milestone scope (Blackjack + 1/2-deck shoe
 ### Blackjack (BJ)
 
 - [ ] **BJ-01**: User can switch between Hold'em and Blackjack; each game keeps its own state and odds (no mode leakage, no shared odds-cache keys)
-- [ ] **BJ-02**: User can deal a blackjack round — player hand face-up, dealer upcard face-up, dealer hole card face-down — with live Monte Carlo odds streaming off the main thread with the visible trial counter (same convergence experience as Hold'em)
-- [ ] **BJ-03**: User sees the player bust-if-hit probability and the dealer final-outcome distribution (17, 18, 19, 20, 21, natural, bust) conditioned on the visible upcard
-- [ ] **BJ-04**: User sees win/push/lose probabilities and per-unit EV for Stand vs Hit at the current decision point (EV per unit wagered, no bankroll/chips — fixed conventions: dealer stands on soft 17, natural pays 3:2)
-- [ ] **BJ-05**: User can Hit or Stand; after each action the hand state updates and all odds recompute; standing plays out the dealer per the fixed rules and shows the round outcome
-- [ ] **BJ-06**: User can reveal the dealer's hole card early (same one-way reveal mechanic as Hold'em) and watch all odds recondition on the newly known card
-- [ ] **BJ-07**: Deck count visibly changes blackjack odds (e.g., natural frequency ≈4.83% at 1 deck vs ≈4.78% at 2 decks) — verifiable in-app by toggling
+- [x] **BJ-02**: User can deal a blackjack round — player hand face-up, dealer upcard face-up, dealer hole card face-down — with live Monte Carlo odds streaming off the main thread with the visible trial counter (same convergence experience as Hold'em)
+- [x] **BJ-03**: User sees the player bust-if-hit probability and the dealer final-outcome distribution (17, 18, 19, 20, 21, natural, bust) conditioned on the visible upcard
+- [x] **BJ-04**: User sees win/push/lose probabilities and per-unit EV for Stand vs Hit at the current decision point (EV per unit wagered, no bankroll/chips — fixed conventions: dealer stands on soft 17, natural pays 3:2)
+- [x] **BJ-05**: User can Hit or Stand; after each action the hand state updates and all odds recompute; standing plays out the dealer per the fixed rules and shows the round outcome
+- [x] **BJ-06**: User can reveal the dealer's hole card early (same one-way reveal mechanic as Hold'em) and watch all odds recondition on the newly known card
+- [x] **BJ-07**: Deck count visibly changes blackjack odds (e.g., natural frequency ≈4.83% at 1 deck vs ≈4.78% at 2 decks) — verifiable in-app by toggling
 
 ### 2-Deck Hold'em (HE2)
 
@@ -50,12 +50,12 @@ Defined 2026-08-24 from the confirmed milestone scope (Blackjack + 1/2-deck shoe
 | DECK-03 | Phase 4 | Pending |
 | DECK-04 | Phase 4 | Pending |
 | BJ-01 | Phase 5 | Pending |
-| BJ-02 | Phase 6 | Pending |
-| BJ-03 | Phase 6 | Pending |
-| BJ-04 | Phase 6 | Pending |
-| BJ-05 | Phase 6 | Pending |
-| BJ-06 | Phase 6 | Pending |
-| BJ-07 | Phase 6 | Pending |
+| BJ-02 | Phase 6 | Complete |
+| BJ-03 | Phase 6 | Complete |
+| BJ-04 | Phase 6 | Complete |
+| BJ-05 | Phase 6 | Complete |
+| BJ-06 | Phase 6 | Complete |
+| BJ-07 | Phase 6 | Complete |
 | HE2-01 | Phase 7 | Pending |
 | HE2-02 | Phase 7 | Pending |
 | HE2-03 | Phase 7 | Pending |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Blackjack & Multi-Deck
-status: executing
-stopped_at: Phase 6 context gathered
-last_updated: "2026-08-24T21:34:44.066Z"
+status: ready_to_plan
+stopped_at: Phase 6 complete (8/8) — ready to discuss Phase 7
+last_updated: 2026-08-25T00:09:12.922Z
 last_activity: 2026-08-24 -- Phase 6 execution started
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 17
-  completed_plans: 9
+  completed_plans: 17
   percent: 40
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-24)
 
 **Core value:** Probability made visible — the user can watch odds converge in real time and see exactly how each new piece of information reshapes the numbers.
-**Current focus:** Phase 6
+**Current focus:** Phase 7 — 2 deck hold'em evaluation layer
 
 ## Current Position
 
-Phase: 6 — EXECUTING
-Plan: 1 of ?
-Status: Executing Phase 6
-Last activity: 2026-08-24 -- Phase 6 execution started
+Phase: 7
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-25
 
 Progress: [██░░░░░░░░] 20% (1/5 v2.0 phases; 6/6 plans so far)
 
@@ -36,7 +36,7 @@ Progress: [██░░░░░░░░] 20% (1/5 v2.0 phases; 6/6 plans so fa
 
 **Velocity:**
 
-- Total plans completed: 25
+- Total plans completed: 33
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -49,6 +49,7 @@ Progress: [██░░░░░░░░] 20% (1/5 v2.0 phases; 6/6 plans so fa
 | 03 | 6 | - | - |
 | 04 | 6 | - | - |
 | 05 | 3 | - | - |
+| 6 | 8 | - | - |
 
 **Recent Trend:**
 
@@ -79,11 +80,13 @@ None yet.
 
 ### Blockers/Concerns
 
-- ⚠️ [Phase 4→6/7/8] 04-REVIEW.md warnings are FUTURE-PHASE TRAPS to fold into upcoming phase contexts: WR-01 Phase 8 MUST pass deckCount into setPick (comment corrected in c29091a); WR-02 Phase 6 should add wire-shape validation for deckCount (reject 0 and >2); WR-03 nothing may pass deckCount:2 into the HOLD'EM trial path until Phase 7's duplicate-aware evaluator exists (evaluator crashes on duplicates); WR-04 Phase 7 should strengthen the shoe-path guard against .includes() membership and add behavioral 2-deck CardPicker tests.
-- ⚠️ [Phase 6 fold-in] 05-REVIEW WR-03: extract a <HoldemGame /> component when Phase 6 builds BlackjackGame — five inline mode guards + Hold'em-scoped errorMessage/scenarioOpen in the cross-game shell are a leakage trap, and the two manually-synced testid safety-net arrays have already diverged (12 vs 29 entries). Structural fix belongs with Phase 6's game-component work.
+- ⚠️ [Phase 4→7/8] Remaining 04-REVIEW.md traps: WR-01 Phase 8 MUST pass deckCount into setPick (comment corrected in c29091a); WR-03 nothing may pass deckCount:2 into the HOLD'EM trial path until Phase 7's duplicate-aware evaluator exists (evaluator crashes on duplicates — Phase 6 verified compliance: conditioning default =1, zero hits in gameStore); WR-04 Phase 7 should strengthen the shoe-path guard against .includes() membership and add behavioral 2-deck CardPicker tests.
+- (Resolved) 04-REVIEW WR-02 deckCount wire-shape validation — CLOSED in Phase 6 (06-03, both poker and blackjack worker APIs reject 0/>2/non-integers with rejection tests).
+- (Resolved) 05-REVIEW WR-03 HoldemGame extraction — CLOSED in Phase 6 (06-02, commit 4551bb9: <HoldemGame /> extracted verbatim, guards retargeted same-commit, testid arrays consolidated into src/test/holdemTestids.ts).
+- ⚠️ [Phase 7+ note] 06-REVIEW WR-01 resolution accepted a documented ~one-bit D-02 leak: the blackjack "1 deck" toggle segment disables when the HIDDEN hole duplicates a visible card (impossible-state prevention outweighed the leak; store-boundary refusal is the backstop). Carry this convention if Phase 8's cross-game toggle absorbs the blackjack-local toggle.
 - ⚠️ [Phases 1-4] Security enforcement is enabled but no SECURITY.md exists for any phase — `/gsd:secure-phase N` closes the gate (client-only app; low risk).
 - ⚠️ [Phase 7 flag] 2-deck poker hand-ranking convention (Five of a Kind above Royal Flush) is single-sourced from a community forum thread, not an official rulebook — treat as working convention, revisit if a more authoritative source surfaces.
-- ⚠️ [Phase 6 flag] Blackjack EV payout model (3:2 natural, 1:1 win, push at 0, per-1-unit labeling) must be an explicit documented decision before implementation, not inferred while coding.
+- (Resolved) Phase 6 EV-model flag — locked as D-04/D-05 in 06-CONTEXT.md before implementation (S17, 3:2 natural, ±1/push-0, hit-once-then-stand labeling) and shipped as specified.
 - (Resolved) WR-02 worker-crash surfacing — FIXED in quick task 260824-biv (Worker error/messageerror listeners now route into the error banner).
 - (Resolved) Phase 1 cosmetic debt (scaffold-tmp title, default favicon, dead scaffold assets) — closed in Phase 3 plan 03-05 (D-14).
 

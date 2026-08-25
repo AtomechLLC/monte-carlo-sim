@@ -49,10 +49,14 @@ Validated in Phase 4: multiset-deck-streaming-foundation (2026-08-24, v2.0):
 - [x] Without-replacement sampling from the finite shoe, property-guarded (DECK-03)
 - [x] Count-aware picker duplicate-blocking with remaining-copy state (DECK-04)
 
+Validated in Phase 6: blackjack-core-odds-loop (2026-08-25):
+
+- [x] Full Blackjack vertical slice: deal with live streamed odds + trial counter, bust-if-hit, 7-bucket dealer distribution, Stand/Hit win-push-lose + per-unit EV (S17, 3:2, hit-once-then-stand labeling), Hit/Stand with dealer playout and outcome banner, one-way hole reveal that truly reconditions (post-review fix: revealed hole pinned in trials), blackjack-local 1/2-deck toggle with the D-12 natural-frequency anchor (4.85% vs 4.79% at 2M deals/arm)
+
 ### Active (v2.0, in progress)
 
 - [x] BJ-01 — Hold'em/Blackjack mode switcher with proven store/DOM/race isolation (Phase 5, 2026-08-24)
-- [ ] BJ-02..07 — Blackjack gameplay & odds (Phase 6)
+- [x] BJ-02..07 — Blackjack gameplay & odds (Phase 6, 2026-08-25)
 - [ ] HE2-01..03 — 2-deck Hold'em variant (Phase 7)
 - [ ] DECK-02 — Cross-game deck-count toggle (Phase 8)
 
