@@ -19,6 +19,17 @@
   --card-w-opponent: 64px;
   --card-w-community: 76px;
 
+  /* Hand-category illustration tokens. Mode-independent for the same reason the card-art
+   * tokens above are: a playing card is a physical object whose stock and ink don't change
+   * when the app's theme does. Three stock levels encode the hand's shape — the matched group,
+   * a second matched group (two pair / full house), and kickers that don't play. */
+  --hand-icon-stock: #f2eee4;
+  --hand-icon-stock-2: #d8d2c4;
+  --hand-icon-stock-dim: #2a3830;
+  --hand-icon-ink: #17110c;
+  --hand-icon-ink-red: #b3282d;
+  --hand-icon-ink-dim: #7c8c83;
+
   /* Phase 3 (03-02): felt palette + seat-badge tokens (UI-SPEC Color, Table Geometry). Badge
    * tokens are mode-independent — they always sit on the dark felt, never on --bg. */
   --felt: #1a5c3a;

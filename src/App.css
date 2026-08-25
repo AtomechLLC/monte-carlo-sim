@@ -591,6 +591,69 @@ h2 {
   line-height: 1.4;
 }
 
+/* Hand-category illustrations: a five-card example hand per row, drawn by HandCategoryIcon.
+ * The cell shrink-wraps the SVG and sits before the row header; `line-height: 0` keeps the
+ * inline SVG from adding a descender gap to the row. */
+.category-table__example {
+  width: 1%;
+  padding: 2px 8px 2px 0;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+.hand-icon {
+  display: block;
+  width: 78px;
+  height: 21px;
+}
+
+/* Three stock levels carry the hand's shape: the matched group, a second matched group
+ * (two pair / full house), and kickers that don't play. */
+.hand-icon__stock--plays {
+  fill: var(--hand-icon-stock);
+}
+.hand-icon__stock--second {
+  fill: var(--hand-icon-stock-2);
+}
+.hand-icon__stock--kicker {
+  fill: var(--hand-icon-stock-dim);
+}
+
+.hand-icon__rank {
+  font: 600 9px / 1 var(--mono);
+}
+/* "10" is the only two-character rank — set smaller so it fits the same card face. */
+.hand-icon__rank--wide {
+  font-size: 7.2px;
+}
+.hand-icon__pip {
+  font: 400 6.5px / 1 var(--mono);
+}
+
+.hand-icon__ink--black {
+  fill: var(--hand-icon-ink);
+}
+.hand-icon__ink--red {
+  fill: var(--hand-icon-ink-red);
+}
+.hand-icon__ink--kicker {
+  fill: var(--hand-icon-ink-dim);
+}
+
+@media (max-width: 1024px) {
+  .hand-icon {
+    width: 62px;
+    height: 16.7px;
+  }
+}
+
+/* Tabular figures for the category percentages. These are the digits that move most while a
+ * run converges, and proportional numerals make the column jitter on every streamed update —
+ * the odds-panel stats already had this treatment; the table did not. */
+[data-testid='category-table'] td {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Main scene row: TableScene + OddsPanel, `xl` (32px) gap side-by-side at
  * >=1024px, collapsing to a column stack below that; `2xl` (48px) vertical
  * margin separates the block from the control bar / page bottom. */

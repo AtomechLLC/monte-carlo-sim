@@ -7,6 +7,7 @@ import { CATEGORY_LABELS, CATEGORY_LABELS_TWO_DECK } from './categoryLabels';
 import { FIVE_OF_A_KIND_INDEX } from '../worker/protocol';
 import { formatPct } from './formatPct';
 import { lockedInCategory } from './lockedCategory';
+import { HandCategoryIcon } from './HandCategoryIcon';
 
 export function OddsTable() {
   const categoryCounts = useOddsStore((state) => state.categoryCounts);
@@ -48,6 +49,12 @@ export function OddsTable() {
       </caption>
       <thead>
         <tr>
+          {/* The illustration column has no visible heading — the example hand restates the
+              category beside it, so a visible label would be noise. The name exists for
+              assistive tech only. */}
+          <th scope="col">
+            <span className="visually-hidden">Example hand</span>
+          </th>
           <th scope="col">Hand Category</th>
           <th scope="col">Probability</th>
           <th scope="col">Locked In</th>
@@ -61,6 +68,14 @@ export function OddsTable() {
             row's <tr> markup stays byte-identical. */}
         {labels.map((label, index) => (
           <tr key={label} data-testid={index === FIVE_OF_A_KIND_INDEX ? 'category-five-of-a-kind' : undefined}>
+            {/* The illustration is a <td> BEFORE the row header, never inside it: SVG <text>
+                contributes to textContent, and a frozen v1 suite asserts the row <th>'s
+                textContent is exactly the category label. Pinned by
+                OddsTable.categoryIconCell.test.tsx (which carries a demonstrated negative
+                control for this exact mistake). */}
+            <td className="category-table__example">
+              <HandCategoryIcon categoryIndex={index} />
+            </td>
             <th scope="row">{label}</th>
             <td data-testid={`category-pct-${index}`}>
               {formatPct(categoryCounts[index] ?? 0, trialsCompleted, pending)}
