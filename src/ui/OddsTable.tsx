@@ -6,6 +6,7 @@ import { deriveConditionedState } from '../engine/conditioning';
 import { CATEGORY_LABELS, CATEGORY_LABELS_TWO_DECK } from './categoryLabels';
 import { FIVE_OF_A_KIND_INDEX } from '../worker/protocol';
 import { formatPct } from './formatPct';
+import { categoryShares, shareWidth } from './categoryShares';
 import { lockedInCategory } from './lockedCategory';
 import { HandCategoryIcon } from './HandCategoryIcon';
 
@@ -39,6 +40,15 @@ export function OddsTable() {
   // so the 1-deck table renders zero trace of the extended row.
   const labels = deckCount === 2 ? CATEGORY_LABELS_TWO_DECK : CATEGORY_LABELS;
 
+  // Bar geometry is derived from the SAME three inputs the percentage cells read, and is
+  // bounded by `labels.length` rather than the snapshot length — so the eleventh row's count
+  // can never influence the ten-row table's scale. See categoryShares.ts for why the bars are
+  // relative to the max rather than to 100%.
+  const shares = useMemo(
+    () => categoryShares(categoryCounts, labels.length, trialsCompleted, pending),
+    [categoryCounts, labels.length, trialsCompleted, pending],
+  );
+
   return (
     <table data-testid="category-table">
       <caption className="category-table__caption">
@@ -56,6 +66,9 @@ export function OddsTable() {
             <span className="visually-hidden">Example hand</span>
           </th>
           <th scope="col">Hand Category</th>
+          {/* The bars themselves are decorative (see the row cell below), but the column they
+              form is a real, visible part of the table and is titled like one. */}
+          <th scope="col">Share</th>
           <th scope="col">Probability</th>
           <th scope="col">Locked In</th>
         </tr>
@@ -77,6 +90,26 @@ export function OddsTable() {
               <HandCategoryIcon categoryIndex={index} />
             </td>
             <th scope="row">{label}</th>
+            {/* The bar is DECORATIVE and says nothing the percentage cell to its right does
+                not already say — `aria-hidden` on the track hides the whole widget, so a
+                screen reader hears "One Pair, 30.0%" and never a second, wordless rendering
+                of the same number. Width is an inline style because it is data, not theme;
+                the TRANSITION on that width lives in App.css and is what makes a converging
+                run visible. Nothing here tweens: React writes the final width for the
+                current snapshot and the compositor does the settling. */}
+            <td className="category-table__share">
+              <div className="category-bar" aria-hidden="true">
+                <div
+                  className={
+                    shares[index]?.leading
+                      ? 'category-bar__fill category-bar__fill--leading'
+                      : 'category-bar__fill'
+                  }
+                  data-testid={`category-bar-${index}`}
+                  style={{ width: shareWidth(shares[index]?.share ?? 0) }}
+                />
+              </div>
+            </td>
             <td data-testid={`category-pct-${index}`}>
               {formatPct(categoryCounts[index] ?? 0, trialsCompleted, pending)}
             </td>
