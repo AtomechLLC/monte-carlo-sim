@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Blackjack & Multi-Deck
-status: executing
-stopped_at: Phase 6 context gathered
-last_updated: "2026-08-25T03:54:02.385Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 8 was final phase)
+last_updated: 2026-08-25T19:11:44.785Z
 last_activity: 2026-08-25 -- Phase 8 execution started
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 27
-  completed_plans: 24
+  completed_plans: 27
   percent: 80
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-24)
 
 **Core value:** Probability made visible — the user can watch odds converge in real time and see exactly how each new piece of information reshapes the numbers.
-**Current focus:** Phase 8
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 8 — EXECUTING
-Plan: 1 of ?
-Status: Executing Phase 8
-Last activity: 2026-08-25 -- Phase 8 execution started
+Phase: 8
+Plan: Not started
+Status: Milestone complete
+Last activity: 2026-08-25
 
 Progress: [██░░░░░░░░] 20% (1/5 v2.0 phases; 6/6 plans so far)
 
@@ -36,7 +36,7 @@ Progress: [██░░░░░░░░] 20% (1/5 v2.0 phases; 6/6 plans so fa
 
 **Velocity:**
 
-- Total plans completed: 40
+- Total plans completed: 43
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -51,6 +51,7 @@ Progress: [██░░░░░░░░] 20% (1/5 v2.0 phases; 6/6 plans so fa
 | 05 | 3 | - | - |
 | 6 | 8 | - | - |
 | 7 | 7 | - | - |
+| 8 | 3 | - | - |
 
 **Recent Trend:**
 
