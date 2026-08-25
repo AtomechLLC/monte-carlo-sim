@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -26,7 +27,17 @@ function readSource(relativePath: string): string {
 }
 
 describe('DECK-01 shoe-path guard: no value-based Set<Card> dedup', () => {
-  const noSetFiles = ['engine/shoe.ts', 'engine/conditioning.ts', 'state/pickerStore.ts', 'ui/CardPicker.tsx'];
+  const noSetFiles = [
+    'engine/shoe.ts',
+    'engine/conditioning.ts',
+    'state/pickerStore.ts',
+    'ui/CardPicker.tsx',
+    // Phase 7 (D-04/D-07): the duplicate-aware wrapper joins the prohibition on arrival —
+    // its duplicate gate is a stamped Int32Array PRECISELY so it never regresses to
+    // value-based Set dedup, and it now sits directly in the trial hot path (runTrials'
+    // hoisted evalFn selection, plan 07-03).
+    'engine/evaluatorTwoDeck.ts',
+  ];
 
   it.each(noSetFiles)('%s contains no Set<Card> and no new Set( occurrence', (relativePath) => {
     const source = readSource(relativePath);
@@ -114,5 +125,128 @@ describe('D-08: the v1-parity goldens exist and were not neutered', () => {
     expect(source).toContain('GOLDEN');
     expect(source).not.toContain('.skip');
     expect(source).not.toContain('.todo');
+  });
+});
+
+describe('D-07/WR-04: no value-membership .includes( anywhere in the shoe path', () => {
+  // The class of bug this sweep catches: `.includes(` on a card array is a value-MEMBERSHIP
+  // test, and a card value is a COUNT in this codebase — the same collapse `Set<Card>`
+  // causes, wearing different clothes. A membership check treats the second physical copy
+  // of a value as "already present" and silently erases it. All five files below had zero
+  // occurrences when this sweep landed (verified by grep, plan 07-03), so no allowlist
+  // entry is needed; a future legitimate exception must use the line-level pin mechanism
+  // the VALID_BOARD_LENGTHS allowance above demonstrates, never drop a file from the list.
+  const noIncludesFiles = [
+    'engine/shoe.ts',
+    'engine/conditioning.ts',
+    'state/pickerStore.ts',
+    'ui/CardPicker.tsx',
+    'engine/evaluatorTwoDeck.ts',
+  ];
+
+  it.each(noIncludesFiles)('%s contains no .includes( value-membership call', (relativePath) => {
+    const source = readSource(relativePath);
+    expect(
+      source,
+      `${relativePath} must never call .includes( — value membership on cards is the Set<Card> collapse in different clothes (D-07, WR-04); use cardCounts / count-aware logic instead`,
+    ).not.toContain('.includes(');
+  });
+});
+
+describe('Phase 7 (T-07-14, 07-RESEARCH Pitfall 3): evaluator call-site and import allowlists', () => {
+  /**
+   * Strips full-line comments (lines whose trimmed form starts with `//` or `*`) before a
+   * token-presence check — the local copy of `App.modeShell.guard.test.ts`'s
+   * `stripCommentLines` helper. Comment-stripping is correct here because these are
+   * token-presence checks on EXECUTABLE code in OTHER files (this guard reads other files,
+   * never itself), and those files' own explanatory prose — e.g. a doc comment that says
+   * "delegates to evaluateHand(...)" — would otherwise be an irrelevant false positive.
+   */
+  function stripCommentLines(source: string): string {
+    return source
+      .split('\n')
+      .filter((line) => {
+        const trimmed = line.trim();
+        return !trimmed.startsWith('//') && !trimmed.startsWith('*');
+      })
+      .join('\n');
+  }
+
+  /**
+   * Every production source file under src/, as a src-relative forward-slash path:
+   * .ts/.tsx only, excluding `.test.` files (test code may exercise anything, including
+   * the raw evaluator and the brute-force oracle) and `.d.ts` declarations.
+   */
+  function productionSourceFiles(): string[] {
+    return readdirSync(SRC_DIR, { recursive: true })
+      .map((entry) => String(entry).replaceAll('\\', '/'))
+      .filter(
+        (relativePath) =>
+          (relativePath.endsWith('.ts') || relativePath.endsWith('.tsx')) &&
+          !relativePath.includes('.test.') &&
+          !relativePath.endsWith('.d.ts'),
+      );
+  }
+
+  function filesContainingToken(token: string): string[] {
+    return productionSourceFiles().filter((relativePath) =>
+      stripCommentLines(readSource(relativePath)).includes(token),
+    );
+  }
+
+  it('no production file outside the four-file allowlist contains an evaluateHand( token', () => {
+    // The failure this catches (07-RESEARCH Pitfall 3): a NEW main-thread call site whose
+    // input can be 2-deck-conditioned would hit the exact stock-evaluator misbehaviour the
+    // duplicate gate exists to prevent — and unlike the worker path it would surface as
+    // garbage or a crash in the UI layer. Note engine/twoDeckOracle.ts IS swept (it is not
+    // a .test. file) and must stay free of the token: the brute-force oracle is a
+    // deliberate second implementation and may never delegate to the production evaluator.
+    const allowlist = [
+      // The DECLARATION site: `export function evaluateHand(` at evaluator.ts:29 is
+      // executable code carrying the token, not a call site.
+      'engine/evaluator.ts',
+      // The worker trial loop (the hoisted 1-deck evalFn arm, plan 07-03).
+      'engine/equity.ts',
+      // The one sanctioned main-thread call site (plan 07-06 routes it through the
+      // duplicate-aware wrapper at deckCount=2).
+      'ui/lockedCategory.ts',
+      // The duplicate-aware wrapper's clean-window and suit-remap-proxy delegations.
+      'engine/evaluatorTwoDeck.ts',
+    ];
+    const offenders = filesContainingToken('evaluateHand(').filter(
+      (relativePath) => !allowlist.includes(relativePath),
+    );
+    expect(
+      offenders,
+      'a production evaluateHand( call site appeared outside the sanctioned allowlist — at deckCount 2 its input can contain duplicate cards, which the raw stock evaluator silently mis-scores or crashes on (07-RESEARCH Pitfall 3); route it through evaluateHandTwoDeck instead',
+    ).toEqual([]);
+  });
+
+  it('only engine/evaluator.ts imports @poker-apprentice/hand-evaluator', () => {
+    // evaluator.ts's own header invariant: "This is the ONLY module in the codebase
+    // permitted to import `@poker-apprentice/hand-evaluator` directly." Every other module
+    // — including the Phase 7 duplicate-aware wrapper — reaches the library through
+    // evaluator.ts's exports, so the empirically-characterized duplicate-input behaviour
+    // (07-RESEARCH) stays quarantined behind one import.
+    const offenders = filesContainingToken('@poker-apprentice/hand-evaluator').filter(
+      (relativePath) => relativePath !== 'engine/evaluator.ts',
+    );
+    expect(
+      offenders,
+      'a second direct @poker-apprentice/hand-evaluator import appeared — evaluator.ts must stay the sole library importer (its header invariant)',
+    ).toEqual([]);
+  });
+
+  it('no production file imports the test-only brute-force oracle', () => {
+    // Plan 07-01's framing: twoDeckOracle.ts is TEST-ONLY, disposable-quality code — an
+    // independent arbiter for the property suite, never a production dependency. The
+    // oracle's own file is excluded only for its self-naming error-message prefixes.
+    const offenders = filesContainingToken('twoDeckOracle').filter(
+      (relativePath) => relativePath !== 'engine/twoDeckOracle.ts',
+    );
+    expect(
+      offenders,
+      'a production file references twoDeckOracle — the brute-force oracle is test-only (plan 07-01) and must never enter a production import graph',
+    ).toEqual([]);
   });
 });

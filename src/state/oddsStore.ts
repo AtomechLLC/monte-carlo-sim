@@ -59,9 +59,18 @@ function checkSnapshotConsistency(snapshot: ProgressSnapshot): void {
   const categorySum = snapshot.categoryCounts.reduce((a, b) => a + b, 0);
   const outcomeSum = snapshot.outcomes.win + snapshot.outcomes.tie + snapshot.outcomes.lose;
 
-  if (snapshot.categoryCounts.length !== CATEGORY_COUNT) {
+  // Both histogram shapes are legitimate (Phase 7 D-05): CATEGORY_COUNT (10, 1-deck) and
+  // CATEGORY_COUNT + 1 (11, 2-deck — index 10 is Five of a Kind). A report-only guard that
+  // fires on every legitimate 2-deck snapshot is worse than no guard, because it trains
+  // people to ignore the channel (07-RESEARCH Pitfall 2) — so the length check is WIDENED
+  // to the two-member family, never disabled: out-of-family lengths still report, and the
+  // `categorySum === trialsCompleted` check below holds unchanged at length 11.
+  if (
+    snapshot.categoryCounts.length !== CATEGORY_COUNT &&
+    snapshot.categoryCounts.length !== CATEGORY_COUNT + 1
+  ) {
     console.error(
-      `[oddsStore consistency guard] categoryCounts has length ${snapshot.categoryCounts.length}, expected ${CATEGORY_COUNT}`,
+      `[oddsStore consistency guard] categoryCounts has length ${snapshot.categoryCounts.length}, expected ${CATEGORY_COUNT} (1 deck) or ${CATEGORY_COUNT + 1} (2 decks)`,
     );
   }
   if (categorySum !== snapshot.trialsCompleted) {

@@ -107,7 +107,19 @@ export function createSimulationApi(options: SimulationOptions = {}): Simulation
     runBatch: runTrials,
     mergeBatch: (totals, batch) => {
       totals.trialsCompleted += batch.trialsCompleted;
-      for (let i = 0; i < CATEGORY_COUNT; i++) {
+      // Grow-on-merge (D-05, 07-RESEARCH Pitfall 6): `createStreamingRunner`'s config
+      // signature gives `makeEmptyTotals` and `toSnapshot` no access to the conditioned
+      // state, so the BATCH's own length is the only place the deck count is observable
+      // inside these hooks — runTrials sizes it `categoryCountFor(deckCount)` (10 or 11).
+      // Sizing the empty totals at 11 unconditionally would change 1-deck snapshot length
+      // and break the streaming golden. At one deck the batch is length 10 and totals
+      // start at length 10, so this growth is a provable no-op; at two decks the first
+      // merge extends totals with zeros to 11 before folding, and every later merge folds
+      // all 11 entries.
+      while (totals.categoryCounts.length < batch.categoryCounts.length) {
+        totals.categoryCounts.push(0);
+      }
+      for (let i = 0; i < batch.categoryCounts.length; i++) {
         totals.categoryCounts[i] += batch.categoryCounts[i];
       }
       totals.outcomes.win += batch.outcomes.win;

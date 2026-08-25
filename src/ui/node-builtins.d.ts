@@ -7,12 +7,15 @@
 // it also removed the module declarations for these built-ins that only these test files
 // import.
 //
-// Deliberately narrower than `@types/node`: it declares ONLY the five symbols these test
+// Deliberately narrower than `@types/node`: it declares ONLY the six symbols these test
 // files actually use, not the full Node ambient global surface — so this file cannot
 // silently reintroduce `process`/`Buffer`/etc. into browser app code.
 declare module 'node:fs' {
   export function existsSync(path: string): boolean;
   export function readFileSync(path: string, encoding: 'utf8'): string;
+  // Phase 7 (plan 07-03): shoePath.guard.test.ts's evaluator call-site allowlist walks
+  // src/ recursively. Narrow on purpose: recursive-only, string[] return (utf8 default).
+  export function readdirSync(path: string, options: { recursive: boolean }): string[];
 }
 
 declare module 'node:url' {
