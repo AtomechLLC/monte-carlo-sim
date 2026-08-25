@@ -1,4 +1,43 @@
-# Control-bar reorganization — group the simulator's controls by purpose
+# Control reorganization — group the simulator's controls by purpose, and place each group where it acts
+
+**User's words**, in the three passes they arrived in:
+
+1. "the controls for running the simulator are haphazard, please reorganize the UI."
+2. "put the command buttons below the table, and leave the mode buttons above it."
+3. "move the action buttons to float over the bottom left of the table."
+
+> **Superseded sections below.** The body of this plan was written against pass 1 (two stacked
+> rows in one bar above the table) and is kept as the record of what was reasoned through. Passes
+> 2 and 3 changed the PLACEMENT only — the grouping, the hidden `<h2>`, the decorative separator,
+> the testid contract and the `.control-bar > button` hazard analysis all survived unchanged. See
+> **Final layout** immediately below for what shipped.
+
+## Final layout (pass 3)
+
+| Where | What | Class |
+|---|---|---|
+| Above the felt | `GameModeSwitcher` left, `DeckCountToggle` right (space-between) | `.control-bar--session` |
+| Floating ON the felt, bottom-left | Hold'em: `Deal` + `Set Up Scenario`, decorative rule, street transport. Blackjack: `Deal`/`Hit`/`Stand` | `.felt-controls` |
+
+The cluster is `position: absolute` inside `.felt` — the same anchoring discipline the seats use —
+which makes `.felt` its **DOM parent**. That is the structural consequence worth remembering: any
+assertion that these controls were control-bar members had to be retargeted.
+
+`.felt` is an **ellipse**, so its bounding box's bottom-left corner is off the table. The shipped
+anchors (`left: 14%`, `bottom: 20%` Hold'em / `26%` Blackjack, `max-width: 26%`) are derived in the
+`.felt-controls` comment block in `src/App.css`, and re-checked arithmetically from the stylesheets
+by `src/App.controlPlacement.test.tsx` so a future felt resize re-validates them.
+
+Two additions pass 1 did not need:
+- **`--z-felt-controls: 4`** — at the `--z-outcome` level, following the scale's existing
+  precedent (`--z-deck` and `--z-community` are both `1`) of role-named tokens sharing a value.
+- **`--seat-badge-bg` / `--seat-badge-text`** as the cluster's surface, the tokens that exist for
+  UI sitting on the felt. Measured on the composited surface: white 13.9–16.8:1, the reserved
+  brass 5.7–7.0:1.
+
+---
+
+## Original plan (pass 1) — kept as the reasoning record
 
 **User's words:** "the controls for running the simulator are haphazard, please reorganize the UI."
 
@@ -120,12 +159,17 @@ keeping both would double the label's gutters to 16px. The margin rule is retire
 1. **`App.holdemDeckToggle.test.tsx`** — "the toggle is the LAST control-bar child (Phase 8
    UI-SPEC A2)". Obsolete *by intent*: the user asked for the reorganization, and A2's substance
    ("the deck toggle sits at the end of the context cluster") now reads as "last child of the
-   session row". Retargeted to `.control-bar__row--session`'s `lastElementChild`, with a comment
-   recording why.
+   session bar". Retargeted to `.control-bar--session`'s `lastElementChild` **and** gained a new
+   assertion that the bar precedes the felt in document order — the "above it" half of pass 2.
+
+2. **`App.modeSwitch.test.tsx`** (pass 3 only) — "the blackjack-scene subtree contains exactly
+   one button, the hole reveal". Moving Deal/Hit/Stand onto the felt makes them children of that
+   subtree, so the census goes 1 → 4. Kept an **exact** census rather than relaxed, and gained an
+   explicit assertion that the shoe toggle stays *off* the felt.
 
 No other pin needs retargeting. (Checked: `App.deckToggleConsolidation.test.tsx` asserts the
 toggle's *semantics*, never its position; `depthTypography.guard.test.ts` pins no `.control-bar`
-rule.)
+rule; the nine-state deck-toggle golden serializes only the toggle's own `outerHTML`.)
 
 ## Tasks
 
