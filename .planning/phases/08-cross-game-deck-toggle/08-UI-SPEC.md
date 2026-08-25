@@ -1,7 +1,8 @@
 ---
 phase: 8
 slug: cross-game-deck-toggle
-status: draft
+status: approved
+reviewed_at: 2026-08-25
 shadcn_initialized: false
 preset: none
 created: 2026-08-24
