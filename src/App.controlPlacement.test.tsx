@@ -383,132 +383,260 @@ describe('the action cluster floats ON the felt', () => {
   });
 });
 
-describe('the cluster really is on the green: ellipse geometry, re-derived from the stylesheets', () => {
-  // jsdom lays nothing out, so this is arithmetic on the declared values rather than measurement
-  // — but it is arithmetic that re-reads the felt's size and the card widths from source, so a
-  // future felt resize re-checks the placement instead of silently invalidating it.
+describe('the cluster really is on the green, at EVERY width the felt renders at', () => {
+  // jsdom lays nothing out, so this is arithmetic on the declared values rather than
+  // measurement. What it is NOT, any more, is arithmetic at one convenient size.
+  //
+  // THE FLAW THIS BLOCK WAS REWRITTEN TO FIX. The first version computed every clearance at the
+  // 1040px reference felt and stopped there. But `.felt` is `width: min(100%, 1040px)` — 1040 is
+  // a MAXIMUM, and in the shipped layout the odds cluster takes its share of `.table-row`, so
+  // the felt renders around 911px. That difference is not a rounding error, it inverts the
+  // result: the cluster's offsets are PERCENTAGES (they shrink with the felt) while its buttons
+  // are TEXT (they do not), so the cluster is proportionally WIDER at smaller felt sizes —
+  // exactly when the pocket it sits in is narrowest. The reference-only check reported 37px of
+  // hero clearance while the shipped app had a 10px x 62px COLLISION.
+  //
+  // So every check below runs at BOTH widths, and the narrow one is the binding case.
   const felt = ruleWith(appCss, '.felt {');
-  const FELT_W = Number.parseFloat(
+  const REFERENCE_FELT_W = Number.parseFloat(
     (/width:\s*min\(100%,\s*(\d+(?:\.\d+)?)px\)/.exec(felt) as RegExpExecArray)[1],
   );
+
+  /**
+   * The width the felt actually renders at in the shipped layout, MEASURED in the running app
+   * (felt 911 x 569). It cannot be derived from the stylesheet: it is whatever `.table-row`'s
+   * flex distribution leaves the felt after the odds cluster and the 32px gap, inside `#root`'s
+   * `min(100%, 1560px)`. Pinned as a constant with its provenance rather than computed, because
+   * a wrong-but-derived number here would be worse than an honest measured one.
+   */
+  const RENDERED_FELT_W = 911;
+
   const [aspectW, aspectH] = declaration(felt, 'aspect-ratio')
     .split('/')
     .map((part) => Number.parseFloat(part));
-  const FELT_H = (FELT_W * aspectH) / aspectW;
 
   /** The rail is an inset ring drawn inside the ellipse, so the usable green is inset by it. */
   const RAIL = Number.parseFloat(
     (/inset 0 0 0 (\d+(?:\.\d+)?)px var\(--felt-rail\)/.exec(felt) as RegExpExecArray)[1],
   );
 
-  const cluster = ruleWith(appCss, '.felt-controls {');
-  const LEFT = percent(cluster, 'left') * FELT_W;
-  const MAX_W = percent(cluster, 'max-width') * FELT_W;
+  /**
+   * One control row's outer height, MEASURED in the running app (the cluster measured 120px tall
+   * for two rows at 8px padding and an 8px gap). The 44px hit-area floor plus the button's
+   * border box lands here; it is the one value in this block that cannot be read out of the
+   * stylesheet, so it is pinned with its provenance and everything else is derived from CSS.
+   */
+  const ROW_HEIGHT = 48;
 
   /**
-   * The cluster's height budget. NOT measured — jsdom has no layout and this repo ships no
-   * headless browser — so it is DECLARED here and reasoned from: two 44px rows (the hit-area
-   * floor), the 8px gap between the groups and 8px padding top and bottom = 112px, plus slack.
+   * The cluster's ACTUAL rendered width, MEASURED in the running app after the padding/gap trim
+   * (right edge x=336.5 against left:13% of a 911px felt = x=118.4). Text metrics cannot be
+   * derived from a stylesheet and jsdom lays nothing out, so this is pinned with its provenance.
    *
-   * This is the one number in this block that is an assumption rather than a derivation, and it
-   * is written down precisely so it is reviewable. The `flex-wrap` on the inner groups is what
-   * makes exceeding it degrade safely: a cluster whose labels render wider than measured grows
-   * DOWNWARD into the headroom the community-row check below verifies, not rightward into the
-   * hero seat that `max-width` fences off.
+   * It exists because the width CAP is a poor proxy for the real width — the cap is deliberately
+   * set above the content so the rows never wrap, which makes cap-based arithmetic pessimistic
+   * (19px where the truth is 29px). The checks below therefore use BOTH: the cap for what is
+   * GUARANTEED whatever the labels do, and this for what is actually on screen.
    */
-  const CLUSTER_HEIGHT_BUDGET = 120;
+  const MEASURED_CLUSTER_W = 218;
 
-  /** How far out of the ellipse's centre a point sits, in units where 1.0 is the boundary — with
-   *  the semi-axes shrunk by the rail, so 1.0 is the inner edge of the green rather than the
-   *  outer edge of the table. */
-  function radialPosition(x: number, y: number): number {
-    const a = FELT_W / 2 - RAIL;
-    const b = FELT_H / 2 - RAIL;
-    return Math.hypot((x - FELT_W / 2) / a, (y - FELT_H / 2) / b);
-  }
+  const cluster = ruleWith(appCss, '.felt-controls {');
+  const LEFT_FRACTION = percent(cluster, 'left');
+  const MAX_WIDTH_FRACTION = percent(cluster, 'max-width');
 
-  it('derives a sane reference felt from App.css (falsifiability control for everything below)', () => {
-    expect(FELT_W).toBeGreaterThan(0);
-    expect(FELT_H).toBeGreaterThan(0);
-    expect(RAIL).toBeGreaterThan(0);
-    expect(LEFT).toBeGreaterThan(0);
-    expect(MAX_W).toBeGreaterThan(0);
-  });
+  /** Block padding of the cluster plate — first value of whichever `padding` shorthand is set. */
+  const CLUSTER_PAD_BLOCK = Number.parseFloat(declaration(cluster, 'padding').split(/\s+/)[0]);
+  const CLUSTER_GAP = Number.parseFloat(declaration(cluster, 'gap'));
+  const SEPARATOR_PAD = Number.parseFloat(
+    declaration(ruleWith(appCss, SEPARATOR_SELECTOR + ' {'), 'padding-top'),
+  );
 
-  it.each([
-    ['holdem', '.felt-controls--holdem {'],
-    ['blackjack', '.felt-controls--blackjack {'],
-  ])("%s: both bottom corners are inside the green, not merely inside the bounding box", (_mode, modifierSelector) => {
-    const bottom = percent(ruleWith(appCss, modifierSelector), 'bottom') * FELT_H;
-    const yBottom = FELT_H - bottom;
+  /** Hold'em stacks two groups with the separator's padding between them; Blackjack has one.
+   *  Derived from the CSS above, so a padding or gap change re-checks the fit rather than
+   *  silently invalidating it. */
+  const HOLDEM_CLUSTER_HEIGHT =
+    CLUSTER_PAD_BLOCK * 2 + ROW_HEIGHT * 2 + CLUSTER_GAP + SEPARATOR_PAD;
 
-    // The bottom corners are the binding ones: the felt is an ellipse and the cluster sits in
-    // its lower half, so the lower a corner is, the narrower the green it has to fit into.
-    for (const [label, x] of [
-      ['bottom-left', LEFT],
-      ['bottom-right (at the max-width fence)', LEFT + MAX_W],
-    ] as const) {
-      const r = radialPosition(x, yBottom);
-      expect(
-        r,
-        `the cluster's ${label} corner sits at ${r.toFixed(3)} of the way to the rail — a value ` +
-          '>= 1 is literally off the table, which is what "bottom left" means naively and why ' +
-          'these offsets are what they are',
-      ).toBeLessThan(1);
-    }
-  });
-
-  it("Hold'em: the cluster clears the hero seat horizontally, even at its max width", () => {
-    // The hero sits bottom-centre and is two hole cards wide. Derived from the card token rather
-    // than hardcoded, so re-sizing the cards re-checks this.
+  function geometry(feltWidth: number) {
+    const feltHeight = (feltWidth * aspectH) / aspectW;
+    const a = feltWidth / 2 - RAIL;
+    const b = feltHeight / 2 - RAIL;
     const heroCardW = pxToken(indexCss, '--card-w-hero');
     const heroGap = Number.parseFloat(
       (/\[data-testid='hero-hole'\][\s\S]*?gap:\s*(\d+)px/.exec(appCss) as RegExpExecArray)[1],
     );
-    const heroWidth = heroCardW * 2 + heroGap;
-    const heroLeftEdge = FELT_W / 2 - heroWidth / 2;
+    const communityTop = percent(ruleWith(appCss, '.community-area {'), 'top') * feltHeight;
+    const playerBottom = percent(ruleWith(appCss, '.bj-player-area {'), 'bottom') * feltHeight;
 
+    return {
+      xLeft: LEFT_FRACTION * feltWidth,
+      // The cap is the cluster's width ONLY because `min-width: 0` lets it bind — pinned below.
+      xRight: (LEFT_FRACTION + MAX_WIDTH_FRACTION) * feltWidth,
+      // What is actually on screen: the content, unless the cap is tighter and clamps it.
+      xRightActual:
+        LEFT_FRACTION * feltWidth +
+        Math.min(MAX_WIDTH_FRACTION * feltWidth, MEASURED_CLUSTER_W),
+      heroLeftEdge: feltWidth / 2 - (heroCardW * 2 + heroGap) / 2,
+      communityBottom: communityTop + (pxToken(indexCss, '--card-w-community') * 7) / 5,
+      playerTop: feltHeight - playerBottom - (heroCardW * 7) / 5,
+      /** How far out of centre a point is, where 1.0 is the inner edge of the green. */
+      radial: (x: number, y: number) =>
+        Math.hypot((x - feltWidth / 2) / a, (y - feltHeight / 2) / b),
+      bottomOf: (modifier: string) =>
+        feltHeight - percent(ruleWith(appCss, modifier), 'bottom') * feltHeight,
+    };
+  }
+
+  const WIDTHS: readonly (readonly [string, number])[] = [
+    ['reference max 1040', REFERENCE_FELT_W],
+    ['as actually rendered 911', RENDERED_FELT_W],
+  ];
+
+  it('the width cap can actually bind — without this every width check below is fiction', () => {
+    // THE ROOT CAUSE of the shipped collision. A flex item defaults to `min-width: auto`, which
+    // refuses to shrink below max-content, so the button rows OVERFLOWED the percentage cap
+    // instead of wrapping inside it: the cluster measured 27.1% of the felt against a 26% cap.
+    // Every "at its width cap" assertion below assumes the cap is real, so the cap's binding
+    // mechanism gets its own pin rather than riding along on the arithmetic.
     expect(
-      LEFT + MAX_W,
-      'the cluster must not reach the hero seat. `max-width` is the fence that makes this hold ' +
-        'even if the button labels render wider than they measure — without it this is a ' +
-        'guess about font metrics, with it it is a guarantee',
-    ).toBeLessThan(heroLeftEdge);
+      ruleWith(appCss, '.felt-controls .control-group {'),
+      'the in-cluster groups must set `min-width: 0`, or `max-width` on the cluster is merely ' +
+        'advisory and the rows spill rightward into the hero seat',
+    ).toContain('min-width: 0');
   });
 
-  it("Hold'em: the cluster's top clears the community row", () => {
-    const bottom = percent(ruleWith(appCss, '.felt-controls--holdem {'), 'bottom') * FELT_H;
-    const yTop = FELT_H - bottom - CLUSTER_HEIGHT_BUDGET;
+  it('derives sane felts (falsifiability control for everything below)', () => {
+    expect(REFERENCE_FELT_W).toBeGreaterThan(0);
+    expect(RAIL).toBeGreaterThan(0);
+    expect(LEFT_FRACTION).toBeGreaterThan(0);
+    expect(MAX_WIDTH_FRACTION).toBeGreaterThan(0);
+    expect(HOLDEM_CLUSTER_HEIGHT).toBeGreaterThan(2 * ROW_HEIGHT);
+    expect(
+      RENDERED_FELT_W,
+      'the rendered felt must be NARROWER than the reference — if it were not, this whole ' +
+        'two-width block would be checking one case twice',
+    ).toBeLessThan(REFERENCE_FELT_W);
+  });
 
-    const community = ruleWith(appCss, '.community-area {');
-    const communityTop = percent(community, 'top') * FELT_H;
-    const communityCardW = pxToken(indexCss, '--card-w-community');
-    // Cards are 5:7, declared once as `aspect-ratio: 5 / 7` on the slots.
-    const communityBottom = communityTop + (communityCardW * 7) / 5;
+  it.each(
+    WIDTHS.flatMap(([label, w]) =>
+      (
+        [
+          ['holdem', '.felt-controls--holdem {'],
+          ['blackjack', '.felt-controls--blackjack {'],
+        ] as const
+      ).map(([mode, modifier]) => [mode + ' @ ' + label, w, modifier] as const),
+    ),
+  )('%s: both bottom corners sit inside the green, not merely inside the bounding box', (_label, feltWidth, modifier) => {
+    const g = geometry(feltWidth);
+    const yBottom = g.bottomOf(modifier);
+
+    // The bottom corners are the binding ones: the felt is an ellipse and the cluster sits in
+    // its lower half, so the lower a corner is, the narrower the green it has to fit into.
+    for (const [corner, x] of [
+      ['bottom-left', g.xLeft],
+      ['bottom-right (at the width cap)', g.xRight],
+    ] as const) {
+      const r = g.radial(x, yBottom);
+      expect(
+        r,
+        'the ' + corner + ' corner sits at ' + r.toFixed(3) + ' of the way to the rail at a ' +
+          feltWidth + 'px felt — 1.0 is the rail\'s inner edge, and beyond it the plate hangs ' +
+          'off the table',
+      ).toBeLessThan(1);
+    }
+  });
+
+  it.each(WIDTHS)(
+    "Hold'em @ %s: the cluster does not reach the hero seat, even at its width cap",
+    (_label, feltWidth) => {
+      const g = geometry(feltWidth);
+
+      // TWO TIERS, because they answer different questions and only one of them was ever
+      // checked before.
+      //
+      // Tier 1 — what is GUARANTEED. Uses the cap, so it holds whatever the labels render at.
+      // The floor is 15px rather than 0: at a 27% cap this arithmetic returned 1.1px of
+      // "clearance" at the rendered felt, which passed a `> 0` check while guaranteeing
+      // nothing. A fence that leaves a millimetre is not a fence.
+      expect(
+        g.heroLeftEdge - g.xRight,
+        'at a ' + feltWidth + 'px felt the width CAP does not fence the cluster off the hero ' +
+          'seat. The offsets are percentages and the buttons are text, so the cluster is ' +
+          'proportionally WIDER at smaller felt sizes — exactly when this pocket is narrowest',
+      ).toBeGreaterThan(15);
+
+      // Tier 2 — what is actually on screen, from the measured content width.
+      expect(
+        g.heroLeftEdge - g.xRightActual,
+        'at a ' + feltWidth + 'px felt the rendered cluster crowds the hero seat',
+      ).toBeGreaterThan(25);
+    },
+  );
+
+  it.each(WIDTHS)("Hold'em @ %s: the cluster top clears the community row", (_label, feltWidth) => {
+    const g = geometry(feltWidth);
+    const yTop = g.bottomOf('.felt-controls--holdem {') - HOLDEM_CLUSTER_HEIGHT;
 
     expect(
       yTop,
-      'the cluster would overlap the board cards — the band between the community row and the ' +
-        'hero seat is the only place on this table a cluster this size fits',
-    ).toBeGreaterThan(communityBottom);
+      'at a ' + feltWidth + 'px felt the cluster would cover the board cards. The pocket is ' +
+        'bounded on three sides — the ellipse below and left, this row above, the hero seat to ' +
+        'the right — so there is nowhere to absorb a third row',
+    ).toBeGreaterThan(g.communityBottom);
   });
 
-  it('Blackjack: the cluster clears a wide player hand at bottom-centre', () => {
-    const bottom = percent(ruleWith(appCss, '.felt-controls--blackjack {'), 'bottom') * FELT_H;
-    const yBottom = FELT_H - bottom;
+  it.each(WIDTHS)(
+    'Blackjack @ %s: the cluster clears a wide player hand at bottom-centre',
+    (_label, feltWidth) => {
+      const g = geometry(feltWidth);
+      // A blackjack hand can run to five or six cards, which spreads far enough left to sit
+      // under the cluster's x range — so the clearance has to be VERTICAL, not horizontal.
+      expect(
+        g.bottomOf('.felt-controls--blackjack {'),
+        'at a ' + feltWidth + "px felt the cluster's bottom edge reaches the player's cards",
+      ).toBeLessThan(g.playerTop);
+    },
+  );
 
-    const playerArea = ruleWith(appCss, '.bj-player-area {');
-    const playerBottom = percent(playerArea, 'bottom') * FELT_H;
-    const playerCardH = (pxToken(indexCss, '--card-w-hero') * 7) / 5;
-    const playerTop = FELT_H - playerBottom - playerCardH;
+  it('records what the pocket actually affords, so the trade-off stays visible', () => {
+    // A LEDGER, not a threshold. The bottom-left pocket is small and hard-bounded, and the
+    // Hold'em cluster very nearly fills it at the rendered width. Writing the numbers into the
+    // failure message means the next person to ask "can we get more clearance here?" gets the
+    // arithmetic instead of re-measuring, and any anchor change moves them visibly in the diff.
+    const ledger = WIDTHS.map(([label, feltWidth]) => {
+      const g = geometry(feltWidth);
+      const yBottom = g.bottomOf('.felt-controls--holdem {');
+      return (
+        label +
+        ': hero ' + (g.heroLeftEdge - g.xRightActual).toFixed(1) + 'px actual / ' +
+        (g.heroLeftEdge - g.xRight).toFixed(1) + 'px guaranteed, ' +
+        'community ' + (yBottom - HOLDEM_CLUSTER_HEIGHT - g.communityBottom).toFixed(1) + 'px, ' +
+        'corner r=' + g.radial(g.xLeft, yBottom).toFixed(3)
+      );
+    });
 
-    // A blackjack hand can run to five or six cards, which spreads far enough left to sit under
-    // the cluster's x range — so the clearance has to be VERTICAL, not horizontal.
-    expect(
-      yBottom,
-      "the cluster's bottom edge must sit above the top of the player's cards, because a " +
-        'multi-card hand spreads wide enough to reach underneath it',
-    ).toBeLessThan(playerTop);
+    // WHY THERE IS NO 40px ASSERTION HERE, though 40px was the target asked for.
+    //
+    // It is not reachable in this pocket at the rendered felt, and the arithmetic says so
+    // rather than the attempt failing. With 40px reserved for the hero seat, the pocket at
+    // 911px is ~217px wide and ~122px tall. Two rows fit that height exactly; the cluster's
+    // content is ~218px, so it is ~1px too wide. Narrowing it below the transport row's width
+    // forces a THIRD row, and at three rows the cluster must drop 56px to clear the community
+    // row — where the ellipse has closed in and the usable width collapses to ~120px. So the
+    // pocket admits either a wide-enough cluster or a 40px gap, never both.
+    //
+    // The honest floors are asserted in the two-tier test above (15px guaranteed, 25px actual).
+    // If more is genuinely needed, the levers are structural, not positional: shrink the felt's
+    // hero seat, move the cluster off the felt, or make `.table-row` give the felt more width.
+    for (const [label, feltWidth] of WIDTHS) {
+      const g = geometry(feltWidth);
+      expect(
+        g.heroLeftEdge - g.xRightActual,
+        label + ' has no clearance left. Ledger — ' + ledger.join(' | '),
+      ).toBeGreaterThan(0);
+    }
+    expect(ledger).toHaveLength(2);
   });
 });
 

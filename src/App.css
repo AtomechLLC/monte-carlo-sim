@@ -560,22 +560,36 @@ h2 {
  * ((x-520)/520)^2 + ((y-325)/325)^2 < 1, and the shipped 12px rail ring eats a
  * further margin inside that curve.
  *
- * Anchoring at left:14% / bottom:20% puts the cluster's bottom-left corner at
- * (145.6, 520): 0.49 + 0.36 = 0.85 of the way out, i.e. comfortably inside the
- * curve with ~40px of green between the corner and the rail. The band it
- * occupies is also the widest part of the table's lower half — at that height
- * the green spans x = 104..936, against x = 374..666 down at the very bottom,
- * which is why "lower" would have been much worse, not better.
+ * DO THE ARITHMETIC AT THE RENDERED WIDTH, NOT THE REFERENCE. `.felt` is
+ * `width: min(100%, 1040px)` — 1040 is a MAXIMUM, and in the shipped layout the
+ * odds cluster takes its share of `.table-row`, so the felt renders around
+ * 911px. That is not a rounding difference, it inverts the result: these
+ * offsets are PERCENTAGES (they shrink with the felt) while the buttons are
+ * TEXT (they do not), so the cluster is proportionally WIDER at smaller felt
+ * sizes — exactly when the pocket is narrowest. A reference-only check reported
+ * 37px of hero clearance while the app shipped a 10px x 62px COLLISION.
+ * App.controlPlacement.test.tsx now runs every clearance at both widths.
  *
- * CLEARANCES, at the reference size:
- *   hero seat      starts at x=430 (bottom-centre, 180px of cards). The cluster
- *                  runs to ~x=392 at its natural width, and `max-width: 26%`
- *                  caps it at x=416 even if the labels render wider than
- *                  measured — so it cannot grow into the seat.
- *   community row  ends at y=366; the cluster's top sits at ~y=408.
+ * CLEARANCES, rendered (911) / reference (1040):
+ *   hero seat      starts at x=365.5 / 430. The cluster's measured content is
+ *                  ~218px wide, so it ends at x=336 / 353 — 29px / 77px clear.
+ *                  `max-width: 25%` is the FENCE behind that: even if the
+ *                  labels rendered wider than measured it caps the right edge
+ *                  at x=346 / 395, still 19px / 35px clear.
+ *   community row  ends at y=317 / 347; the cluster's top sits at y=334 / 398.
  *   opponents      top 9%, and the deck is far right at left:90% — nowhere near.
- * Blackjack's cluster is shorter (one row) and sits higher still, so it clears
- * a wide multi-card player hand at bottom-centre; see its modifier below.
+ * Blackjack's cluster is one row and sits higher, so it clears a wide
+ * multi-card player hand at bottom-centre; see its modifier below.
+ *
+ * THE POCKET IS FULL, and that is a finding, not a fear. With 40px reserved for
+ * the hero seat the pocket at 911 is ~217px wide and ~122px tall. Two rows fit
+ * that height exactly and the content is ~218px, so it is ~1px too wide for a
+ * 40px gap. Narrowing below the transport row's width forces a THIRD row, which
+ * must then drop 56px to clear the community row — into where the ellipse has
+ * closed in and the usable width collapses to ~120px. So this pocket admits a
+ * wide-enough cluster or a 40px gap, never both. More clearance than the above
+ * needs a STRUCTURAL change (a smaller hero seat, more felt width from
+ * `.table-row`, or moving the cluster off the felt), not a nudge.
  *
  * The inner groups wrap, deliberately: if the labels do render wider than
  * measured, the cluster grows DOWNWARD (where there is headroom) rather than
@@ -604,7 +618,15 @@ h2 {
    * bind on flex items whose content cannot shrink, which is why `min-width: 0` below is
    * load-bearing rather than decorative. */
   left: 13%;
-  max-width: 27%;
+  /* The cap is a FENCE, and a fence is only worth the gap it leaves. At 27% it sat 28px above
+   * the cluster's ~218px measured content, so what it actually GUARANTEED at the rendered
+   * 911px felt was 1.1px of hero clearance — arithmetically "no overlap", practically nothing,
+   * and the assertions leaning on it were nearly vacuous. 25% is 228px at that felt: still
+   * ~10px of headroom over the content, so it never forces the third row that would reach the
+   * community row, while guaranteeing 19px of hero clearance at 911 and 35px at 1040 even if
+   * the labels rendered wider than measured. Below a ~872px felt the cap starts binding and the
+   * rows wrap — the documented degradation, and the reason `min-width: 0` exists. */
+  max-width: 25%;
   z-index: var(--z-felt-controls);
   display: flex;
   flex-direction: column;
