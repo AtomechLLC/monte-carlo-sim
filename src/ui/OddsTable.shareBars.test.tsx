@@ -239,7 +239,7 @@ describe('Share bars — decorative only', () => {
     expect(fill.closest('[aria-hidden="true"]')).toBe(track);
   });
 
-  it('hides every row s bar, not just the first', () => {
+  it("hides every row's bar, not just the first", () => {
     useOddsStore.setState(SETTLED_10);
     render(<OddsTable />);
 
