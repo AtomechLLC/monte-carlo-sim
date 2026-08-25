@@ -18,8 +18,17 @@
 
 /* Heading role (20px/600/1.2). Every <h2> in this app is a Phase 2 addition
  * (Card Picker / Street / Board / the picker panel's "Pick a card for..." /
- * the empty-hand-state heading below) — h1 is deliberately untouched, Phase 3
- * owns that redesign. */
+ * the empty-hand-state heading below).
+ *
+ * These three declarations are now a restatement of index.css's own h2 rule
+ * rather than an override of it: this rule is what has actually been setting
+ * 20px since Phase 2 (index.css said 24px), so when the display face landed,
+ * index.css was corrected to the value that was really rendering. Kept rather
+ * than deleted because it is the rule with the authority — App.css loads
+ * second — and because deleting it would make the shipped size depend on
+ * stylesheet order rather than on a stated intent. The FAMILY deliberately is
+ * not restated here: `var(--display)` is set once, in index.css, on the h1/h2
+ * pair together. */
 h2 {
   font-size: 20px;
   font-weight: 600;

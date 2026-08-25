@@ -1,0 +1,43 @@
+/* ---------------------------------------------------------------------------
+ * Self-hosted type — the Bodoni half.
+ *
+ * No CDN, by requirement: this app ships as a static bundle that has to work
+ * offline (and from the GitHub Pages subpath), so every glyph travels with it.
+ *
+ * IBM Plex Sans needs no file like this one — `@fontsource/ibm-plex-sans`
+ * ships per-subset, per-weight stylesheets (`latin-400.css`, `latin-600.css`)
+ * and main.tsx imports exactly those two and nothing else.
+ *
+ * Bodoni cannot be imported the same way: `@fontsource-variable/bodoni-moda`
+ * (5.3.0) ships no `latin.css`. Its three entry points — `wght.css`,
+ * `standard.css`, `opsz.css` — each declare FOUR subsets: math (21.5 kB),
+ * symbols (14.1 kB), latin-ext (14.1 kB) and latin (25.9 kB). A browser
+ * downloads only the subset whose `unicode-range` it actually needs, so the
+ * other three would never be fetched by anyone — but Vite bundles every file
+ * a stylesheet references, so all 75.6 kB would sit in `dist/assets` to serve
+ * 25.9 kB of it. The rule below is upstream's own latin `@font-face` from
+ * `wght.css`, copied verbatim (family name, weight range, `font-display` and
+ * `unicode-range` all unchanged) with the three unused subsets simply absent.
+ * Re-check it against the package when bumping the dependency.
+ *
+ * The `wght` axis file rather than `standard` or `opsz`: this app sets exactly
+ * two weights and never varies optical size, so an optical-size axis would be
+ * 20 kB of range there is no way to spend.
+ *
+ * The bare-specifier `url()` is resolved by Vite through the package's own
+ * `exports` map (`./files/*.woff2`), which is why no path into node_modules
+ * appears here.
+ *
+ * Licensing: Bodoni Moda and IBM Plex Sans are both OFL-1.1; each licence
+ * ships inside its own package as `node_modules/<pkg>/LICENSE`.
+ * ------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Bodoni Moda Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 900;
+  src: url('@fontsource-variable/bodoni-moda/files/bodoni-moda-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}

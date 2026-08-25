@@ -103,8 +103,34 @@
   --z-outcome: 4;
   --z-in-flight: 50;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* -------------------------------------------------------------------------
+   * Type. Two self-hosted families (see src/fonts.css and the imports in
+   * src/main.tsx — no CDN, latin subsets only), plus the untouched mono.
+   *
+   * --display is a DIDONE, and Didones are display faces in the literal sense:
+   * their whole character is the contrast between hairline and stem, and below
+   * about 20px the hairlines stop resolving and the face just looks weak. So
+   * it reaches exactly two selectors — h1 and h2, the app's only two heading
+   * roles, at 32px and 20px — and never body copy, never a control, never a
+   * number. The fallbacks are the same kind of face all the way down: Didot,
+   * then a transitional serif, then the generic.
+   *
+   * --sans carries EVERYTHING else, which in this app is almost everything:
+   * every control, every readout, every percentage. IBM Plex Sans is chosen
+   * for that job rather than for personality — it has real tabular figures
+   * (the odds columns already ask for `font-variant-numeric: tabular-nums`),
+   * a large x-height that holds up at the 14px Label size, and unambiguous
+   * 1/l/I and 0/O, which matters when the whole screen is numbers. system-ui
+   * stays behind it as the fallback, so a failed font load degrades to
+   * precisely the stack that shipped before.
+   *
+   * RENAMES --heading to --display: the token now names a ROLE that only the
+   * display sizes may spend, rather than the generic "this is a heading" it
+   * meant when both stacks were the same system font. h1/h2 were its only
+   * consumers.
+   * ---------------------------------------------------------------------- */
+  --display: 'Bodoni Moda Variable', Didot, Georgia, serif;
+  --sans: 'IBM Plex Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font: 18px/145% var(--sans);
@@ -148,7 +174,7 @@ body {
 
 h1,
 h2 {
-  font-family: var(--heading);
+  font-family: var(--display);
   /* Phase 3 (03-02, UI-SPEC A6): both the Display (h1) and Heading (h2) roles are weight 600 —
    * the scaffold's orphan weight-500 style is retired, landing the app on exactly 2 locked
    * weights (400/600) app-wide. */
@@ -157,20 +183,41 @@ h2 {
 }
 
 /* Display role (32/600/1.2, UI-SPEC A6): the felt table, not this banner, is the visual
- * centerpiece now, so the old 56px scaffold heading shrinks accordingly. */
+ * centerpiece now, so the old 56px scaffold heading shrinks accordingly.
+ *
+ * This is the app's WORDMARK, and the only change that makes it one is tracking. A Didone set
+ * solid reads as a paragraph that happens to be large; opened up, the same letterforms read as
+ * something engraved on a plate — which is the register a casino table wants, and it costs no
+ * size, no weight and no colour to get. (Not brass, deliberately: the accent budget is three
+ * reserved Hold'em uses, and a permanently gold banner would quietly become a fourth.)
+ *
+ * The `text-indent` is the other half of the tracking: letter-spacing adds its space AFTER the
+ * last letter too, and centring counts that trailing space, so a tracked centred line sits
+ * visually left of centre by half the tracking. Matching the indent to the tracking puts the
+ * same space back at the start and re-centres it. */
 h1 {
   font-size: 32px;
   line-height: 1.2;
+  letter-spacing: 0.07em;
+  text-indent: 0.07em;
   margin: 16px 0;
 }
+/* Heading role (20/600/1.2). The size was `24px` here with a `<=1024px` override back down to
+ * 20px, but App.css has set an unconditional `h2 { font-size: 20px }` since Phase 2 — so 24px
+ * has been dead for the entire life of the file and the override restated a value that already
+ * applied. Both are collapsed into the one size that was always rendering, which is what lets
+ * the type scale be VERIFIED as exactly {32, 20, 16, 14} rather than asserted (see
+ * ui/depthTypography.guard.test.ts) instead of carrying a phantom fifth size in the source.
+ *
+ * Tracking flips sign with the typeface: -0.24px was right for a system sans at 24px, where
+ * tightening steadies a large line. A Didone at 20px needs the opposite — its hairlines need
+ * air around them or adjacent stems visually merge — so headings now open up very slightly
+ * rather than close up. */
 h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: 0.015em;
   margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
 }
 p {
   margin: 0;
