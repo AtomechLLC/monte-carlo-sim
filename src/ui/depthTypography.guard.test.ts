@@ -696,3 +696,43 @@ describe('card-back recolour — the tint lives in exactly one place', () => {
     }
   });
 });
+
+/**
+ * The table is drawn in perspective, and exactly one property makes that safe.
+ *
+ * Inside a `transform-style: preserve-3d` context, a child's `translateZ` takes over depth
+ * sorting and OVERRIDES `z-index`. This app's whole stacking contract is a z-index scale whose
+ * load-bearing promise is `--z-in-flight: 50` — a card in flight is never occluded by a settled
+ * one. `preserve-3d` on the felt would void that silently: nothing would throw, no test that
+ * renders in jsdom could see it, and the symptom would be an occasional card vanishing behind
+ * another mid-deal. Empirically confirmed by pixel-sampling during the card-art research
+ * (.planning/research/CARD-ART.md).
+ */
+describe('felt perspective — flat, so the z-index scale keeps its meaning', () => {
+  const felt = withoutComments(ruleFor(baseAppCss, '.felt'));
+
+  it('tilts the table', () => {
+    expect(felt).toMatch(/transform:\s*perspective\([^)]*\)\s*rotateX\(/);
+  });
+
+  it('declares transform-style: flat, never preserve-3d', () => {
+    expect(felt).toContain('transform-style: flat');
+    expect(
+      felt,
+      'preserve-3d lets a child translateZ override z-index, voiding the in-flight guarantee',
+    ).not.toContain('preserve-3d');
+  });
+
+  it('keeps the tilt shallow enough to leave the card indices readable', () => {
+    const deg = Number(felt.match(/rotateX\((\d+(?:\.\d+)?)deg\)/)?.[1]);
+    expect(deg, 'rotateX must be declared in degrees').toBeGreaterThan(0);
+    expect(deg, 'past ~15deg foreshortening eats the indices the deck was regenerated to fix')
+      .toBeLessThanOrEqual(15);
+  });
+
+  it('gives blackjack a half-moon outline while Hold\u2019s stays an oval', () => {
+    expect(felt, 'the shared felt is the oval').toContain('border-radius: 50%');
+    const blackjack = withoutComments(ruleFor(baseAppCss, "[data-testid='blackjack-scene']"));
+    expect(blackjack, 'blackjack overrides the outline').toMatch(/border-radius:[^;]*88%/);
+  });
+});

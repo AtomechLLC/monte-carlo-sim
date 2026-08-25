@@ -304,6 +304,27 @@ h2 {
   position: relative;
   width: min(100%, 1040px);
   aspect-ratio: 16 / 10;
+  /* ---------------------------------------------------------------------
+   * The table is seen in perspective, from a player's seat: the far rail
+   * recedes, the near rail stays put (hence the bottom transform-origin).
+   *
+   * `transform-style: flat` is DELIBERATE and load-bearing — not a default
+   * left in place. Inside a `preserve-3d` context a child's `translateZ`
+   * takes over depth sorting and OVERRIDES `z-index`, which would silently
+   * void `--z-in-flight: 50`'s guarantee that a card in flight is never
+   * occluded by a settled one. Flat keeps the painter's-algorithm ordering
+   * the whole z-scale is built on, and the cards still read as lying on the
+   * table because they inherit the tilt with it.
+   *
+   * The angle is deliberately shallow. Past ~15deg the foreshortening starts
+   * eating the card indices this deck was just regenerated to make legible,
+   * and a probability tool that is hard to read is a worse tool. Cards are
+   * NOT counter-rotated to face the viewer: billboarded cards read as
+   * propped-up place-cards rather than cards lying on a table.
+   * ------------------------------------------------------------------ */
+  transform: perspective(1500px) rotateX(12deg);
+  transform-origin: 50% 100%;
+  transform-style: flat;
   margin-inline: auto;
   border-radius: 50%;
   background:
@@ -649,6 +670,35 @@ h2 {
   background: var(--seat-badge-bg);
   color: var(--seat-badge-text);
   box-shadow: var(--elev-raised);
+}
+
+/* ---------------------------------------------------------------------------
+ * Blackjack's table is a HALF-MOON, not Hold'em's oval.
+ *
+ * This is how the two games are actually laid out in a casino, and it is why
+ * the shape carries information rather than decoration: at a blackjack table
+ * the dealer stands at the STRAIGHT edge and the players sit around the ARC.
+ * The scene already places the dealer top-centre and the player bottom-centre,
+ * so a flat top edge and a deep bottom curve map straight onto the roles that
+ * are already there — and the two games become distinguishable at a glance,
+ * before a single card is dealt.
+ *
+ * Only the outline changes. The felt gradient, the overhead lamp, the rail and
+ * the tilt are all inherited from `.felt`, and the rail follows the new
+ * outline for free because it is a border on this same box.
+ * ------------------------------------------------------------------------- */
+[data-testid='blackjack-scene'] {
+  border-radius: 18px 18px 50% 50% / 18px 18px 88% 88%;
+}
+
+/* The shoe moves with the shape. `.deck-origin`'s shared anchor (left 90%, top 40%) is a
+ * point on Hold'em's oval but OUTSIDE the half-moon: the bottom corners' 88% vertical radius
+ * starts pulling the right edge inward from 12% of the height down, so at 40% the deck was
+ * straddling the rail. Top-right is both inside the flat part of the shape and where a shoe
+ * actually sits — at the dealer's side, on the straight edge. */
+[data-testid='blackjack-deck-origin'] {
+  top: 4%;
+  left: 80%;
 }
 
 /* Hold'em carries two rows (the Deal pair, then the transport), so it sits
