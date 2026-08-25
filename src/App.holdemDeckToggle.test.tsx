@@ -248,13 +248,33 @@ describe('D-02 lifecycle: idle set, mid-hand fresh deal, already-active no-op', 
 });
 
 describe('A2/A3/A4 affordances: placement, fresh-deal disclosure, duplicate-pick guard', () => {
-  it('the toggle is the LAST control-bar child with the locked group semantics and labels (A2)', () => {
+  // RETARGETED 2026-08-25 (control-bar reorganization) — never deleted, never weakened, per the
+  // same standing rule App.modeShell.guard.test.ts states for its own pins.
+  //
+  // WHY: A2 pinned the toggle as `.control-bar`'s LAST ELEMENT CHILD, which was the only way to
+  // say "the shoe control sits at the end of the context cluster" while the bar was ONE FLAT
+  // ROW of five unrelated controls. The user asked for that row to be reorganized ("the
+  // controls for running the simulator are haphazard, please reorganize the UI"), so the bar is
+  // now two purpose-grouped rows and the flat-row phrasing has no referent — the toggle's LAST
+  // position is unchanged, the parent it is last in is not. A2's substance is preserved
+  // verbatim by re-anchoring on the session row: the toggle is still the trailing control of
+  // the "what am I playing" cluster, still pushed to the far edge (now by the row's
+  // space-between rather than by being the flat bar's tail), and every semantic half of this
+  // assertion — role, accessible name, both segment labels — is untouched below.
+  //
+  // This is the obsolete-by-intent case, not a drifted-implementation case: the assertion is
+  // red because the user changed the design, and the retarget records that. It must NOT be
+  // relaxed to a bare `toBeInTheDocument()` — placement is the whole point of A2.
+  it("the toggle is the LAST child of the control bar's session row, with the locked group semantics and labels (A2, retargeted)", () => {
     render(<App />);
 
     const toggle = screen.getByTestId('holdem-deck-toggle');
-    const controlBar = document.querySelector('.control-bar');
-    expect(controlBar).not.toBeNull();
-    expect(controlBar!.lastElementChild).toBe(toggle);
+    const sessionRow = document.querySelector('.control-bar__row--session');
+    expect(sessionRow).not.toBeNull();
+    expect(sessionRow!.lastElementChild).toBe(toggle);
+    // The session row really is inside the control bar — without this the pin above could pass
+    // against a row that had floated out of the bar entirely.
+    expect(sessionRow!.parentElement).toBe(document.querySelector('.control-bar'));
     expect(toggle).toHaveAttribute('role', 'group');
     expect(toggle).toHaveAttribute('aria-label', 'Deck count');
     expect(screen.getByTestId('holdem-deck-toggle-1')).toHaveTextContent('1 deck');

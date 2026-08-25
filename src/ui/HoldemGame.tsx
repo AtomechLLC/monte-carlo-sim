@@ -29,8 +29,14 @@ const DUPLICATE_PICK_GUARD_TITLE =
 /**
  * The Hold'em game root (D-07, 05-REVIEW WR-03): every Hold'em-scoped effect, state field and
  * JSX block extracted verbatim from App.tsx, so both games are sibling components under the
- * shell's mode fork. Renders its own control bar with <GameModeSwitcher /> as the first child,
- * keeping the shipped Hold'em DOM order byte-equivalent to the pre-extraction App.tsx (D-08).
+ * shell's mode fork. Renders its own control bar with <GameModeSwitcher /> leading it.
+ *
+ * D-08's original wording ("as the first child, keeping the shipped Hold'em DOM order
+ * byte-equivalent to the pre-extraction App.tsx") described the flat single-row bar, which the
+ * 260825 reorganization deliberately replaced at the user's request. The switcher is still the
+ * bar's first control in reading order; it is now the first child of the session ROW rather
+ * than of the bar itself. What D-08 was protecting — that the extraction changed no rendered
+ * output — was verified at the time and is not what this later, explicit redesign undoes.
  */
 export function HoldemGame() {
   const runout = useGameStore((state) => state.runout);
@@ -209,20 +215,28 @@ export function HoldemGame() {
           </p>
         </div>
       )}
+      {/* Control bar, reorganized 260825 at the user's request ("the controls for running the
+          simulator are haphazard"). Two rows, grouped by WHAT A CONTROL DOES rather than one
+          flat undifferentiated flex line of five unrelated things:
+
+            Row 1 — session/context: which game, which shoe. Both persist across hands, so
+            neither belongs beside the per-hand actions. Space-between pushes the shoe to the
+            far edge; the two segmented controls bracket the row.
+
+            Row 2 — the hand: the actions that operate on the hand currently on the table —
+            the Deal/Set Up Scenario pair, then a DECORATIVE CSS separator (a border-left on
+            the second group; never a text character, never an element, never focusable), then
+            the street transport.
+
+          Structure only. Every handler, disabled rule, copy string, testid and order of
+          operations below is exactly what shipped — this changed where controls sit, not what
+          they do. */}
       <div className="control-bar">
-        <GameModeSwitcher />
-        <DealButton />
-        <button
-          type="button"
-          data-testid="set-up-scenario-button"
-          aria-expanded={scenarioOpen}
-          aria-controls={CARD_PICKER_REGION_ID}
-          onClick={() => setScenarioOpen((open) => !open)}
-        >
-          Set Up Scenario
-        </button>
-        <StreetControls />
-        {/* Shared segmented control (Phase 8 D-01, SC1 — last control-bar child, UI-SPEC A2):
+        <div className="control-bar__row control-bar__row--session">
+          <GameModeSwitcher />
+          {/* Shared segmented control (Phase 8 D-01, SC1 — the session row's last child,
+            UI-SPEC A2 as retargeted by the 260825 reorganization; it was the last control-bar
+            child when the bar was one flat row):
             the markup lives in DeckCountToggle; the A4 guard predicate and both pre-computed
             titles — including the A4-beats-A3 precedence on the first segment — stay at this
             call site. There is deliberately NO confirmation dialog for the mid-hand path (A3):
@@ -235,20 +249,36 @@ export function HoldemGame() {
             active-segment-no-op invariants this comment used to restate are properties of the
             shared component and now live once, in DeckCountToggle's doc comment — matching how
             BlackjackControls' call-site comment was trimmed in the extraction commit.) */}
-        <DeckCountToggle
-          testidPrefix="holdem-deck-toggle"
-          deckCount={deckCount}
-          onSelect={setDeckCount}
-          oneDeckDisabled={duplicateInPicks}
-          oneDeckTitle={
-            duplicateInPicks
-              ? DUPLICATE_PICK_GUARD_TITLE
-              : deckCount === 2 && runout !== null
-                ? FRESH_DEAL_TITLE
-                : undefined
-          }
-          twoDecksTitle={deckCount === 1 && runout !== null ? FRESH_DEAL_TITLE : undefined}
-        />
+          <DeckCountToggle
+            testidPrefix="holdem-deck-toggle"
+            deckCount={deckCount}
+            onSelect={setDeckCount}
+            oneDeckDisabled={duplicateInPicks}
+            oneDeckTitle={
+              duplicateInPicks
+                ? DUPLICATE_PICK_GUARD_TITLE
+                : deckCount === 2 && runout !== null
+                  ? FRESH_DEAL_TITLE
+                  : undefined
+            }
+            twoDecksTitle={deckCount === 1 && runout !== null ? FRESH_DEAL_TITLE : undefined}
+          />
+        </div>
+        <div className="control-bar__row control-bar__row--hand">
+          <div className="control-group control-group--hand-actions">
+            <DealButton />
+            <button
+              type="button"
+              data-testid="set-up-scenario-button"
+              aria-expanded={scenarioOpen}
+              aria-controls={CARD_PICKER_REGION_ID}
+              onClick={() => setScenarioOpen((open) => !open)}
+            >
+              Set Up Scenario
+            </button>
+          </div>
+          <StreetControls />
+        </div>
       </div>
       {scenarioOpen && (
         <div id={CARD_PICKER_REGION_ID}>
