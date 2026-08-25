@@ -28,7 +28,7 @@ Audit: [milestones/v1.0-MILESTONE-AUDIT.md](milestones/v1.0-MILESTONE-AUDIT.md)
 - [x] **Phase 5: Game-Mode Shell & Store Separation** - Users can switch between Hold'em and Blackjack, each with fully independent state and odds (completed 2026-08-24)
 - [x] **Phase 6: Blackjack Core Odds Loop** - Full Blackjack vertical slice: deal, bust/dealer-outcome odds, Stand/Hit EV, hit/stand play, dealer reveal, deck toggle (completed 2026-08-24)
 - [x] **Phase 7: 2-Deck Hold'em Evaluation Layer** - Hold'em over a 104-card shoe with correct duplicate-card evaluation and a Five of a Kind category (completed 2026-08-25)
-- [ ] **Phase 8: Cross-Game Deck-Count Toggle UI** - One shared deck-count control spanning both games
+- [x] **Phase 8: Cross-Game Deck-Count Toggle UI** - One shared deck-count control spanning both games (completed 2026-08-25)
 
 ## Phase Details
 
@@ -187,7 +187,7 @@ Plans:
   2. Changing deck count in either game immediately cancels any in-flight simulation and recomputes all odds under the new shoe size, with no stale numbers left on screen.
   3. The control follows the same "takes effect on next deal" discipline already established for the card picker — no disruptive mid-hand mutation.
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 **UI hint**: yes
 
 Plans:
@@ -201,7 +201,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 08-03-PLAN.md — Regression sweep, golden commit-ordering proof, multi-source coverage audit and production-build browser acceptance checkpoint
+- [x] 08-03-PLAN.md — Regression sweep, golden commit-ordering proof, multi-source coverage audit and production-build browser acceptance checkpoint
 
 ## Progress
 
@@ -217,4 +217,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Game-Mode Shell & Store Separation | v2.0 | 3/3 | Complete   | 2026-08-24 |
 | 6. Blackjack Core Odds Loop | v2.0 | 8/8 | Complete    | 2026-08-25 |
 | 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 7/7 | Complete    | 2026-08-25 |
-| 8. Cross-Game Deck-Count Toggle UI | v2.0 | 2/3 | In Progress|  |
+| 8. Cross-Game Deck-Count Toggle UI | v2.0 | 3/3 | Complete   | 2026-08-25 |
