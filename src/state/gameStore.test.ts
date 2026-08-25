@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
 import { useGameStore } from './gameStore';
 import { useOddsStore } from './oddsStore';
 import { usePickerStore } from './pickerStore';
 import { useUiStore } from './uiStore';
 import { FULL_DECK } from '../engine/cards';
+import { cardCounts } from '../engine/shoe';
 import type { ProgressSnapshot } from '../worker/protocol';
 
 const EMPTY_PICKS = {
@@ -18,7 +20,9 @@ const EMPTY_PICKS = {
 
 describe('gameStore — predetermined runout and street pointer', () => {
   beforeEach(() => {
-    useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
+    // deckCount MUST be reset to 1 here: without it a 2-deck test leaks into the
+    // 1-deck-only distinct-cards assertion below, which is only valid at one deck.
+    useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0, deckCount: 1 });
     usePickerStore.setState({ picks: { ...EMPTY_PICKS } });
     useUiStore.getState().resetAnimations();
   });
@@ -240,7 +244,9 @@ describe('gameStore — predetermined runout and street pointer', () => {
 
 describe('gameStore — merge-on-deal (picker draft honoured, unset slots randomly filled)', () => {
   beforeEach(() => {
-    useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0 });
+    // deckCount reset for the same isolation reason as above: several assertions in this
+    // block are 1-deck-only (13 DISTINCT cards) and must never inherit a 2-deck state.
+    useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0, deckCount: 1 });
     usePickerStore.setState({ picks: { ...EMPTY_PICKS } });
     useUiStore.getState().resetAnimations();
   });
@@ -350,5 +356,189 @@ describe('gameStore — merge-on-deal (picker draft honoured, unset slots random
     useGameStore.getState().deal();
     const { runout } = useGameStore.getState();
     expect(runout!.heroHole).toEqual(['As', 'Ah']);
+  });
+});
+
+/** Flattens a runout into its 13 physical cards, in slot order. */
+function runoutCards() {
+  const { runout } = useGameStore.getState();
+  return [
+    ...runout!.heroHole,
+    ...runout!.board,
+    ...runout!.opponentHoles[0],
+    ...runout!.opponentHoles[1],
+    ...runout!.opponentHoles[2],
+  ];
+}
+
+describe('gameStore — count-aware deal pool (D-14, HE2-01)', () => {
+  beforeEach(() => {
+    useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0, deckCount: 1 });
+    usePickerStore.setState({ picks: { ...EMPTY_PICKS } });
+    useUiStore.getState().resetAnimations();
+  });
+
+  it('a fresh store defaults to deckCount 1', () => {
+    expect(useGameStore.getState().deckCount).toBe(1);
+  });
+
+  it('at deckCount 2 with no picks, deal() produces 13 cards in which no VALUE appears more than twice', () => {
+    useGameStore.setState({ deckCount: 2 });
+    useGameStore.getState().deal();
+
+    const allCards = runoutCards();
+    expect(allCards).toHaveLength(13);
+    // cardCounts assertion, never a Set-size assertion — the per-value cap is the 2-deck
+    // invariant; distinctness is only a 1-deck property.
+    for (const count of cardCounts(allCards).values()) {
+      expect(count).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it('at deckCount 2 with both copies of one value picked into two slots, deal() honours BOTH picks without re-drawing either', () => {
+    useGameStore.setState({ deckCount: 2 });
+    usePickerStore.getState().setPick('hero-0', 'As', 2);
+    usePickerStore.getState().setPick('flop-0', 'As', 2);
+
+    useGameStore.getState().deal();
+
+    const { runout } = useGameStore.getState();
+    expect(runout!.heroHole[0]).toBe('As');
+    expect(runout!.board[0]).toBe('As');
+    // Exactly the two picked physical copies exist in the runout: the shoe held only two
+    // As, both were consumed by the picks, so the random fill can never re-draw one.
+    const allCards = runoutCards();
+    expect(allCards).toHaveLength(13);
+    expect(cardCounts(allCards).get('As')).toBe(2);
+  });
+});
+
+describe('gameStore — setDeckCount() (D-02 lifecycle + A4 store-boundary refusal)', () => {
+  let armSpy: MockInstance;
+
+  beforeEach(() => {
+    useGameStore.setState({ runout: null, street: 'preflop', revealedMask: 0, dealNonce: 0, deckCount: 1 });
+    usePickerStore.setState({ picks: { ...EMPTY_PICKS } });
+    useUiStore.getState().resetAnimations();
+    useOddsStore.getState().clearCache();
+    // vi.spyOn returns the SAME spy when the method is already spied (every test after the
+    // first), so clear its accumulated calls to keep per-test arm counts accurate.
+    armSpy = vi.spyOn(useUiStore.getState(), 'beginAnimation');
+    armSpy.mockClear();
+  });
+
+  function arms(): number {
+    return armSpy.mock.calls.length;
+  }
+
+  /** Seeds one settled cache entry so cache retention/clearing can be asserted. */
+  function seedCache() {
+    const snapshot: ProgressSnapshot = {
+      requestId: 1,
+      categoryCounts: new Array(10).fill(0),
+      outcomes: { win: 60, tie: 10, lose: 30 },
+      trialsCompleted: 100,
+      done: true,
+    };
+    useOddsStore.getState().cacheIfSettled('flop', 0, snapshot);
+    expect(useOddsStore.getState().settledCache.size).toBe(1);
+  }
+
+  it('same value while idle: the whole store state is reference-identical, nothing arms, the cache stays', () => {
+    seedCache();
+    const before = useGameStore.getState();
+
+    useGameStore.getState().setDeckCount(1);
+
+    expect(useGameStore.getState()).toBe(before);
+    expect(useOddsStore.getState().settledCache.size).toBe(1);
+    expect(arms()).toBe(0);
+  });
+
+  it('same value with a hand on the table: identical no-op — dealNonce unchanged', () => {
+    useGameStore.getState().deal();
+    armSpy.mockClear();
+    seedCache();
+    const before = useGameStore.getState();
+
+    useGameStore.getState().setDeckCount(1);
+
+    expect(useGameStore.getState()).toBe(before);
+    expect(useGameStore.getState().dealNonce).toBe(1);
+    expect(useOddsStore.getState().settledCache.size).toBe(1);
+    expect(arms()).toBe(0);
+  });
+
+  it('different value while idle: deckCount changes, dealNonce unchanged, no arming, no odds-cache clear', () => {
+    seedCache();
+
+    useGameStore.getState().setDeckCount(2);
+
+    const state = useGameStore.getState();
+    expect(state.deckCount).toBe(2);
+    expect(state.runout).toBeNull();
+    expect(state.dealNonce).toBe(0);
+    expect(useOddsStore.getState().settledCache.size).toBe(1);
+    expect(arms()).toBe(0);
+  });
+
+  it('different value with a hand on the table: fresh deal — dealNonce +1 exactly, gate armed exactly once, cache emptied, street preflop, revealedMask 0', () => {
+    useGameStore.getState().deal();
+    useGameStore.setState({ street: 'river', revealedMask: 0b101 });
+    armSpy.mockClear();
+    seedCache();
+
+    useGameStore.getState().setDeckCount(2);
+
+    const state = useGameStore.getState();
+    expect(state.deckCount).toBe(2);
+    expect(state.dealNonce).toBe(2);
+    expect(state.street).toBe('preflop');
+    expect(state.revealedMask).toBe(0);
+    expect(useOddsStore.getState().settledCache.size).toBe(0);
+    expect(arms()).toBe(1);
+  });
+
+  it('refuses 2 -> 1 while the picks hold a duplicated value: deckCount stays 2, dealNonce unchanged, picks untouched', () => {
+    useGameStore.setState({ deckCount: 2 });
+    usePickerStore.getState().setPick('hero-0', 'As', 2);
+    usePickerStore.getState().setPick('flop-0', 'As', 2);
+    useGameStore.getState().deal();
+    armSpy.mockClear();
+    const storeBefore = useGameStore.getState();
+    const picksBefore = usePickerStore.getState().picks;
+
+    useGameStore.getState().setDeckCount(1);
+
+    // A refused switch is a COMPLETE no-op, exactly like the same-value branch — and the
+    // load-bearing guarantee: the picks are untouched (a deck toggle never silently
+    // clears a pick, UI-SPEC A4).
+    expect(useGameStore.getState()).toBe(storeBefore);
+    expect(useGameStore.getState().deckCount).toBe(2);
+    expect(useGameStore.getState().dealNonce).toBe(storeBefore.dealNonce);
+    expect(usePickerStore.getState().picks).toBe(picksBefore);
+    expect(arms()).toBe(0);
+  });
+
+  it('allows 2 -> 1 when the picks hold no duplicated value (the on-table hand never blocks)', () => {
+    useGameStore.setState({ deckCount: 2 });
+    usePickerStore.getState().setPick('hero-0', 'As', 2);
+    useGameStore.getState().deal();
+
+    useGameStore.getState().setDeckCount(1);
+
+    expect(useGameStore.getState().deckCount).toBe(1);
+    expect(usePickerStore.getState().picks['hero-0']).toBe('As');
+  });
+
+  it('always allows 1 -> 2 with any picks; picks untouched', () => {
+    usePickerStore.getState().setPick('hero-0', 'As');
+    usePickerStore.getState().setPick('hero-1', 'Ah');
+    const picksBefore = usePickerStore.getState().picks;
+
+    useGameStore.getState().setDeckCount(2);
+
+    expect(useGameStore.getState().deckCount).toBe(2);
+    expect(usePickerStore.getState().picks).toBe(picksBefore);
   });
 });
