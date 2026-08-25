@@ -39,6 +39,10 @@ export const HOLDEM_ONLY_TESTIDS: readonly string[] = [
   'lose-pct',
   'category-table',
   'category-pct-0',
+  // The Share column's bar fill — one entry, index 0, matching the sampling convention the
+  // percentage column already uses here (a per-row sweep would add ten near-identical cases
+  // proving the same containment).
+  'category-bar-0',
   'card-picker',
   'picker-panel',
   'picker-slot-hero-0',
