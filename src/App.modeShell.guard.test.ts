@@ -419,21 +419,30 @@ describe('SC1 — the deck-count markup lives in exactly ONE shared component, r
     ).toContain('<DeckCountToggle');
   });
 
-  it.each(callSites)('%s retains zero occurrences of role="group"', (relativePath) => {
+  it.each(callSites)('%s retains zero group-role markup, in any quoting style', (relativePath) => {
+    // STRENGTHENED (08-REVIEW WR-03 item 3): was `.not.toContain('role="group"')`, which
+    // only saw the double-quoted form — role='group' and role={'group'} walked straight
+    // past it. The regex covers every JSX quoting style; role="alert" and the other roles
+    // these files legitimately carry are unaffected because it anchors on the value.
     expect(
       readSource(relativePath),
-      `${relativePath} must not contain role="group" anywhere, comments included — the inline ` +
-        'segmented markup was extracted (Phase 8 D-01, 08-UI-SPEC A3); its reappearance would ' +
-        'mean SC1\'s single-source claim regressed',
-    ).not.toContain('role="group"');
+      `${relativePath} must not contain a role="group" attribute in ANY quoting style, comments ` +
+        'included — the inline segmented markup was extracted (Phase 8 D-01, 08-UI-SPEC A3); ' +
+        'its reappearance would mean SC1\'s single-source claim regressed',
+    ).not.toMatch(/role\s*=\s*[{("'`]*group/);
   });
 
-  it.each(callSites)('%s retains zero occurrences of the group aria-label', (relativePath) => {
+  it.each(callSites)('%s retains zero occurrences of the group label, in any form', (relativePath) => {
+    // STRENGTHENED (08-REVIEW WR-03 item 3): was `.not.toContain('aria-label="Deck count"')`.
+    // Pinning the BARE label literal is quoting-agnostic and additionally catches the hoisted
+    // -constant evasion (`const GROUP_LABEL = 'Deck count'` + aria-label={GROUP_LABEL}), which
+    // the attribute-shaped pin could not see. Neither call site contains the string today.
     expect(
       readSource(relativePath),
-      `${relativePath} must not contain aria-label="Deck count" anywhere, comments included — ` +
-        'the wrapper markup lives only in ui/DeckCountToggle.tsx (Phase 8 D-01, 08-UI-SPEC A3)',
-    ).not.toContain('aria-label="Deck count"');
+      `${relativePath} must not contain the group label "Deck count" anywhere, in any quoting ` +
+        'style and comments included — the wrapper markup and its label live only in ' +
+        'ui/DeckCountToggle.tsx (Phase 8 D-01, 08-UI-SPEC A3)',
+    ).not.toContain('Deck count');
   });
 
   it('each call site keeps its own locked testid prefix, and the component builds the segment testids from the prefix (D-02)', () => {
@@ -459,26 +468,65 @@ describe('SC1 — the deck-count markup lives in exactly ONE shared component, r
     ).toContain('${testidPrefix}-2');
   });
 
-  it('exactly ONE non-test src/ui component contains the group aria-label — and it is DeckCountToggle.tsx', () => {
-    // The .test.tsx exclusion is load-bearing: plan 08-02 adds src/ui/DeckCountToggle.test.tsx,
-    // which necessarily contains the string, and this sweep must stay green when it lands.
-    // Deliberately NOT swept on `1 deck` / `2 decks`: ui/BlackjackGame.tsx's locked idle copy
-    // contains the substring "2 decks" and BlackjackControls' surviving WR-01 essay contains
-    // "1 deck".
-    // { recursive: false } is deliberate and load-bearing twice over: src/ui has no
-    // subdirectories today, and the node-builtins.d.ts shim (IMP-02) types readdirSync
-    // with a required options argument — the narrow shim shape this file must respect.
-    const uiComponentFiles = readdirSync(join(SRC_DIR, 'ui'), { recursive: false }).filter(
-      (name) => name.endsWith('.tsx') && !name.endsWith('.test.tsx'),
+  it('exactly ONE production .tsx file in ALL of src/ contains the deck-count group markup — and it is ui/DeckCountToggle.tsx', () => {
+    // WIDENED (08-REVIEW WR-03). This sweep previously read a FLAT, non-test listing of
+    // src/ui only, which pinned SC1's "the markup lives in exactly ONE component" claim three
+    // sizes too small:
+    //   1. Directory scope — src/App.tsx is a .tsx component OUTSIDE src/ui, so re-inlining
+    //      the group markup there left all 11 SC1 assertions green.
+    //   2. { recursive: false } — the first src/ui/blackjack/ or src/ui/shared/ directory
+    //      would have silently dropped its files out of the sweep's view.
+    //   3. Literal quoting — keying on the double-quoted form let role='group' /
+    //      aria-label={'Deck count'} / a hoisted `const GROUP_LABEL = 'Deck count'` evade it.
+    //
+    // One change subsumes all three, reusing the complete, already-proven in-repo pattern from
+    // the sibling guard src/engine/shoePath.guard.test.ts (productionSourceFiles): walk src/
+    // with { recursive: true } and normalize Windows separators. Matching on the BARE literal
+    // `Deck count` rather than on an aria-label= form is deliberately STRONGER than the
+    // previous pin — it is quoting-agnostic and it also catches the hoisted-constant evasion,
+    // where the label never appears next to the attribute at all.
+    //
+    // The `.test.` exclusion stays, and stays LOAD-BEARING — it is exercised by two real
+    // files, not merely asserted: src/ui/DeckCountToggle.test.tsx deliberately contains the
+    // literal markup string (see its own comment on the wrapper case) and
+    // src/App.deckToggleDom.golden.test.tsx carries it inside all nine frozen constants.
+    // Still deliberately NOT swept on `1 deck` / `2 decks`: ui/BlackjackGame.tsx's locked idle
+    // copy contains "2 decks" and BlackjackControls' surviving WR-01 essay contains "1 deck".
+    // { recursive: true } also satisfies the narrow node-builtins.d.ts shim (IMP-02), which
+    // types readdirSync with a REQUIRED options argument.
+    const productionTsxFiles = readdirSync(SRC_DIR, { recursive: true })
+      .map((entry) => String(entry).replaceAll('\\', '/'))
+      .filter((relativePath) => relativePath.endsWith('.tsx') && !relativePath.includes('.test.'));
+
+    const emitters = productionTsxFiles.filter((relativePath) =>
+      readSource(relativePath).includes('Deck count'),
     );
-    const withGroupMarkup = uiComponentFiles.filter((name) =>
-      readSource(join('ui', name)).includes('aria-label="Deck count"'),
-    );
+
     expect(
-      withGroupMarkup,
-      'exactly one non-test src/ui component may contain the deck-count group markup — SC1\'s ' +
-        'single-source-of-markup rule (Phase 8 D-01, 08-UI-SPEC A3)',
-    ).toEqual(['DeckCountToggle.tsx']);
+      emitters,
+      'exactly ONE production .tsx file under src/ may contain the deck-count group markup — ' +
+        'SC1\'s single-source-of-markup rule (Phase 8 D-01, 08-UI-SPEC A3). A second entry ' +
+        'means the markup was re-inlined somewhere: App.tsx and every src/ui subdirectory are ' +
+        'now in scope, whatever quoting style the copy is written in',
+    ).toEqual(['ui/DeckCountToggle.tsx']);
+
+    // Falsifiability control for the sweep itself: a green result above must not be reachable
+    // from an empty or still-ui-only listing. App.tsx's invisibility to the old flat src/ui
+    // read was the WR-03 hole, so its presence here is what proves the walk actually widened.
+    expect(
+      productionTsxFiles,
+      'the sweep must see src/App.tsx — a .tsx component outside src/ui, invisible to the flat ' +
+        'src/ui listing this pin replaced (08-REVIEW WR-03)',
+    ).toContain('App.tsx');
+
+    // The single emitter must still carry the markup in the exact double-quoted JSX form the
+    // nine-state DOM golden serializes. The sweep above is quoting-agnostic BY DESIGN (that is
+    // what closes evasion 3), so the canonical form needs its own pin rather than riding along.
+    expect(
+      readSource('ui/DeckCountToggle.tsx'),
+      'ui/DeckCountToggle.tsx must carry the group markup as aria-label="Deck count" — the ' +
+        'exact form the nine-state DOM golden freezes (08-UI-SPEC A2)',
+    ).toContain('aria-label="Deck count"');
   });
 });
 
