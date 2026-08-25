@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -32,6 +32,36 @@ describe('cardAssetPath', () => {
       const onDisk = join(PUBLIC_CARDS_DIR, basename);
       expect(existsSync(onDisk)).toBe(true);
     }
+  });
+});
+
+// DEPLOY-CRITICAL. The GitHub Pages project site serves from `/monte-carlo-sim/`, and these
+// paths are composed at runtime so no bundler rewrite can save them: if the base prefix is ever
+// dropped, every card 404s on the deployed site while the whole suite above stays green (the
+// cases above run at the default base '/', where the prefix is invisible). These tests are the
+// only thing that would go red, so do not delete them when refactoring the asset bridge.
+describe('asset paths honor the deployment base (GitHub Pages subpath)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('prefixes cardAssetPath with a non-root BASE_URL, without doubling the slash', () => {
+    vi.stubEnv('BASE_URL', '/monte-carlo-sim/');
+    expect(cardAssetPath('As')).toBe('/monte-carlo-sim/cards/S-A.svg');
+    expect(cardAssetPath('Td')).toBe('/monte-carlo-sim/cards/D-10.svg');
+    expect(cardAssetPath('As')).not.toContain('//cards');
+  });
+
+  it('prefixes the card back with a non-root BASE_URL', () => {
+    vi.stubEnv('BASE_URL', '/monte-carlo-sim/');
+    render(<CardBack />);
+    const img = document.querySelector('img.card-back');
+    expect(img).toHaveAttribute('src', '/monte-carlo-sim/cards/back.svg');
+  });
+
+  it('emits the plain root-relative path at the default base, matching dev and test', () => {
+    vi.stubEnv('BASE_URL', '/');
+    expect(cardAssetPath('As')).toBe('/cards/S-A.svg');
   });
 });
 

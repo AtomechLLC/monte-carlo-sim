@@ -11,8 +11,9 @@ import { CardBack } from './CardBack';
 
 /**
  * D-03's single card-code -> art bridge. This file is the ONLY place in the app permitted to
- * construct a `/cards/...` asset path or a "{Rank} of {Suit}" alt string — no other component
- * may hand-compose rank/suit art or an asset URL.
+ * construct a `cards/...` asset path or a "{Rank} of {Suit}" alt string — no other component
+ * may hand-compose rank/suit art or an asset URL. (CardBack.tsx owns the one back-of-card path
+ * and follows the same base-prefix rule.)
  *
  * Rank/suit are derived via `getRank`/`getSuit` (never manual string indexing/substring
  * extraction — RESEARCH Pitfall 5) because this project's `Card` union uses lowercase suits
@@ -67,11 +68,20 @@ const RANK_NAME: Record<Rank, string> = {
   A: 'Ace',
 };
 
-/** `'As'` -> `/cards/S-A.svg`, `'Td'` -> `/cards/D-10.svg`. */
+/**
+ * `'As'` -> `/cards/S-A.svg`, `'Td'` -> `/cards/D-10.svg` (at the default root base).
+ *
+ * The path is prefixed with `import.meta.env.BASE_URL` because the app also ships as a GitHub
+ * Pages PROJECT site served from a subpath (`/monte-carlo-sim/`). Vite rewrites root-relative
+ * URLs it can see statically (those in index.html), but this path is composed at RUNTIME, so
+ * nothing would rewrite it — every card would 404 on the deployed site. `BASE_URL` always ends
+ * in `/`, and it is `'/'` under both `vite dev` and Vitest, so the emitted string is unchanged
+ * everywhere except a subpath production build.
+ */
 export function cardAssetPath(card: Card): string {
   const suit = SUIT_TO_ASSET[getSuit(card)];
   const rank = RANK_TO_ASSET[getRank(card)];
-  return `/cards/${suit}-${rank}.svg`;
+  return `${import.meta.env.BASE_URL}cards/${suit}-${rank}.svg`;
 }
 
 /** `'As'` -> `'Ace of Spades'`, `'Td'` -> `'Ten of Diamonds'` — the screen-reader-facing name. */
