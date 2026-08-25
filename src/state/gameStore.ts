@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import type { Card } from '@poker-apprentice/types';
-import { CARDS_PER_DEAL, HOLE_CARDS_PER_PLAYER, OPPONENT_COUNT, deckWithout } from '../engine/cards';
+import { CARDS_PER_DEAL, HOLE_CARDS_PER_PLAYER, OPPONENT_COUNT } from '../engine/cards';
+import type { DeckCount } from '../engine/shoe';
+import { shoeWithout } from '../engine/shoe';
 import { createRng, drawN } from '../engine/rng';
 import type { PredeterminedRunout } from '../engine/conditioning';
 import type { Street } from '../engine/streets';
 import { nextStreet, previousStreet } from '../engine/streets';
 import { useOddsStore } from './oddsStore';
-import { usePickerStore, pickedCards } from './pickerStore';
+import { usePickerStore, pickedCards, hasDuplicatePick } from './pickerStore';
 import { useUiStore } from './uiStore';
 
 interface GameState {
@@ -21,6 +23,11 @@ interface GameState {
    * deliberately a single counter, not two.
    */
   dealNonce: number;
+  /**
+   * Hold'em-LOCAL shoe size (D-14) — lives here, never in the cross-game store,
+   * following the D-10 store-locality precedent.
+   */
+  deckCount: DeckCount;
   /** Draws a fresh predetermined runout (hero + board + 3 opponents) and resets navigation state. */
   deal: () => void;
   /** Moves the visible street forward one step; no-op at `'river'`. Never redraws cards. */
@@ -32,6 +39,13 @@ interface GameState {
    * one — there is deliberately no un-reveal/toggle action exposed anywhere in this store.
    */
   reveal: (opponentIndex: number) => void;
+  /**
+   * D-02: a same-value click is a no-op; while idle this only sets the field; with a runout
+   * on the table it sets the field and immediately re-deals (which clears the odds cache,
+   * bumps `dealNonce` and arms the gate). Refuses a 2 -> 1 switch while the picks hold a
+   * duplicated value (UI-SPEC A4).
+   */
+  setDeckCount: (deckCount: DeckCount) => void;
 }
 
 export const useGameStore = create<GameState>()((set, get) => ({
@@ -39,6 +53,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
   street: 'preflop',
   revealedMask: 0,
   dealNonce: 0,
+  deckCount: 1,
   deal: () => {
     // Merge-on-deal (D-03, D-06): picked cards are honoured exactly where placed; every unset
     // slot is filled from ONE shuffle of what's left over. Never draw a second time for a
@@ -47,7 +62,12 @@ export const useGameStore = create<GameState>()((set, get) => ({
     // here but never cleared.
     const { picks } = usePickerStore.getState();
     const picked = pickedCards(picks);
-    const pool = deckWithout(picked);
+    // Count-aware pool (D-14, HE2-01). Provably byte-identical at one deck: shoe.ts
+    // documents that walking the shoe IN ORDER is what makes `shoeWithout(1, x)`
+    // reproduce the previous single-deck pool helper's output exactly, ordering
+    // included, and deckParity.golden.test.ts pins that equivalence against recorded
+    // seeded output.
+    const pool = shoeWithout(get().deckCount, picked);
     const rng = createRng();
     const fill: Card[] = drawN(rng, pool, CARDS_PER_DEAL - picked.length);
 
@@ -115,5 +135,33 @@ export const useGameStore = create<GameState>()((set, get) => ({
       set((state) => ({ revealedMask: state.revealedMask | (1 << opponentIndex) }));
       useUiStore.getState().beginAnimation();
     }
+  },
+  setDeckCount: (deckCount) => {
+    // The already-selected segment is a harmless no-op (D-02): nothing changes, nothing
+    // arms, the cache stays.
+    if (get().deckCount === deckCount) return;
+    // A4 store-boundary refusal: switching DOWN to one deck while the picks hold two
+    // copies of one value is refused outright. The picks are the ONLY state surviving a
+    // toggle into the next deal() — they flow through `shoeWithout(deckCount, picked)`
+    // above — so they are the only impossibility source. The UI disables that segment
+    // with an explanatory title, so this branch is normally unreachable; it exists as
+    // the correctness backstop, deliberately structured so a deck toggle can NEVER
+    // silently clear a pick (UI-SPEC A4).
+    if (deckCount === 1 && hasDuplicatePick(usePickerStore.getState().picks)) return;
+    // D-02: set the field; with a hand on the table, re-deal immediately. deal() already
+    // owns the three things that make the mid-hand path correct: it clears the odds
+    // cache (D-03), it bumps `dealNonce` (the CR-02 generation guard the in-flight
+    // snapshot stream checks), and it arms the animation gate. setDeckCount itself must
+    // NOT call beginAnimation() and must NOT touch the odds store — a deck toggle is not
+    // a card animation, and duplicating either call would double-arm the gate or race
+    // the cache clear.
+    set({ deckCount });
+    if (get().runout !== null) {
+      get().deal();
+    }
+    // Deliberate divergence from the D-10 store-locality precedent's toggle: there is no
+    // retained-hand refusal branch for the mid-hand case, because D-02's fresh deal
+    // discards the table rather than preserving it — the only refusal is the picks-based
+    // one above.
   },
 }));
