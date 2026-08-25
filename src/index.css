@@ -24,8 +24,45 @@
   --accent-bg: rgba(201, 162, 39, 0.12);
   --accent-border: rgba(201, 162, 39, 0.5);
   --destructive: #e36a6e;
-  --shadow:
-    rgba(0, 0, 0, 0.55) 0 10px 15px -3px, rgba(0, 0, 0, 0.35) 0 4px 6px -2px;
+
+  /* -------------------------------------------------------------------------
+   * Elevation scale. Three levels, and only three: an object on this table is
+   * either lying on it, lifted off it, or in the air between two places, and
+   * there is no fourth thing a shadow means here.
+   *
+   *   rest       settled cards, tiles resting on a panel
+   *   raised     controls, the odds cluster, a hovered (clickable) seat
+   *   in-flight  a card between the deck and its slot
+   *
+   * Every level is a TWO-part shadow: a short, tight contact shadow saying
+   * where the object touches, and a long, soft cast shadow saying how far it
+   * is from what it sits on. Raising an object lengthens and softens the cast
+   * shadow while the contact shadow barely moves — that ratio IS the
+   * perception of height, and it is why a single blurred blob never reads as
+   * one. In flight the contact shadow all but disappears (nothing is being
+   * touched) and the cast shadow travels furthest.
+   *
+   * Pure black at partial alpha, deliberately: depth here is the ABSENCE of
+   * the overhead lamp, not a colour. The scale spends no accent — the brass
+   * budget stays exactly the three reserved Hold'em uses (UI-SPEC A2).
+   *
+   * RETIRES --shadow, the Vite scaffold's one-off drop shadow: its last
+   * consumer went with the Phase 2 selector cleanup (see App.css's header),
+   * and this scale is what a shadow in this app now means.
+   * ---------------------------------------------------------------------- */
+  --elev-rest:
+    0 1px 1px rgba(0, 0, 0, 0.45), 0 2px 5px -1px rgba(0, 0, 0, 0.38);
+  --elev-raised:
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 18px -6px rgba(0, 0, 0, 0.52);
+  --elev-in-flight:
+    0 2px 3px rgba(0, 0, 0, 0.26), 0 24px 36px -14px rgba(0, 0, 0, 0.66);
+  /* How long an object takes to change elevation. Deliberately shorter than
+   * the 300ms deal fly-in it accompanies, so a card's shadow has finished
+   * settling by the time the card itself stops moving — a shadow that is
+   * still catching up reads as a bug, not as weight. This governs ONLY the
+   * CSS box-shadow transition; it is not a Motion duration and touches
+   * nothing in the animation choreography contract. */
+  --elev-settle: 180ms;
 
   /* Phase 3 (03-01): card art tokens. Same value in light and dark mode (UI-SPEC Color) — the
    * card-back recolor and card widths don't depend on the app's light/dark theme. */
