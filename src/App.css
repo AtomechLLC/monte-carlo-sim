@@ -97,9 +97,13 @@ h2 {
   border: 1px solid var(--border);
 }
 
-/* 24px padding inside the card-picker <dialog> panel (Spacing Scale "lg"). */
+/* 24px padding inside the card-picker <dialog> panel (Spacing Scale "lg"), and the raised
+ * level of the elevation scale (index.css) — a modal dialog is the one thing in this app that
+ * is unambiguously floating above everything else, so it is the clearest place the scale has
+ * to be true. */
 [data-testid='picker-panel'] {
   padding: 24px;
+  box-shadow: var(--elev-raised);
 }
 
 /* 8px gap between a picker slot button and its adjacent Clear button, and
@@ -166,13 +170,21 @@ h2 {
  * on reveal never changes box dimensions (UI-SPEC Table Geometry & Card
  * Dimensions) — the image just fills whatever box its slot declares.
  * ------------------------------------------------------------------------- */
+/* The rest level of the elevation scale (index.css): a settled card lying on the felt. The
+ * shadow hangs on the CARD element rather than on its `.card-slot` wrapper because the card
+ * is the thing with the 6px radius — a shadow on the wrapper would square off at the corners.
+ * The transition is what makes landing legible: when AnimatedCard drops `.card-in-flight` the
+ * card sinks from the in-flight shadow back to this one instead of snapping. It is a CSS
+ * transition on ONE non-layout property, entirely independent of Motion — no duration, easing
+ * or gate in the animation choreography contract is involved. */
 .playing-card {
   width: 100%;
   aspect-ratio: 5 / 7;
   display: block;
   border-radius: 6px;
   border: 1px solid rgba(0, 0, 0, 0.15);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--elev-rest);
+  transition: box-shadow var(--elev-settle) ease-out;
 }
 
 .card-back {
@@ -375,6 +387,16 @@ h2 {
   z-index: var(--z-in-flight);
 }
 
+/* The in-flight level of the elevation scale (index.css). Same existing hook, no new class and
+ * no TSX change: AnimatedCard already co-applies `.card-in-flight` to the motion span for
+ * exactly the window its `useAnimationGate` reports `pending`, so a card is drawn as airborne
+ * for precisely as long as it is airborne, and settles to the rest shadow above (over
+ * --elev-settle) the moment the class comes off. The z-index rule above says a flying card is
+ * never occluded; this says it never looks pressed flat either. */
+.card-in-flight .playing-card {
+  box-shadow: var(--elev-in-flight);
+}
+
 /* Deck-origin stack: 2-3 overlapping backs with a 2px stagger offset
  * (decorative micro-offset, exempt from the spacing scale, like border
  * widths — UI-SPEC Table Geometry). */
@@ -427,6 +449,54 @@ h2 {
   padding: 8px 12px;
   font-family: inherit;
   font-weight: 400;
+}
+
+/* ---------------------------------------------------------------------------
+ * Elevation, applied (index.css --elev-* scale).
+ *
+ * The scale's other three application sites live with the rules they belong to
+ * — `.playing-card` (rest) and `.card-in-flight .playing-card` (in-flight) in
+ * the card-presentation block, `.bj-ev-tile` (rest) in the Phase 6 block, and
+ * the raised surfaces (both odds panels, the picker dialog, the three
+ * segmented controls) as one added declaration inside each SHARED rule so no
+ * game's appearance can drift from the other's. What is left over is the set
+ * of things that raise because they are PRESSABLE, plus the one thing that
+ * raises only while pointed at.
+ * ------------------------------------------------------------------------- */
+
+/* An actionable control sits above the page. Deliberately a short list of the
+ * app's real actions rather than every <button>: the 52 rank buttons inside
+ * the picker dialog are a grid of choices on an already-raised surface, and
+ * giving each its own shadow would turn one floating panel into 52. */
+.control-bar > button,
+[data-testid='rewind-button'],
+[data-testid='advance-button'],
+[data-testid^='picker-slot-'] {
+  box-shadow: var(--elev-raised);
+}
+
+/* ...and drops flat when there is nothing to press. This is the same
+ * information the shipped 0.4-opacity dimming carries, said in the other
+ * channel the scale now gives us — an unavailable control is not hovering
+ * above the page waiting for a click. Never --destructive: these are not
+ * destructive actions (see the disabled-dimming rule above). */
+.control-bar > button:disabled,
+[data-testid='rewind-button']:disabled,
+[data-testid='advance-button']:disabled,
+[data-testid^='picker-slot-']:disabled {
+  box-shadow: var(--elev-rest);
+}
+
+/* A seat that can still be revealed lifts its cards under the pointer (and
+ * under keyboard focus, which must never be the weaker affordance of the two).
+ * Scoped to `:not(:disabled)` on purpose: a revealed seat is disabled, and
+ * lifting cards that cannot be clicked would promise an interaction that no
+ * longer exists. The lift lands on the card art rather than on the button box
+ * so the felt keeps its own edges — the cards rise off the table, the seat
+ * does not. */
+[data-testid^='opponent-seat-']:not(:disabled):hover .playing-card,
+[data-testid^='opponent-seat-']:not(:disabled):focus-visible .playing-card {
+  box-shadow: var(--elev-raised);
 }
 
 /* Pending state (03-03, UI-SPEC A9): the whole OddsPanel dims while `pendingAnimationCount > 0`
@@ -628,21 +698,33 @@ h2 {
 
 /* Reduced motion: the bar still shows the correct shape, it just arrives instantly.
    The convergence story is a nicety; the value it illustrates is already in the
-   percentage column, so there is nothing to lose by removing the movement. */
+   percentage column, so there is nothing to lose by removing the movement.
+
+   The card's elevation change (added with the --elev-* scale) opts out on the same terms and
+   for the same reason: the STYLED END STATE is untouched — an airborne card is still drawn
+   airborne, a hovered seat still lifts, a landed card still sits at rest — only the easing
+   between the two states is removed. Nothing about which shadow applies, or when, depends on
+   this block. */
 @media (prefers-reduced-motion: reduce) {
   .category-bar__fill {
+    transition: none;
+  }
+  .playing-card {
     transition: none;
   }
 }
 
 /* Both games' odds clusters sit on the raised --surface rather than straight on the page
  * ground, so the readouts read as one docked instrument panel beside the felt instead of
- * loose text. Selector-list rule covering both panels; padding/layout stay where they are. */
+ * loose text. Selector-list rule covering both panels; padding/layout stay where they are.
+ * The elevation scale (index.css) makes "raised" literal rather than a figure of speech —
+ * added to the SHARED rule, so both games' panels stay pixel-identical (D-11). */
 [data-testid='odds-panel'],
 [data-testid='blackjack-odds-panel'] {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
+  box-shadow: var(--elev-raised);
 }
 
 /* Main scene row: TableScene + OddsPanel, `xl` (32px) gap side-by-side at
@@ -683,6 +765,10 @@ h2 {
  * the same logic Phase 6's did — one selected-state convention app-wide, zero
  * new accent usage, selector-list extension only so the shipped declarations
  * (and blackjack's computed styles) stay provably untouched. */
+/* The `box-shadow` below is the raised level of the elevation scale (index.css), added to this
+ * SHARED rule so all three segmented controls — and therefore both games — lift identically
+ * (D-11). A segmented control is a physical rocker: it has to sit above the page to be worth
+ * pressing. */
 [data-testid='game-mode-switcher'],
 [data-testid='blackjack-deck-toggle'],
 [data-testid='holdem-deck-toggle'] {
@@ -690,6 +776,7 @@ h2 {
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
+  box-shadow: var(--elev-raised);
 }
 
 [data-testid^='game-mode-switch-'],
@@ -884,6 +971,9 @@ h2 {
   gap: 8px;
 }
 
+/* The tiles take the REST level of the elevation scale (index.css), not the raised level their
+ * containing panel has: they are objects lying ON that panel, not floating above it. That
+ * relationship is the whole reason the scale has three named levels instead of one shadow. */
 .bj-ev-tile {
   display: flex;
   flex-direction: column;
@@ -891,6 +981,7 @@ h2 {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 16px;
+  box-shadow: var(--elev-rest);
 }
 
 .bj-ev-tile__label {
