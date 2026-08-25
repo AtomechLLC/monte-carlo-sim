@@ -415,21 +415,58 @@ describe('App.css — the felt is lit and framed, not re-laid-out (Felt & Brass 
   });
 });
 
-describe('App.css — the accent budget is still exactly three Hold\'em uses (UI-SPEC A2)', () => {
-  // The one colour invariant this pass could plausibly have broken. `var(--accent)` (the full
-  // accent, not the --accent-bg/--accent-border tints, which the Share column legitimately
-  // uses) may appear in exactly two rules: the reserved-uses rule listing the three roles, and
-  // the leading probability bar.
-  const consumers = withoutComments(baseAppCss)
-    .split('}')
-    .filter((chunk) => /(?:^|[^-])var\(--accent\)/.test(chunk));
+describe('App.css - two accents, with strictly separate jobs', () => {
+  // RETARGETED (user request: highlight which button to press next). The budget used to be
+  // "three Hold'em uses of one accent". It is now TWO accents whose SEPARATION is the point,
+  // so the pin checks that separation rather than a count that no longer describes anything.
+  //
+  // BRASS (--accent) = reserved, STATIC meaning. LILAC (--accent-next) = the single LIVE
+  // "press this next" signal. Advance MOVED from brass to lilac rather than joining both: an
+  // element satisfying two accent rules at once would make neither rule mean anything.
+  const rulesUsing = (token: string) =>
+    withoutComments(baseAppCss)
+      .split('}')
+      // Parens via character classes rather than backslash escapes: the escape survives one
+      // fewer layer of quoting, and a silently-unescaped `\(` turns the token into a capture
+      // group that matches nothing — which is exactly how this pin first shipped vacuous.
+      .filter((chunk) => new RegExp('(?:^|[^-])var[(]' + token + '[)]').test(chunk));
 
-  it('exactly two rules spend the full accent, and they are the shipped two', () => {
-    expect(consumers).toHaveLength(2);
-    expect(consumers.join('\n')).toContain("[data-testid='street-label']");
-    expect(consumers.join('\n')).toContain('.picker-slot-filled');
-    expect(consumers.join('\n')).toContain("[data-testid='advance-button']:not(:disabled)");
-    expect(consumers.join('\n')).toContain('.category-bar__fill--leading');
+  const brass = rulesUsing('--accent');
+  const lilac = rulesUsing('--accent-next');
+
+  it('brass stays on the static roles, plus the leading bar', () => {
+    const joined = brass.join('\n');
+    expect(joined).toContain("[data-testid='street-label']");
+    expect(joined).toContain('.picker-slot-filled');
+    expect(joined).toContain('.category-bar__fill--leading');
+  });
+
+  it('brass no longer marks Advance - that role moved to the live signal', () => {
+    expect(
+      brass.join('\n'),
+      'Advance is the NEXT action while a hand runs, so it belongs to --accent-next; leaving ' +
+        'it on brass too would put one element under two accent rules',
+    ).not.toContain("[data-testid='advance-button']");
+  });
+
+  it('the live signal is spent in exactly one rule, keyed on state not on CSS', () => {
+    expect(lilac).toHaveLength(1);
+    expect(
+      lilac[0],
+      'which control is "next" is a question about game state, so the components set ' +
+        'data-next-action; CSS must not infer it from :disabled or :first-child',
+    ).toContain('[data-next-action=');
+  });
+
+  it('accent is a background only where the element IS the bar', () => {
+    // The leading probability bar paints accent as a fill by nature — it is a bar, not text.
+    // Everywhere else the accent is ink, per the reservation rule: a filled accent button
+    // would swamp a palette whose whole discipline is that the accent stays scarce.
+    const fills = [...brass, ...lilac].filter((chunk) =>
+      /background(?:-color)?:\s*var[(]--accent/.test(chunk),
+    );
+    expect(fills).toHaveLength(1);
+    expect(fills[0]).toContain('.category-bar__fill--leading');
   });
 });
 

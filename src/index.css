@@ -21,6 +21,18 @@
   --surface: #131b16;
   --border: #26332b;
   --accent: #c9a227;
+  /* The SECOND accent, and a deliberate addition rather than a token that was always here:
+   * the blue/purple in this app's history was the Vite scaffold's --accent (#aa3bff), retired
+   * with the rest of the scaffold palette. This is a new, cooler signal with a different job.
+   *
+   * The two accents divide the work: BRASS is reserved, static meaning (the street label, a
+   * filled picker slot). LILAC is the single live "press this next" signal, and it MOVES as
+   * the state changes — Deal before a hand exists, Advance while one is running.
+   *
+   * #aa3bff was measured and rejected: 3.16:1 on the felt plate where the Deal button actually
+   * sits, which fails AA. #b5a0ff measures 8.62:1 on the page ground and 6.24:1 on the plate,
+   * and reads clearly against brass (cool vs warm) so the two can never be confused. */
+  --accent-next: #b5a0ff;
   --accent-bg: rgba(201, 162, 39, 0.12);
   --accent-border: rgba(201, 162, 39, 0.5);
   --destructive: #e36a6e;

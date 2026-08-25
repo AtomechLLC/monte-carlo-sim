@@ -41,7 +41,17 @@ export function StreetControls() {
         Rewind
       </button>
       <span data-testid="street-label">{STREET_LABEL[street]}</span>
-      <button type="button" data-testid="advance-button" onClick={advanceStreet} disabled={noHand || street === 'river'}>
+      {/* Advance is the next action for as long as the hand has somewhere left to go. The
+          moment it does not — no hand yet, or the river reached — the signal hands back to
+          Deal (see DealButton), so exactly one control is ever marked. A disabled control is
+          never "next": the attribute is absent, not merely dimmed. */}
+      <button
+        type="button"
+        data-testid="advance-button"
+        onClick={advanceStreet}
+        disabled={noHand || street === 'river'}
+        data-next-action={!noHand && street !== 'river' ? 'true' : undefined}
+      >
         Advance
       </button>
     </div>

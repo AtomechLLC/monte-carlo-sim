@@ -68,14 +68,34 @@ h2 {
   line-height: 1.4;
 }
 
-/* Accent is reserved for exactly three things: the current street-name
- * label, a filled picker slot's text, and the Advance button's label while
- * it is the enabled/actionable next step. Never a background fill, never on
- * the Deal button. */
+/* TWO accents now, with strictly separate jobs (user request: "use an accent color to
+ * highlight the 'next' actions", then "I want to [show] the user which button to press NEXT —
+ * which is deal, then advance once the game began").
+ *
+ * BRASS (--accent) is RESERVED, STATIC meaning: the current street-name label and a filled
+ * picker slot. It marks what IS, and it does not move.
+ *
+ * LILAC (--accent-next) is the single LIVE signal: the one control to press next. It MOVES —
+ * Deal before a hand exists and again once the river is reached, Advance for as long as the
+ * hand has somewhere to go, Hit/Stand during a blackjack player-turn. Marked in the components
+ * with `data-next-action`, never inferred from CSS state, because "what should I press next"
+ * is a question about game state rather than about the DOM.
+ *
+ * The Advance button MOVED from the brass list to the lilac one rather than being added to
+ * both: while a hand is running, Advance IS the next action, and having it satisfy two
+ * different accent rules at once would make neither rule mean anything.
+ *
+ * Neither accent is ever a background fill. */
 .picker-slot-filled,
-[data-testid='street-label'],
-[data-testid='advance-button']:not(:disabled) {
+[data-testid='street-label'] {
   color: var(--accent);
+}
+
+/* The next action: accent text plus an outline, so it is the one control that reads as raised
+ * and chosen among a row of neutral buttons. */
+[data-next-action='true'] {
+  color: var(--accent-next);
+  border: 1px solid var(--accent-next);
 }
 
 /* Minimum 44x44px hit area (an accessibility touch-target floor, not a

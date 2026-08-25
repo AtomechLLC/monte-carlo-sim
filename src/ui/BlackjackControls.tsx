@@ -94,6 +94,12 @@ export function BlackjackControls() {
   // is clicked, roundPhase leaves 'player-turn', so both disable immediately — no
   // double-action during the dealer playout.
   const actionsDisabled = roundPhase !== 'player-turn';
+  // Which control to press NEXT. Outside a player-turn there is no hand to act on, so Deal
+  // carries the signal; during one, Hit and Stand BOTH carry it — that is a genuine either/or
+  // and this app deliberately offers no strategy advice, so marking one as the recommended
+  // play would be a claim it has no business making.
+  const nextAction = actionsDisabled ? 'true' : undefined;
+  const nextPlay = actionsDisabled ? undefined : 'true';
 
   return (
     <div className="felt-controls felt-controls--blackjack">
@@ -104,13 +110,13 @@ export function BlackjackControls() {
             confirmation dialog here would violate both the app's silent-system-behaviour
             precedent and the copy block-list ("Cancel"/"OK"), and blackjack has no rewind, so
             Deal-as-escape-hatch is the only way out of a round the user has lost interest in. */}
-        <button type="button" data-testid="blackjack-deal-button" onClick={deal}>
+        <button type="button" data-testid="blackjack-deal-button" onClick={deal} data-next-action={nextAction}>
           Deal
         </button>
-        <button type="button" data-testid="blackjack-hit-button" disabled={actionsDisabled} onClick={hit}>
+        <button type="button" data-testid="blackjack-hit-button" disabled={actionsDisabled} onClick={hit} data-next-action={nextPlay}>
           Hit
         </button>
-        <button type="button" data-testid="blackjack-stand-button" disabled={actionsDisabled} onClick={stand}>
+        <button type="button" data-testid="blackjack-stand-button" disabled={actionsDisabled} onClick={stand} data-next-action={nextPlay}>
           Stand
         </button>
       </div>
