@@ -398,9 +398,11 @@ describe('SC1 — the deck-count markup lives in exactly ONE shared component, r
   // ADDED (Phase 8 plan 08-01): the source-level half of ROADMAP SC1's verification. The
   // comment-stripped pins prove both games import AND render the shared module; the raw
   // absence pins prove no inline segmented markup survives at either call site. The two
-  // absence markers below are the only clean ones: `aria-pressed` survives in HoldemGame's
-  // JSX rationale comment and `1 deck` in BlackjackControls' WR-01 essay, and
-  // stripCommentLines only strips lines beginning with // or *, never JSX comment blocks.
+  // absence markers below are the only clean ones: `1 deck` survives in BlackjackControls'
+  // WR-01 essay, and stripCommentLines only strips lines beginning with // or *, never JSX
+  // comment blocks. (`aria-pressed` used to survive in HoldemGame's JSX rationale comment as
+  // well; 08-REVIEW IN-01 trimmed that prose back to call-site concerns, so that particular
+  // collision is gone — but the marker choice stands on its own and is left unchanged.)
   const callSites = ['ui/BlackjackControls.tsx', 'ui/HoldemGame.tsx'];
 
   it.each(callSites)('%s imports the shared component module, outside of comments', (relativePath) => {

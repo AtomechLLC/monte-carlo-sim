@@ -222,19 +222,19 @@ export function HoldemGame() {
           Set Up Scenario
         </button>
         <StreetControls />
-        {/* Structural twin of the mode switcher (D-01, UI-SPEC A2 — last control-bar child):
-            segment labels never change with state; `aria-pressed` alone carries which count is
-            active. The active segment is never `disabled` — clicking it is a harmless no-op
-            routed through the store's same-value early return. There is deliberately NO
-            confirmation dialog for the mid-hand path (A3): the app's silent-system-behaviour
-            precedent plus the copy block-list rule one out — the fresh deal itself is the
-            primary affordance (the full re-deal choreography plays the same frame the user
-            clicks), and the pre-click `title` below is the same lightweight disclosure
-            convention the picker cells already use. The on-table hand NEVER blocks a switch —
-            D-02's fresh deal discards it — so the picks are the only impossibility source.
-            The segmented markup itself now lives in the shared DeckCountToggle (Phase 8
-            D-01, SC1); the A4 guard predicate and both pre-computed titles — including the
-            A4-beats-A3 precedence on the first segment — stay at this call site. */}
+        {/* Shared segmented control (Phase 8 D-01, SC1 — last control-bar child, UI-SPEC A2):
+            the markup lives in DeckCountToggle; the A4 guard predicate and both pre-computed
+            titles — including the A4-beats-A3 precedence on the first segment — stay at this
+            call site. There is deliberately NO confirmation dialog for the mid-hand path (A3):
+            the app's silent-system-behaviour precedent plus the copy block-list rule one out —
+            the fresh deal itself is the primary affordance (the full re-deal choreography
+            plays the same frame the user clicks), and the pre-click `title` below is the same
+            lightweight disclosure convention the picker cells already use. The on-table hand
+            NEVER blocks a switch — D-02's fresh deal discards it — so the picks are the only
+            impossibility source. (Trimmed per 08-REVIEW IN-01: the markup/label/aria and
+            active-segment-no-op invariants this comment used to restate are properties of the
+            shared component and now live once, in DeckCountToggle's doc comment — matching how
+            BlackjackControls' call-site comment was trimmed in the extraction commit.) */}
         <DeckCountToggle
           testidPrefix="holdem-deck-toggle"
           deckCount={deckCount}
