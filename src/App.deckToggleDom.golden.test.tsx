@@ -20,11 +20,38 @@ import type { Card } from '@poker-apprentice/types';
 // BYTE-FROZEN NINE-STATE DOM GOLDEN — DO NOT REGENERATE (08-CONTEXT D-06,
 // 08-UI-SPEC A2).
 //
-// Captured at commit b44f6c6, on the tree that still contained BOTH inline deck
-// toggles (the pre-extraction BlackjackControls.tsx and HoldemGame.tsx). Every
-// frozen constant below is a verbatim transcription of
-// `screen.getByTestId('{prefix}').outerHTML` as the SHIPPED INLINE markup
-// serialized it — captured from a live run, never authored by hand.
+// PROVENANCE — CORRECTED 2026-08-25 per 08-REVIEW WR-04.
+//
+// The wording that originally shipped here ("a verbatim transcription of
+// `screen.getByTestId('{prefix}').outerHTML` ... captured from a live run,
+// never authored by hand") described a capture step that, by the executor's
+// own record (08-01-SUMMARY Deviation #2), was never performed. This file's
+// entire value is its history, so it now states the procedure that actually
+// ran. What happened, and where the proof really lives:
+//
+//   1. Each frozen constant below was AUTHORED BY HAND from the documented
+//      serialization rules recapped above the constants — not transcribed off
+//      a live run.
+//   2. Those hand-authored constants were then PROVEN byte-equal to the live
+//      INLINE render by these nine full-string `toBe` assertions passing at
+//      commit 4d85066 — a tree that still contained BOTH inline deck toggles
+//      (the pre-extraction BlackjackControls.tsx and HoldemGame.tsx) and that
+//      touched no other file.
+//   3. A single wrong byte could not have survived step 2: a failing `toBe`
+//      on a full outerHTML string reports the entire actual string in its
+//      `Received:` block (verified — not truncated at these lengths), so the
+//      assertion pass IS a byte-for-byte comparison against the live render.
+//
+// The PASSING RUN at 4d85066 is therefore the provenance — not a transcription
+// step, which never existed. The proof is exactly as strong as a live capture
+// would have been; it is simply a different procedure, and this comment no
+// longer claims the one that did not happen.
+//
+// Re-verify the claim independently, in this order:
+//   git show 4d85066:src/ui/BlackjackControls.tsx | grep 'role="group"'
+//     -> non-empty: that tree really did still render the inline markup
+//   git checkout 4d85066 -- . && npx vitest run src/App.deckToggleDom.golden.test.tsx
+//     -> 9 passed against the inline toggles (restore with `git checkout HEAD -- .`)
 //
 // A failure in this file means the rendered toggle DOM changed: a D-06
 // ("renders byte-identical DOM per game") / UI-SPEC A2 ("per-state outerHTML
@@ -34,6 +61,22 @@ import type { Card } from '@poker-apprentice/types';
 // for the Phase 8 extraction: it was committed GREEN against the inline
 // toggles BEFORE the shared component existed, so it pins what the old code
 // did, not what the new code happens to do.
+//
+// REGENERATION PROCEDURE — only ever after 08-UI-SPEC is amended first (that
+// is the only door), and never to make a red suite green:
+//   1. Point the affected state's assertion at a sentinel:
+//        expect(html).toBe('REGENERATE');
+//   2. `npx vitest run src/App.deckToggleDom.golden.test.tsx`, then copy the
+//      new string out of that failure's `Received:` block. Read it from the
+//      ASSERTION DIFF, not from a `console.log`: vitest's default reporter
+//      does not surface console output from PASSING tests in run mode, which
+//      is what actually defeated the original capture attempt. (It is NOT,
+//      as 08-01-SUMMARY Deviation #2 first recorded, anything in this repo's
+//      vitest config — `vite.config.ts` sets only environment/globals/
+//      setupFiles and `src/test/setup.ts` touches no console. That erroneous
+//      attribution is retracted in the SUMMARY.)
+//   3. Paste the string back, cite the UI-SPEC amendment in that constant's
+//      doc comment, and record the regenerating commit here.
 //
 // The guard titles contain U+2014 EM DASH — the character is load-bearing and
 // must never be retyped as a hyphen.
@@ -128,9 +171,13 @@ beforeEach(() => {
 });
 
 // ============================================================================
-// The nine frozen constants. CAPTURED, not authored (see the file header):
-// transcribed verbatim from a `console.log(outerHTML)` run against the inline
-// toggles at commit b44f6c6, logs then removed. Wrapper serializes
+// The nine frozen constants. AUTHORED from the serialization rules restated
+// below, then PROVEN byte-equal to the live inline render by the nine
+// full-string `toBe` assertions passing at commit 4d85066 — there was no
+// `console.log` transcription step (corrected 2026-08-25 per 08-REVIEW WR-04;
+// see the PROVENANCE block in the file header for the full record and for how
+// to re-verify it). The rules they were authored from, which are also what
+// makes each constant readable: wrapper serializes
 // `data-testid`, `role`, `aria-label` in that order; each segment serializes
 // `type`, `data-testid`, `aria-pressed`, then `disabled` only when disabled,
 // then `title` only when present. React omits `disabled`/`title` entirely for
