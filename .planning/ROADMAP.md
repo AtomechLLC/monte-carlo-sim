@@ -187,13 +187,13 @@ Plans:
   2. Changing deck count in either game immediately cancels any in-flight simulation and recomputes all odds under the new shoe size, with no stale numbers left on screen.
   3. The control follows the same "takes effect on next deal" discipline already established for the card picker — no disruptive mid-hand mutation.
 
-**Plans:** 0/3 plans complete
+**Plans:** 1/3 plans executed
 **UI hint**: yes
 
 Plans:
 **Wave 1**
 
-- [ ] 08-01-PLAN.md — Extract the shared DeckCountToggle onto both games behind a nine-state pre-extraction outerHTML golden, with the mode-shell guard amended additively in the same commit
+- [x] 08-01-PLAN.md — Extract the shared DeckCountToggle onto both games behind a nine-state pre-extraction outerHTML golden, with the mode-shell guard amended additively in the same commit
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -217,4 +217,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Game-Mode Shell & Store Separation | v2.0 | 3/3 | Complete   | 2026-08-24 |
 | 6. Blackjack Core Odds Loop | v2.0 | 8/8 | Complete    | 2026-08-25 |
 | 7. 2-Deck Hold'em Evaluation Layer | v2.0 | 7/7 | Complete    | 2026-08-25 |
-| 8. Cross-Game Deck-Count Toggle UI | v2.0 | 0/3 | Not started | - |
+| 8. Cross-Game Deck-Count Toggle UI | v2.0 | 1/3 | In Progress|  |
