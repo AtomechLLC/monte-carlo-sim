@@ -5,7 +5,7 @@ milestone_name: Blackjack & Multi-Deck
 status: milestone_complete
 stopped_at: Milestone complete (Phase 8 was final phase)
 last_updated: 2026-08-25T19:11:44.785Z
-last_activity: 2026-10-15 - Completed quick task 261015-ch8: Roulette as a third game mode
+last_activity: 2026-10-15 - Completed quick task 261015-d7o: Craps as a fourth game mode
 progress:
   total_phases: 5
   completed_phases: 5
@@ -99,6 +99,7 @@ None yet.
 | 260824-biv | Post-v1.0 hardening: WR-02 worker-crash surfacing, explicit TS strict, odds-panel labels, category-table semantics + locked-in indicator, formatPct dedupe, dead CSS, matchMedia hardening, error detail | 2026-08-24 | e39ade6 | [260824-biv](./quick/260824-biv-fix-core-post-v1-0-problems-wr-02-worker/) |
 | fast | Fix hero hand rendering behind community cards (z-scale + geometry) | 2026-08-24 | 00cfa16 | (inline) |
 | 261015-ch8 | Roulette as a third game mode: single/double-zero wheel toggle, colour and/or straight-up prediction on a real layout, Spin 100 with the batch landing spin by spin, hit rate vs true odds, expected hits, net units; shared predictionScore / useProgressiveReveal / PredictionGauge for craps next | 2026-10-15 | 16fb8b4 | [261015-ch8-roulette-mode](./quick/261015-ch8-roulette-mode/) |
+| 261015-d7o | Craps as a fourth game mode: seven bets (Pass, Don't pass, Field, Any seven, Any craps, Place 6/8) with closed forms pinned three ways, Roll 100 decisions landing one at a time, win rate / pushes / expected / net, the dice-total triangle, the Field 12 triple-or-double house rule | 2026-10-15 | 03d90b6 | [261015-d7o-craps-mode](./quick/261015-d7o-craps-mode/) |
 
 ## Deferred Items
 
