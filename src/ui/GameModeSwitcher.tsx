@@ -1,12 +1,13 @@
 import { useGameModeStore } from '../state/gameModeStore';
 
 /**
- * Segmented two-button game-mode control (D-01). Renders in the control bar in BOTH modes.
- * Reads/writes only `gameModeStore` — no other store is touched from this component (D-05).
- * Button labels never change with state; `aria-pressed` alone carries which game is active,
- * mirroring the "Set Up Scenario" toggle's locked-label rule (`aria-expanded` carries its state).
- * Neither button is ever `disabled` (UI-SPEC A5) — clicking the already-active button is a
- * harmless no-op routed through `setMode`.
+ * Segmented game-mode control (D-01) — two buttons in Phase 5, three since roulette joined
+ * (quick task 261015-ch8). Renders in the control bar in EVERY mode. Reads/writes only
+ * `gameModeStore` — no other store is touched from this component (D-05). Button labels never
+ * change with state; `aria-pressed` alone carries which game is active, mirroring the "Set Up
+ * Scenario" toggle's locked-label rule (`aria-expanded` carries its state). No button is ever
+ * `disabled` (UI-SPEC A5) — clicking the already-active button is a harmless no-op routed
+ * through `setMode`.
  */
 export function GameModeSwitcher() {
   const mode = useGameModeStore((state) => state.mode);
@@ -29,6 +30,14 @@ export function GameModeSwitcher() {
         onClick={() => setMode('blackjack')}
       >
         Blackjack
+      </button>
+      <button
+        type="button"
+        data-testid="game-mode-switch-roulette"
+        aria-pressed={mode === 'roulette'}
+        onClick={() => setMode('roulette')}
+      >
+        Roulette
       </button>
     </div>
   );

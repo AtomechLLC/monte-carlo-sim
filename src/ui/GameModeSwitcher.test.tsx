@@ -73,3 +73,33 @@ describe('GameModeSwitcher — segmented control reflects and drives gameModeSto
     expect(wrapper).toHaveAttribute('aria-label', 'Game mode');
   });
 });
+
+describe('GameModeSwitcher - the third segment, Roulette (261015-ch8)', () => {
+  beforeEach(() => {
+    useGameModeStore.setState({ mode: 'holdem' });
+  });
+
+  it('renders Roulette as the last of three segments, unpressed by default, never disabled', () => {
+    render(<GameModeSwitcher />);
+    const buttons = screen.getByTestId('game-mode-switcher').querySelectorAll('button');
+    expect(buttons).toHaveLength(3);
+    expect(buttons[2]).toBe(screen.getByTestId('game-mode-switch-roulette'));
+    expect(buttons[2].textContent).toBe('Roulette');
+    expect(buttons[2]).toHaveAttribute('aria-pressed', 'false');
+    expect(buttons[2]).not.toBeDisabled();
+  });
+
+  it('clicking Roulette presses it alone and writes the store; the labels never change', async () => {
+    const user = userEvent.setup();
+    render(<GameModeSwitcher />);
+
+    await user.click(screen.getByTestId('game-mode-switch-roulette'));
+
+    expect(useGameModeStore.getState().mode).toBe('roulette');
+    expect(screen.getByTestId('game-mode-switch-roulette')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('game-mode-switch-holdem')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('game-mode-switch-blackjack')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('game-mode-switch-roulette').textContent).toBe('Roulette');
+    expect(screen.getByRole('button', { name: "Hold'em" })).not.toBeDisabled();
+  });
+});

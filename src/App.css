@@ -203,7 +203,9 @@ h2 {
 [data-testid='blackjack-hit-button']:disabled,
 [data-testid='blackjack-stand-button']:disabled,
 [data-testid='blackjack-deck-toggle-1']:disabled,
-[data-testid='holdem-deck-toggle-1']:disabled {
+[data-testid='holdem-deck-toggle-1']:disabled,
+[data-testid='roulette-spin-button']:disabled,
+[data-testid='roulette-reset-button']:disabled {
   color: var(--text);
   opacity: 0.4;
   cursor: not-allowed;
@@ -1153,6 +1155,9 @@ h2 {
   .playing-card {
     transition: none;
   }
+  .prediction-gauge__fill {
+    transition: none;
+  }
 }
 
 /* Both games' odds clusters sit on the raised --surface rather than straight on the page
@@ -1161,7 +1166,8 @@ h2 {
  * The elevation scale (index.css) makes "raised" literal rather than a figure of speech —
  * added to the SHARED rule, so both games' panels stay pixel-identical (D-11). */
 [data-testid='odds-panel'],
-[data-testid='blackjack-odds-panel'] {
+[data-testid='blackjack-odds-panel'],
+[data-testid='roulette-odds-panel'] {
   /* The panel gets a floor and the felt yields, rather than the other way round. When the felt
    * grew to 1040px it took the space out of this column, and every multi-word heading in the
    * category table started wrapping onto two lines — a table of numbers whose headings are
@@ -1225,9 +1231,15 @@ h2 {
  * SHARED rule so all three segmented controls — and therefore both games — lift identically
  * (D-11). A segmented control is a physical rocker: it has to sit above the page to be worth
  * pressing. */
+/* Roulette (261015-ch8) extends them a third time with the wheel toggle — the
+ * same selector-list-only discipline, so the four segmented controls stay one
+ * rocker design. The internal-divider rule also gains the Blackjack switcher
+ * segment, which stopped being the switcher's last segment when Roulette's
+ * button landed after it. */
 [data-testid='game-mode-switcher'],
 [data-testid='blackjack-deck-toggle'],
-[data-testid='holdem-deck-toggle'] {
+[data-testid='holdem-deck-toggle'],
+[data-testid='roulette-wheel-toggle'] {
   display: inline-flex;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1237,7 +1249,8 @@ h2 {
 
 [data-testid^='game-mode-switch-'],
 [data-testid^='blackjack-deck-toggle-'],
-[data-testid^='holdem-deck-toggle-'] {
+[data-testid^='holdem-deck-toggle-'],
+[data-testid^='roulette-wheel-toggle-'] {
   min-width: 44px;
   min-height: 44px;
   padding: 8px 16px;
@@ -1251,14 +1264,17 @@ h2 {
 }
 
 [data-testid='game-mode-switch-holdem'],
+[data-testid='game-mode-switch-blackjack'],
 [data-testid='blackjack-deck-toggle-1'],
-[data-testid='holdem-deck-toggle-1'] {
+[data-testid='holdem-deck-toggle-1'],
+[data-testid='roulette-wheel-toggle-european'] {
   border-right: 1px solid var(--border);
 }
 
 [data-testid^='game-mode-switch-'][aria-pressed='true'],
 [data-testid^='blackjack-deck-toggle-'][aria-pressed='true'],
-[data-testid^='holdem-deck-toggle-'][aria-pressed='true'] {
+[data-testid^='holdem-deck-toggle-'][aria-pressed='true'],
+[data-testid^='roulette-wheel-toggle-'][aria-pressed='true'] {
   background: var(--border);
   color: var(--text-h);
   font-weight: 600;
@@ -1521,4 +1537,370 @@ h2 {
   color: var(--seat-badge-text);
   border-radius: 12px; /* badge-radius precedent */
   pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Roulette (quick task 261015-ch8)
+ *
+ * Every roulette rule lives in this ONE block, plus the surgical selector-list
+ * extensions above (the disabled-dimming list, the four segmented-control
+ * rules, the shared odds-panel surface and the reduced-motion opt-out) — the
+ * same convention the Phase 6 and Phase 7 blocks established. Tokens only:
+ * the locked 4-size / 2-weight type scale, the 4px spacing scale, the three
+ * elevation levels, and the three pocket colours declared in index.css. The
+ * brass accent appears exactly once, as INK rather than fill: the ring around
+ * the selected pocket or colour (a "filled picker slot" is already a brass
+ * role). The lilac next-action signal reaches the Spin button through the
+ * shipped data-next-action rule without a new selector.
+ *
+ * THE TABLE IS A RECTANGLE. Hold'em's oval and Blackjack's half-moon carry
+ * which game you are at; a roulette table is a long rectangle, so the felt's
+ * 50% radius is rounded back to a corner radius. Everything else — gradient,
+ * lamp, rail, tilt — is inherited from `.felt`, and because the rail is a
+ * border on the same box it follows the new outline for free.
+ *
+ * GEOMETRY, worked at the felt's RENDERED width (911px, the same discipline
+ * the `.felt-controls` block above insists on), inner edge 12px in from the
+ * rail on each side:
+ *   wheel    left 2.5%, 26% wide         -> x 23..260, vertically centred
+ *   layout   left 31%, 66% wide          -> x 282..883 (16px clear of the rail);
+ *            thirteen fractional columns with 2px gaps -> ~44.4px cells at
+ *            911, the 44px hit floor met by the felt's own width rather than
+ *            by a pixel size that could overflow a narrower felt; six
+ *            fractional rows under a 13:3 aspect ratio, a number spanning two
+ *   colours  beneath the grid, 44px tall -> the layout block spans y ~185..383
+ *   rules    top 9%, centred             -> y ~51, above everything
+ *   actions  bottom 5%, left 2%          -> y ~485..541, under the wheel's
+ *            lowest point (~407) with ~78px to spare, and under the colour
+ *            row's bottom (~383) on the x range they share
+ * At the 1040 reference every clearance is wider. Nothing here needs the
+ * ellipse arithmetic the other two tables need: the corners are usable.
+ * ------------------------------------------------------------------------- */
+.felt--roulette {
+  border-radius: 28px;
+}
+
+/* The printed line: wheel kind, pocket count, house edge — the one place the
+ * toggle's consequence is STATED. Same treatment as Blackjack's printed rules,
+ * but real DOM text rather than a pseudo-element, because it changes with the
+ * wheel and a test can read it. */
+.roulette-rules {
+  position: absolute;
+  top: 9%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.18em;
+  color: rgba(255, 249, 235, 0.34);
+  white-space: nowrap;
+  z-index: var(--z-felt);
+  pointer-events: none;
+}
+
+/* --- The wheel (SVG) ----------------------------------------------------- */
+.roulette-wheel {
+  position: absolute;
+  left: 2.5%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26%;
+  height: auto;
+  z-index: var(--z-seat);
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.52));
+}
+
+.roulette-wheel__rim {
+  fill: var(--felt-rail);
+}
+
+.roulette-wheel__pocket {
+  stroke: rgba(255, 249, 235, 0.3);
+  stroke-width: 1;
+}
+
+.roulette-wheel__pocket--red {
+  fill: var(--pocket-red);
+}
+
+.roulette-wheel__pocket--black {
+  fill: var(--pocket-black);
+}
+
+.roulette-wheel__pocket--green {
+  fill: var(--pocket-green);
+}
+
+/* Where the ball is: the pocket keeps its own colour, its outline brightens. */
+.roulette-wheel__pocket--hit {
+  stroke: var(--text-h);
+  stroke-width: 3;
+}
+
+.roulette-wheel__label {
+  fill: var(--seat-badge-text);
+  font-size: 14px;
+  font-weight: 400;
+  pointer-events: none;
+}
+
+.roulette-wheel__track {
+  fill: var(--felt-dark);
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 2;
+}
+
+.roulette-wheel__hub {
+  fill: var(--felt-rail);
+  stroke: rgba(255, 249, 235, 0.22);
+  stroke-width: 2;
+}
+
+.roulette-wheel__ball {
+  fill: var(--text-h);
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 1.5;
+}
+
+/* The last result, printed on the hub at the Display size — the number that
+ * should read from across the room. */
+.roulette-wheel__result {
+  fill: var(--text-h);
+  font-size: 32px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* --- The betting layout -------------------------------------------------- */
+.roulette-layout {
+  position: absolute;
+  left: 31%;
+  width: 66%;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: var(--z-seat);
+}
+
+/* FLUID, deliberately: the felt yields to the odds panel (see the shared panel
+ * rule above), so at viewports between the column breakpoint and ~1230px it
+ * renders well under its 1040px reference. A pixel-sized grid overflowed the
+ * felt there and painted over the panel; fractional tracks keep every cell
+ * inside the felt at any width, and the 44px floor below holds the row height
+ * (the column width reaches it from ~890px of felt upward). */
+.roulette-grid {
+  display: grid;
+  grid-template-columns: repeat(13, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+  aspect-ratio: 13 / 3;
+}
+
+/* A pocket cell: its colour is its fill, its label is white. A number spans two
+ * of the six rows, so the 44px floor on the item is what sizes the rows. */
+.roulette-pocket {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 249, 235, 0.35);
+  border-radius: 4px;
+  color: var(--seat-badge-text);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  cursor: pointer;
+  box-shadow: var(--elev-rest);
+}
+
+.roulette-pocket--red {
+  background: var(--pocket-red);
+}
+
+.roulette-pocket--black {
+  background: var(--pocket-black);
+}
+
+.roulette-pocket--green {
+  background: var(--pocket-green);
+}
+
+.roulette-colors {
+  display: flex;
+  gap: 8px;
+}
+
+.roulette-color {
+  flex: 1;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 249, 235, 0.35);
+  border-radius: 6px;
+  color: var(--seat-badge-text);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  cursor: pointer;
+  box-shadow: var(--elev-rest);
+}
+
+.roulette-color--red {
+  background: var(--pocket-red);
+}
+
+.roulette-color--black {
+  background: var(--pocket-black);
+}
+
+.roulette-color--green {
+  background: var(--pocket-green);
+}
+
+/* The zeros a green bet covers, printed on the button at the Label size. */
+.roulette-color__sub {
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+/* The selection: a brass ring and the semibold weight, over the cell's own
+ * colour. Ink, not fill — the pocket keeps its red, black or green. */
+.roulette-pocket[aria-pressed='true'],
+.roulette-color[aria-pressed='true'] {
+  font-weight: 600;
+  box-shadow:
+    0 0 0 3px var(--accent),
+    var(--elev-raised);
+}
+
+/* The action cluster, under the wheel at the felt's bottom-left (see the
+ * geometry note in this block's header). */
+.felt-controls--roulette {
+  bottom: 5%;
+}
+
+/* --- The odds cluster ---------------------------------------------------- */
+/* `max-width` is LOAD-BEARING, not cosmetic. The shared panel rule gives both
+ * flex items `flex: 0 1 auto`, so each one's flex basis is its max-content
+ * width — and the marquee's max-content is a hundred dots on ONE line (~1500px,
+ * flex-wrap notwithstanding: wrapping lowers the min-content, never the
+ * max-content). Measured live: a panel that was 496px before the first batch
+ * grew to 690px at 84 revealed spins, starving the felt from 721px down to
+ * ~320px. Clamping the basis keeps the panel between the shared 460px floor
+ * and this ceiling whatever the history holds, so the felt keeps its share. */
+[data-testid='roulette-odds-panel'] {
+  max-width: 520px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* One prediction's readout: rests ON the panel (the rest level), like the
+ * Blackjack EV tiles. */
+.prediction-score {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  box-shadow: var(--elev-rest);
+}
+
+/* Heading role for the target's name, Label role for the odds-and-payout line. */
+.prediction-score__caption {
+  margin: 0;
+  text-align: left;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-h);
+}
+
+.prediction-score__subtitle {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+/* Observed versus true, on one line: a track, a fill at the observed rate,
+ * and an ivory mark at the true probability. The fill glides between batches
+ * exactly as the Share column's bars do — the same one transitioned property,
+ * opted out under reduced motion above — and the digits never animate. */
+.prediction-gauge {
+  position: relative;
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+.prediction-gauge__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--text);
+  transition: width 320ms ease-out;
+}
+
+.prediction-gauge__mark {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 16px;
+  margin-left: -1px;
+  background: var(--text-h);
+}
+
+.roulette-prompt {
+  margin: 0;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+[data-testid='roulette-landed-table'] td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The marquee: one dot per revealed spin, newest first, in the pocket's colour.
+ * Dots rather than numbered chips so a hundred of them wrap into three rows;
+ * each still carries its label for assistive tech and as a tooltip. */
+.roulette-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.roulette-chip {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 249, 235, 0.25);
+}
+
+.roulette-chip--red {
+  background: var(--pocket-red);
+}
+
+.roulette-chip--black {
+  background: var(--pocket-black);
+}
+
+.roulette-chip--green {
+  background: var(--pocket-green);
+}
+
+.roulette-chip--latest {
+  box-shadow: 0 0 0 2px var(--text-h);
 }

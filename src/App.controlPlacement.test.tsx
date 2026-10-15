@@ -761,9 +761,13 @@ describe('the separator is decorative: no element, no character, no tab stop', (
     }
   });
 
+  // RETARGETED (261015-ch8), not relaxed: the session-bar census went 4 -> 5 in both games
+  // because the game-mode switcher gained its third segment, Roulette. That is exactly the
+  // event this census exists to flag ("a control was added"), and the count stays exact so the
+  // next addition has to come here and say so too. The felt-cluster counts are untouched.
   it.each([
-    ['holdem', () => render(<App />), 4, 4],
-    ['blackjack', renderInBlackjack, 4, 3],
+    ['holdem', () => render(<App />), 5, 4],
+    ['blackjack', renderInBlackjack, 5, 3],
   ])('%s: every focusable thing in the controls is one of their real buttons', (_mode, doRender, sessionButtons, actionButtons) => {
     doRender();
 

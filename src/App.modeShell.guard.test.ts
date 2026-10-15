@@ -66,6 +66,18 @@ import { dirname, join } from 'node:path';
 // store-free sweep and locked-label pins, and both call sites gained SC1 source-identity
 // pins (import/render presence, inline-markup absence, single-source-of-markup sweep).
 // Nothing was deleted, relaxed or retargeted.
+//
+// AMENDED 2026-10-15 (quick task 261015-ch8, roulette as the THIRD game): every pin is ADDITIVE
+// per this file's standing rule. `GameMode` gained 'roulette' and the switcher a third segment,
+// so the locked-label block gains the 'Roulette' label and its testid plus the roulette tree's
+// own locked copy; the Hold'em-store and blackjack-store sweeps gain 'roulette' as a forbidden
+// token beside 'blackjack' (the third game is as invisible to the first two as the second was
+// to the first); the resetAnimations sweep gains every roulette production file and the two
+// shared batch-game modules; a new block pins the roulette tree to read no other game's store;
+// and the App.css D-11 block gains the wheel toggle's selector-list extensions. Nothing was
+// deleted, relaxed or retargeted — the 'deckCount'-free shell sweep in particular is unchanged,
+// because roulette's wheel kind lives in rouletteStore the way each deck count lives in its
+// game's own store.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = __dirname;
@@ -151,6 +163,16 @@ describe('Hold\'em stores and engine/conditioning.ts — no mode branch (Pitfall
         'PITFALLS Pitfall 10 warns against (D-05)',
     ).not.toContain('gamemode');
   });
+
+  it.each(holdemOnlyFiles)('%s contains no "roulette" either (case-insensitive, 261015-ch8)', (relativePath) => {
+    // ADDED (261015-ch8): the third game is as invisible to the Hold'em-owned files as the
+    // second was — Pitfall 10's warning sign now has three spellings.
+    expect(
+      readSource(relativePath).toLowerCase(),
+      `${relativePath} must never mention "roulette" — a mode branch inside a Hold'em-owned ` +
+        'store is exactly the leakage PITFALLS Pitfall 10 warns against, whichever game it names',
+    ).not.toContain('roulette');
+  });
 });
 
 describe('App.tsx (shell) + ui/HoldemGame.tsx — single cancellation owner, no production gate reset (D-07, D-08)', () => {
@@ -208,6 +230,18 @@ describe('App.tsx (shell) + ui/HoldemGame.tsx — single cancellation owner, no 
     // exactly as ui/HoldemGame.tsx did in 06-02 and the blackjack files did in 06-07 — the
     // prohibition covers every production file that could be tempted to "drain" the gate.
     'ui/DeckCountToggle.tsx',
+    // ADDED (261015-ch8): the roulette tree, its store, and the two shared batch-game modules
+    // joined on creation. Roulette never ARMS the gate (it has no cards), which makes a
+    // drain call here doubly wrong — it would release units some other game's cards own.
+    'ui/RouletteGame.tsx',
+    'ui/RouletteTable.tsx',
+    'ui/RouletteControls.tsx',
+    'ui/RouletteLayout.tsx',
+    'ui/RouletteWheel.tsx',
+    'ui/RouletteOddsPanel.tsx',
+    'state/rouletteStore.ts',
+    'ui/useProgressiveReveal.ts',
+    'ui/PredictionGauge.tsx',
   ])(
     '%s contains zero occurrences of resetAnimations',
     (relativePath) => {
@@ -622,6 +656,65 @@ describe('ui/BlackjackGame.tsx — single cancellation owner, gate order, sole-r
   });
 });
 
+describe('Roulette reads no other game\'s store, and no other game reads roulette (261015-ch8 — D-05/D-10 extended to a third game)', () => {
+  // ADDED (261015-ch8). The roulette tree gets the same isolation the Blackjack tree got in
+  // 06-07: comment-stripped (the files' own comments legitimately NAME the other games'
+  // stores to document that they must not import them — the gameModeStore technique above).
+  const rouletteFiles = [
+    'ui/RouletteGame.tsx',
+    'ui/RouletteTable.tsx',
+    'ui/RouletteControls.tsx',
+    'ui/RouletteLayout.tsx',
+    'ui/RouletteWheel.tsx',
+    'ui/RouletteOddsPanel.tsx',
+    'state/rouletteStore.ts',
+  ];
+  const foreignStores = ['gameStore', 'oddsStore', 'pickerStore', 'uiStore', 'blackjackStore', 'blackjackOddsStore'];
+
+  it.each(rouletteFiles.flatMap((file) => foreignStores.map((token) => [file, token] as const)))(
+    '%s contains no occurrence of %s outside of comments',
+    (relativePath, token) => {
+      expect(
+        stripCommentLines(readSource(relativePath)),
+        `${relativePath} must never contain "${token}" — the roulette tree reads only ` +
+          'rouletteStore (and the game root reads gameModeStore only to mount), exactly as the ' +
+          'Blackjack tree reads only its own stores (D-05, D-10 extended, 261015-ch8)',
+      ).not.toContain(token);
+    },
+  );
+
+  it('state/rouletteStore.ts imports from the engine and zustand only — no store, in either direction', () => {
+    // Path-level, so it cannot be out-enumerated (the 08-REVIEW WR-02 technique): the store
+    // owns a wheel kind and a history and needs no other store to do it. The animation gate in
+    // particular is deliberately absent — roulette has no cards to fly.
+    expect(stripCommentLines(readSource('state/rouletteStore.ts'))).not.toContain("from './");
+  });
+
+  it.each(['state/blackjackStore.ts', 'state/blackjackOddsStore.ts', 'ui/BlackjackGame.tsx', 'ui/BlackjackControls.tsx'])(
+    '%s contains no "roulette" (case-insensitive)',
+    (relativePath) => {
+      expect(
+        readSource(relativePath).toLowerCase(),
+        `${relativePath} must never mention "roulette" — the Blackjack tree stays as unaware of ` +
+          'the third game as the Hold\'em tree is (D-10 extended, 261015-ch8)',
+      ).not.toContain('roulette');
+    },
+  );
+
+  it('the shared batch-game modules name no game at all', () => {
+    // useProgressiveReveal and PredictionGauge are the roulette/craps-shared pieces (PLAN
+    // decisions 3 and 5), props-driven by construction like DeckCountToggle: a game name inside
+    // either would be the first symptom of game logic leaking into a shared module.
+    for (const relativePath of ['ui/useProgressiveReveal.ts', 'ui/PredictionGauge.tsx']) {
+      const lowered = stripCommentLines(readSource(relativePath)).toLowerCase();
+      for (const game of ['roulette', 'blackjack', 'holdem', 'craps']) {
+        expect(lowered, `${relativePath} must not mention "${game}" in executable code`).not.toContain(game);
+      }
+      expect(lowered, `${relativePath} must import no store`).not.toContain('../state/');
+    }
+  });
+});
+
 describe('blackjack stores share no key/field vocabulary with the Hold\'em stores (D-10)', () => {
   // D-10's "NO key/field sharing" rule made enforceable rather than advisory: the blackjack
   // store pair must never mention the poker stores\' knowledge dimensions (street /
@@ -730,6 +823,31 @@ describe('Locked copy and labels stay verbatim (D-01, D-13, D-14, 06-UI-SPEC Cop
         'future phases depend on this exact string',
     ).toContain(testid);
   });
+
+  // ADDED (261015-ch8): the third segment and the roulette tree's own locked strings, pinned
+  // the same way — a reword goes through the plan, never silently in code.
+  it('GameModeSwitcher.tsx contains the locked Roulette label and testid (261015-ch8)', () => {
+    const source = readSource('ui/GameModeSwitcher.tsx');
+    expect(source).toContain('Roulette');
+    expect(source).toContain('game-mode-switch-roulette');
+  });
+
+  it.each(['Single zero', 'Double zero', 'Wheel', 'Reset', 'roulette-wheel-toggle', 'roulette-spin-button', 'roulette-reset-button'])(
+    'RouletteControls.tsx contains the locked string %s (261015-ch8)',
+    (locked) => {
+      expect(readSource('ui/RouletteControls.tsx')).toContain(locked);
+    },
+  );
+
+  it('RouletteGame.tsx contains the locked idle heading and body verbatim (261015-ch8)', () => {
+    const source = normalizeWhitespace(readSource('ui/RouletteGame.tsx'));
+    expect(source).toContain('No spins yet');
+    expect(source).toContain(
+      normalizeWhitespace(
+        'Pick a color, a number, or both on the layout, then click Spin 100 to see how often your prediction comes in. Switch the wheel between single and double zero to see the odds shift.',
+      ),
+    );
+  });
 });
 
 describe('oddsStore.ts — knowledgeKey stays the exact two-part poker-shaped key (Pitfall 11)', () => {
@@ -812,6 +930,31 @@ describe('App.css — Phase 7 styles are selector-list extensions of the shared 
         ':disabled (UI-SPEC A4) — in the SAME rule as the blackjack guard segment, never a ' +
         'duplicated dimming block (D-11)',
     ).toContain("[data-testid='holdem-deck-toggle-1']:disabled");
+  });
+
+  // ADDED (261015-ch8): the roulette wheel toggle joins every shared segmented-control rule
+  // as a selector-list extension, by exactly the Phase 7 logic — and the switcher's Blackjack
+  // segment joins the internal-divider rule, because it stopped being the last segment when
+  // Roulette's button landed after it.
+  it('every shared segmented-control rule carries the roulette wheel toggle as a selector-list extension (261015-ch8)', () => {
+    expect(theChunkWith("[data-testid='blackjack-deck-toggle']", 'display: inline-flex')).toContain(
+      "[data-testid='roulette-wheel-toggle']",
+    );
+    expect(theChunkWith("[data-testid^='blackjack-deck-toggle-']", 'min-width: 44px')).toContain(
+      "[data-testid^='roulette-wheel-toggle-']",
+    );
+    const divider = theChunkWith("[data-testid='blackjack-deck-toggle-1']", 'border-right');
+    expect(divider).toContain("[data-testid='roulette-wheel-toggle-european']");
+    expect(divider).toContain("[data-testid='game-mode-switch-blackjack']");
+    expect(theChunkWith("[data-testid^='blackjack-deck-toggle-'][aria-pressed='true']")).toContain(
+      "[data-testid^='roulette-wheel-toggle-'][aria-pressed='true']",
+    );
+    expect(theChunkWith("[data-testid='blackjack-deck-toggle-1']:disabled")).toContain(
+      "[data-testid='roulette-spin-button']:disabled",
+    );
+    expect(theChunkWith("[data-testid='blackjack-odds-panel']", 'min-width: 460px')).toContain(
+      "[data-testid='roulette-odds-panel']",
+    );
   });
 
   it('the copy-cue block exists, uses only the felt/badge tokens, and touches no reserved colour', () => {

@@ -112,3 +112,50 @@ describe('gameModeStore — blackjackRestorePending marks exactly a holdem -> bl
     expect(useGameModeStore.getState().holdemRestorePending).toBe(true);
   });
 });
+
+describe('gameModeStore - roulette is a third mode, and a restore marks any switch INTO a card game (261015-ch8)', () => {
+  beforeEach(() => {
+    useGameModeStore.setState({
+      mode: 'holdem',
+      holdemRestorePending: false,
+      blackjackRestorePending: false,
+    });
+  });
+
+  it('setMode("roulette") flips the mode and raises neither restore flag - roulette has no cards to restore', () => {
+    useGameModeStore.getState().setMode('roulette');
+    expect(useGameModeStore.getState().mode).toBe('roulette');
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(false);
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+  });
+
+  it('roulette -> holdem raises holdemRestorePending only, exactly as blackjack -> holdem does', () => {
+    useGameModeStore.getState().setMode('roulette');
+    useGameModeStore.getState().setMode('holdem');
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(true);
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+  });
+
+  it('roulette -> blackjack raises blackjackRestorePending only', () => {
+    useGameModeStore.getState().setMode('roulette');
+    useGameModeStore.getState().setMode('blackjack');
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(true);
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(false);
+  });
+
+  it('a redundant setMode("roulette") while already in roulette clears both flags (A5 no-op click)', () => {
+    useGameModeStore.setState({ mode: 'roulette', holdemRestorePending: true, blackjackRestorePending: true });
+    useGameModeStore.getState().setMode('roulette');
+    expect(useGameModeStore.getState().mode).toBe('roulette');
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(false);
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+  });
+
+  it('the Phase 5/6 transitions are unchanged by the generalisation', () => {
+    useGameModeStore.getState().setMode('blackjack');
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(true);
+    useGameModeStore.getState().setMode('holdem');
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(true);
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+  });
+});

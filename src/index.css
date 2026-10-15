@@ -111,6 +111,16 @@
   --seat-badge-bg: rgba(0, 0, 0, 0.45);
   --seat-badge-text: #ffffff;
 
+  /* Roulette pocket colours (quick task 261015-ch8). Domain colours, like the felt: a red
+   * pocket is red the way a heart is red, so these are palette tokens and never the accents —
+   * the brass and lilac budgets are untouched. Each is a FILL that carries white type, so the
+   * contrast that matters is white on it: red ~5.9:1, black ~18:1, green ~5.4:1, all clear AA
+   * at the 14px and 16px sizes the layout and wheel use. The green is deliberately a step
+   * brighter than --felt so a zero pocket reads as a pocket, not as a hole in the table. */
+  --pocket-red: #b8342c;
+  --pocket-black: #141a16;
+  --pocket-green: #1f7a45;
+
   /* Phase 3 (03-02): stacking-order scale for the felt scene (UI-SPEC Table Geometry). Every
    * animating card (plan 03-03) uses --z-in-flight so it is never occluded by a settled seat/
    * board card while mid-flight. */
