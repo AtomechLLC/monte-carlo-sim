@@ -765,9 +765,10 @@ describe('the separator is decorative: no element, no character, no tab stop', (
   // because the game-mode switcher gained its third segment, Roulette. That is exactly the
   // event this census exists to flag ("a control was added"), and the count stays exact so the
   // next addition has to come here and say so too. The felt-cluster counts are untouched.
+  // RETARGETED AGAIN (261015-d7o): 5 -> 6 for the fourth segment, Craps.
   it.each([
-    ['holdem', () => render(<App />), 5, 4],
-    ['blackjack', renderInBlackjack, 5, 3],
+    ['holdem', () => render(<App />), 6, 4],
+    ['blackjack', renderInBlackjack, 6, 3],
   ])('%s: every focusable thing in the controls is one of their real buttons', (_mode, doRender, sessionButtons, actionButtons) => {
     doRender();
 

@@ -2,7 +2,8 @@ import { useGameModeStore } from '../state/gameModeStore';
 
 /**
  * Segmented game-mode control (D-01) — two buttons in Phase 5, three since roulette joined
- * (quick task 261015-ch8). Renders in the control bar in EVERY mode. Reads/writes only
+ * (quick task 261015-ch8), four since craps (261015-d7o). Renders in the control bar in EVERY
+ * mode. Reads/writes only
  * `gameModeStore` — no other store is touched from this component (D-05). Button labels never
  * change with state; `aria-pressed` alone carries which game is active, mirroring the "Set Up
  * Scenario" toggle's locked-label rule (`aria-expanded` carries its state). No button is ever
@@ -38,6 +39,14 @@ export function GameModeSwitcher() {
         onClick={() => setMode('roulette')}
       >
         Roulette
+      </button>
+      <button
+        type="button"
+        data-testid="game-mode-switch-craps"
+        aria-pressed={mode === 'craps'}
+        onClick={() => setMode('craps')}
+      >
+        Craps
       </button>
     </div>
   );

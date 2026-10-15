@@ -78,6 +78,12 @@ import { dirname, join } from 'node:path';
 // deleted, relaxed or retargeted — the 'deckCount'-free shell sweep in particular is unchanged,
 // because roulette's wheel kind lives in rouletteStore the way each deck count lives in its
 // game's own store.
+//
+// AMENDED 2026-10-15 (quick task 261015-d7o, craps as the FOURTH game): the same additive
+// amendments a fourth time — 'Craps' label and testid pinned, 'craps' forbidden in every other
+// game's files, the craps tree and its store in the resetAnimations sweep and under their own
+// no-foreign-store block, the Field toggle's selector-list extensions pinned in the App.css
+// block. Nothing deleted, relaxed or retargeted.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = __dirname;
@@ -173,6 +179,10 @@ describe('Hold\'em stores and engine/conditioning.ts — no mode branch (Pitfall
         'store is exactly the leakage PITFALLS Pitfall 10 warns against, whichever game it names',
     ).not.toContain('roulette');
   });
+
+  it.each(holdemOnlyFiles)('%s contains no "craps" either (case-insensitive, 261015-d7o)', (relativePath) => {
+    expect(readSource(relativePath).toLowerCase()).not.toContain('craps');
+  });
 });
 
 describe('App.tsx (shell) + ui/HoldemGame.tsx — single cancellation owner, no production gate reset (D-07, D-08)', () => {
@@ -242,6 +252,15 @@ describe('App.tsx (shell) + ui/HoldemGame.tsx — single cancellation owner, no 
     'state/rouletteStore.ts',
     'ui/useProgressiveReveal.ts',
     'ui/PredictionGauge.tsx',
+    // ADDED (261015-d7o): the craps tree and its store, on creation, for the same reason.
+    'ui/CrapsGame.tsx',
+    'ui/CrapsTable.tsx',
+    'ui/CrapsControls.tsx',
+    'ui/CrapsLayout.tsx',
+    'ui/CrapsDice.tsx',
+    'ui/CrapsOddsPanel.tsx',
+    'ui/crapsTrialText.ts',
+    'state/crapsStore.ts',
   ])(
     '%s contains zero occurrences of resetAnimations',
     (relativePath) => {
@@ -701,6 +720,10 @@ describe('Roulette reads no other game\'s store, and no other game reads roulett
     },
   );
 
+  it.each(rouletteFiles)('%s contains no "craps" (case-insensitive, 261015-d7o)', (relativePath) => {
+    expect(readSource(relativePath).toLowerCase()).not.toContain('craps');
+  });
+
   it('the shared batch-game modules name no game at all', () => {
     // useProgressiveReveal and PredictionGauge are the roulette/craps-shared pieces (PLAN
     // decisions 3 and 5), props-driven by construction like DeckCountToggle: a game name inside
@@ -712,6 +735,44 @@ describe('Roulette reads no other game\'s store, and no other game reads roulett
       }
       expect(lowered, `${relativePath} must import no store`).not.toContain('../state/');
     }
+  });
+});
+
+describe('Craps reads no other game\'s store, and no other game reads craps (261015-d7o — D-05/D-10 extended to a fourth game)', () => {
+  // ADDED (261015-d7o): the fourth tree gets the isolation the third got, plus the third's own
+  // store on the forbidden list.
+  const crapsFiles = [
+    'ui/CrapsGame.tsx',
+    'ui/CrapsTable.tsx',
+    'ui/CrapsControls.tsx',
+    'ui/CrapsLayout.tsx',
+    'ui/CrapsDice.tsx',
+    'ui/CrapsOddsPanel.tsx',
+    'ui/crapsTrialText.ts',
+    'state/crapsStore.ts',
+  ];
+  const foreignStores = ['gameStore', 'oddsStore', 'pickerStore', 'uiStore', 'blackjackStore', 'blackjackOddsStore', 'rouletteStore'];
+
+  it.each(crapsFiles.flatMap((file) => foreignStores.map((token) => [file, token] as const)))(
+    '%s contains no occurrence of %s outside of comments',
+    (relativePath, token) => {
+      expect(stripCommentLines(readSource(relativePath))).not.toContain(token);
+    },
+  );
+
+  it('state/crapsStore.ts imports from the engine and zustand only', () => {
+    expect(stripCommentLines(readSource('state/crapsStore.ts'))).not.toContain("from './");
+  });
+
+  it.each([
+    'state/blackjackStore.ts',
+    'state/blackjackOddsStore.ts',
+    'ui/BlackjackGame.tsx',
+    'ui/BlackjackControls.tsx',
+    'state/rouletteStore.ts',
+    'ui/RouletteGame.tsx',
+  ])('%s contains no "craps" (case-insensitive)', (relativePath) => {
+    expect(readSource(relativePath).toLowerCase()).not.toContain('craps');
   });
 });
 
@@ -839,6 +900,28 @@ describe('Locked copy and labels stay verbatim (D-01, D-13, D-14, 06-UI-SPEC Cop
     },
   );
 
+  // ADDED (261015-d7o): the fourth segment and the craps tree's own locked strings.
+  it('GameModeSwitcher.tsx contains the locked Craps label and testid (261015-d7o)', () => {
+    const source = readSource('ui/GameModeSwitcher.tsx');
+    expect(source).toContain('Craps');
+    expect(source).toContain('game-mode-switch-craps');
+  });
+
+  it.each(['12 pays triple', '12 pays double', 'Field 12 pays', 'Reset', 'craps-field-toggle', 'craps-roll-button', 'craps-reset-button'])(
+    'CrapsControls.tsx contains the locked string %s (261015-d7o)',
+    (locked) => {
+      expect(readSource('ui/CrapsControls.tsx')).toContain(locked);
+    },
+  );
+
+  it('CrapsGame.tsx contains the locked idle heading and body verbatim (261015-d7o)', () => {
+    const source = normalizeWhitespace(readSource('ui/CrapsGame.tsx'));
+    expect(source).toContain('No rolls yet');
+    expect(source).toContain(
+      "Pick a bet on the layout, then click Roll 100 to see how often it wins. Switch the Field's 12 between triple and double to see the house edge shift.",
+    );
+  });
+
   it('RouletteGame.tsx contains the locked idle heading and body verbatim (261015-ch8)', () => {
     const source = normalizeWhitespace(readSource('ui/RouletteGame.tsx'));
     expect(source).toContain('No spins yet');
@@ -954,6 +1037,32 @@ describe('App.css — Phase 7 styles are selector-list extensions of the shared 
     );
     expect(theChunkWith("[data-testid='blackjack-odds-panel']", 'min-width: 460px')).toContain(
       "[data-testid='roulette-odds-panel']",
+    );
+  });
+
+  // ADDED (261015-d7o): the craps Field toggle joins the same rules the same way, and the
+  // switcher's Roulette segment joins the divider rule now that Craps follows it.
+  it('every shared segmented-control rule carries the craps Field toggle as a selector-list extension (261015-d7o)', () => {
+    expect(theChunkWith("[data-testid='blackjack-deck-toggle']", 'display: inline-flex')).toContain(
+      "[data-testid='craps-field-toggle']",
+    );
+    expect(theChunkWith("[data-testid^='blackjack-deck-toggle-']", 'min-width: 44px')).toContain(
+      "[data-testid^='craps-field-toggle-']",
+    );
+    const divider = theChunkWith("[data-testid='blackjack-deck-toggle-1']", 'border-right');
+    expect(divider).toContain("[data-testid='craps-field-toggle-triple12']");
+    expect(divider).toContain("[data-testid='game-mode-switch-roulette']");
+    expect(theChunkWith("[data-testid^='blackjack-deck-toggle-'][aria-pressed='true']")).toContain(
+      "[data-testid^='craps-field-toggle-'][aria-pressed='true']",
+    );
+    expect(theChunkWith("[data-testid='blackjack-deck-toggle-1']:disabled")).toContain(
+      "[data-testid='craps-roll-button']:disabled",
+    );
+    expect(theChunkWith("[data-testid='blackjack-odds-panel']", 'min-width: 460px')).toContain(
+      "[data-testid='craps-odds-panel']",
+    );
+    expect(theChunkWith("[data-testid='roulette-odds-panel']", 'max-width: 520px')).toContain(
+      "[data-testid='craps-odds-panel']",
     );
   });
 

@@ -3,10 +3,10 @@ import { create } from 'zustand';
 /**
  * A literal union, never a boolean and never a TS `enum` — mirrors `Street` (src/engine/streets.ts)
  * and `DeckCount` (src/engine/shoe.ts). Two games in Phase 5 (D-02); roulette joined as the
- * third (quick task 261015-ch8) by extending this union exactly as that decision foresaw — a
- * fourth game (craps) extends it again, it does not become a boolean flag.
+ * third (quick task 261015-ch8) and craps as the fourth (261015-d7o) by extending this union
+ * exactly as that decision foresaw — it never becomes a boolean flag.
  */
-export type GameMode = 'holdem' | 'blackjack' | 'roulette';
+export type GameMode = 'holdem' | 'blackjack' | 'roulette' | 'craps';
 
 // gameModeStore must not import gameStore/oddsStore/pickerStore/uiStore — those stores stay
 // entirely unaware Blackjack exists (D-05). The dependency, if any ever forms, runs one way only:
@@ -36,7 +36,7 @@ interface GameModeState {
    * is cross-game SHELL state (which mount is a mode restore), not game state — it reads
    * nothing from any game-owned store. Note: the blackjack-local deck count does NOT belong in
    * this file — it lives in blackjackStore per D-10, and the mode-shell guard's token sweep
-   * enforces that. Roulette has no card animation and therefore no restore flag.
+   * enforces that. Roulette and craps have no card animation and therefore no restore flag.
    */
   blackjackRestorePending: boolean;
   /**

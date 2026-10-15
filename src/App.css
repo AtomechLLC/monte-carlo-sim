@@ -205,7 +205,9 @@ h2 {
 [data-testid='blackjack-deck-toggle-1']:disabled,
 [data-testid='holdem-deck-toggle-1']:disabled,
 [data-testid='roulette-spin-button']:disabled,
-[data-testid='roulette-reset-button']:disabled {
+[data-testid='roulette-reset-button']:disabled,
+[data-testid='craps-roll-button']:disabled,
+[data-testid='craps-reset-button']:disabled {
   color: var(--text);
   opacity: 0.4;
   cursor: not-allowed;
@@ -1167,7 +1169,8 @@ h2 {
  * added to the SHARED rule, so both games' panels stay pixel-identical (D-11). */
 [data-testid='odds-panel'],
 [data-testid='blackjack-odds-panel'],
-[data-testid='roulette-odds-panel'] {
+[data-testid='roulette-odds-panel'],
+[data-testid='craps-odds-panel'] {
   /* The panel gets a floor and the felt yields, rather than the other way round. When the felt
    * grew to 1040px it took the space out of this column, and every multi-word heading in the
    * category table started wrapping onto two lines — a table of numbers whose headings are
@@ -1239,7 +1242,8 @@ h2 {
 [data-testid='game-mode-switcher'],
 [data-testid='blackjack-deck-toggle'],
 [data-testid='holdem-deck-toggle'],
-[data-testid='roulette-wheel-toggle'] {
+[data-testid='roulette-wheel-toggle'],
+[data-testid='craps-field-toggle'] {
   display: inline-flex;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1250,7 +1254,8 @@ h2 {
 [data-testid^='game-mode-switch-'],
 [data-testid^='blackjack-deck-toggle-'],
 [data-testid^='holdem-deck-toggle-'],
-[data-testid^='roulette-wheel-toggle-'] {
+[data-testid^='roulette-wheel-toggle-'],
+[data-testid^='craps-field-toggle-'] {
   min-width: 44px;
   min-height: 44px;
   padding: 8px 16px;
@@ -1265,16 +1270,19 @@ h2 {
 
 [data-testid='game-mode-switch-holdem'],
 [data-testid='game-mode-switch-blackjack'],
+[data-testid='game-mode-switch-roulette'],
 [data-testid='blackjack-deck-toggle-1'],
 [data-testid='holdem-deck-toggle-1'],
-[data-testid='roulette-wheel-toggle-european'] {
+[data-testid='roulette-wheel-toggle-european'],
+[data-testid='craps-field-toggle-triple12'] {
   border-right: 1px solid var(--border);
 }
 
 [data-testid^='game-mode-switch-'][aria-pressed='true'],
 [data-testid^='blackjack-deck-toggle-'][aria-pressed='true'],
 [data-testid^='holdem-deck-toggle-'][aria-pressed='true'],
-[data-testid^='roulette-wheel-toggle-'][aria-pressed='true'] {
+[data-testid^='roulette-wheel-toggle-'][aria-pressed='true'],
+[data-testid^='craps-field-toggle-'][aria-pressed='true'] {
   background: var(--border);
   color: var(--text-h);
   font-weight: 600;
@@ -1770,7 +1778,8 @@ h2 {
 /* The selection: a brass ring and the semibold weight, over the cell's own
  * colour. Ink, not fill — the pocket keeps its red, black or green. */
 .roulette-pocket[aria-pressed='true'],
-.roulette-color[aria-pressed='true'] {
+.roulette-color[aria-pressed='true'],
+.craps-bet[aria-pressed='true'] {
   font-weight: 600;
   box-shadow:
     0 0 0 3px var(--accent),
@@ -1792,7 +1801,8 @@ h2 {
  * grew to 690px at 84 revealed spins, starving the felt from 721px down to
  * ~320px. Clamping the basis keeps the panel between the shared 460px floor
  * and this ceiling whatever the history holds, so the felt keeps its share. */
-[data-testid='roulette-odds-panel'] {
+[data-testid='roulette-odds-panel'],
+[data-testid='craps-odds-panel'] {
   max-width: 520px;
   padding: 24px;
   display: flex;
@@ -1902,5 +1912,225 @@ h2 {
 }
 
 .roulette-chip--latest {
+  box-shadow: 0 0 0 2px var(--text-h);
+}
+
+/* ---------------------------------------------------------------------------
+ * Craps (quick task 261015-d7o)
+ *
+ * Every craps rule lives in this ONE block, plus the surgical selector-list
+ * extensions above (the disabled-dimming list, the segmented-control rules,
+ * the shared panel surface and width cap, and the selected-bet ring it shares
+ * with the roulette pockets). Tokens only; the dice borrow the card stock and
+ * ink tokens because a die is a physical object the way a card is. Zero new
+ * accent usage: the brass ring on the selected bet is the roulette rule.
+ *
+ * GEOMETRY at the felt's rendered width (911 x 569), inner edge 12px in:
+ *   rules   top 9%, centred             -> y ~51 (the roulette rule, reused)
+ *   layout  left 3%, 60% wide, top 17%  -> x 27..574, y ~97..285: THREE rows
+ *           on a 12-column grid (place boxes 48px; Field over 6 columns
+ *           beside the two propositions over 3 each; Don't pass and Pass
+ *           line over 6 each), ~58px bars, 8px gaps — measured 188px tall
+ *   dice    left 67%, 29% wide, top 20% -> x 610..874, two 64px faces and
+ *           the sequence line beneath
+ *   actions bottom 5%, left 2%          -> y ~485..541, far below the pass
+ *           line (~285); at the 661px felt a 1280px viewport renders, the
+ *           layout ends at ~253 against a plate top of ~308 — the five-bar
+ *           stack this replaced ran to the rail and under the plate there
+ * Fluid like the roulette layout: widths are percentages of the felt, so a
+ * narrower felt never overflows into the odds panel.
+ * ------------------------------------------------------------------------- */
+.felt--craps {
+  border-radius: 28px;
+}
+
+.craps-layout {
+  position: absolute;
+  left: 3%;
+  top: 17%;
+  width: 60%;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 8px;
+  z-index: var(--z-seat);
+}
+
+.craps-place-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* Row two: the Field band over half the width, the two propositions sharing
+ * the other half. Row three: the two line bets, half each. */
+.craps-bet--field,
+.craps-bet--dont-pass {
+  grid-column: span 6;
+}
+
+.craps-bet--any-seven,
+.craps-bet--any-craps {
+  grid-column: span 3;
+}
+
+.craps-bet--pass {
+  grid-column: span 6;
+}
+
+/* The wrapper exists for React's key; the button is the grid item. */
+.craps-place-slot {
+  display: contents;
+}
+
+/* The four place numbers the simulator does not score: present so the row is
+ * the row every craps player knows, inert so they promise nothing. */
+.craps-place-box {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(255, 249, 235, 0.3);
+  border-radius: 6px;
+  color: rgba(255, 249, 235, 0.45);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* A bet box: the printed-on-felt look (a pale rule, a dark wash), the 44px
+ * floor, uppercase tracked labels like the printed table rules. */
+.craps-bet {
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 2px solid rgba(255, 249, 235, 0.5);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--seat-badge-text);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: var(--elev-rest);
+}
+
+.craps-bet__sub {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  opacity: 0.85;
+}
+
+.craps-bet--place {
+  min-height: 48px;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+/* --- The dice --------------------------------------------------------------- */
+.craps-dice {
+  position: absolute;
+  left: 67%;
+  top: 20%;
+  width: 29%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: var(--z-seat);
+}
+
+.craps-dice__pair {
+  display: flex;
+  gap: 12px;
+}
+
+.craps-die {
+  width: 64px;
+  height: 64px;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.38));
+}
+
+.craps-die__stock {
+  fill: var(--hand-icon-stock);
+  stroke: rgba(0, 0, 0, 0.25);
+  stroke-width: 1;
+}
+
+.craps-die__pip {
+  fill: var(--hand-icon-ink);
+}
+
+/* Before the first decision: dashed placeholders, the undealt-card-slot pattern. */
+.craps-die-placeholder {
+  width: 64px;
+  height: 64px;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+/* The decision spelled out: a badge on the felt, Label size. */
+.craps-dice__sequence {
+  margin: 0;
+  padding: 4px 8px;
+  text-align: center;
+  border-radius: 12px;
+  background: var(--seat-badge-bg);
+  color: var(--seat-badge-text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.felt-controls--craps {
+  bottom: 5%;
+}
+
+/* --- The odds cluster: decision history, one dot per decision ----------------- */
+[data-testid='craps-totals-table'] td {
+  font-variant-numeric: tabular-nums;
+}
+
+.craps-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.craps-chip {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 249, 235, 0.25);
+}
+
+.craps-chip--win {
+  background: var(--pocket-green);
+}
+
+.craps-chip--lose {
+  background: var(--pocket-red);
+}
+
+.craps-chip--push {
+  background: var(--text);
+}
+
+.craps-chip--latest {
   box-shadow: 0 0 0 2px var(--text-h);
 }

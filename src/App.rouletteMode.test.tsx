@@ -136,7 +136,9 @@ describe('the switcher has three segments and Roulette mounts its own tree', () 
   it("renders Hold'em, Blackjack and Roulette, with Roulette unpressed and absent by default", () => {
     render(<App />);
     const switcher = screen.getByTestId('game-mode-switcher');
-    expect(switcher.querySelectorAll('button')).toHaveLength(3);
+    // RETARGETED (261015-d7o): 3 -> 4 when Craps joined as the fourth segment; the Roulette
+    // assertions below are unchanged.
+    expect(switcher.querySelectorAll('button')).toHaveLength(4);
     const roulette = screen.getByTestId('game-mode-switch-roulette');
     expect(roulette).toHaveTextContent('Roulette');
     expect(roulette).toHaveAttribute('aria-pressed', 'false');

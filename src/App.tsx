@@ -3,13 +3,15 @@ import './App.css';
 import { HoldemGame } from './ui/HoldemGame';
 import { BlackjackGame } from './ui/BlackjackGame';
 import { RouletteGame } from './ui/RouletteGame';
+import { CrapsGame } from './ui/CrapsGame';
 import { useGameModeStore } from './state/gameModeStore';
 
 // D-07 (05-REVIEW WR-03): App is now a cross-game SHELL — it owns no game state, no effects
 // and no simulation imports. Every Hold'em-scoped effect, state field and JSX block lives in
 // <HoldemGame />, every Blackjack-scoped one in <BlackjackGame /> (06-07 — the Phase 5
 // placeholder shim and BlackjackScene are retired, D-13), and every roulette-scoped one in
-// <RouletteGame /> (quick task 261015-ch8); the shell only picks which game component mounts.
+// <RouletteGame /> (quick task 261015-ch8) and every craps-scoped one in <CrapsGame />
+// (261015-d7o); the shell only picks which game component mounts.
 // Leakage is structurally impossible: a game-scoped sibling cannot exist outside its game
 // component.
 function App() {
@@ -26,6 +28,7 @@ function App() {
       {mode === 'holdem' && <HoldemGame />}
       {mode === 'blackjack' && <BlackjackGame />}
       {mode === 'roulette' && <RouletteGame />}
+      {mode === 'craps' && <CrapsGame />}
     </MotionConfig>
   );
 }

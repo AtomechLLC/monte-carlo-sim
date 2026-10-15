@@ -159,3 +159,36 @@ describe('gameModeStore - roulette is a third mode, and a restore marks any swit
     expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
   });
 });
+
+describe('gameModeStore - craps is a fourth mode (261015-d7o)', () => {
+  beforeEach(() => {
+    useGameModeStore.setState({ mode: 'holdem', holdemRestorePending: false, blackjackRestorePending: false });
+  });
+
+  it('setMode("craps") flips the mode and raises neither restore flag', () => {
+    useGameModeStore.getState().setMode('craps');
+    expect(useGameModeStore.getState().mode).toBe('craps');
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(false);
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+  });
+
+  it('craps -> holdem and craps -> blackjack each raise exactly that game\'s restore flag', () => {
+    useGameModeStore.getState().setMode('craps');
+    useGameModeStore.getState().setMode('holdem');
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(true);
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+
+    useGameModeStore.getState().setMode('craps');
+    useGameModeStore.getState().setMode('blackjack');
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(true);
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(false);
+  });
+
+  it('roulette <-> craps raises nothing', () => {
+    useGameModeStore.getState().setMode('roulette');
+    useGameModeStore.getState().setMode('craps');
+    useGameModeStore.getState().setMode('roulette');
+    expect(useGameModeStore.getState().holdemRestorePending).toBe(false);
+    expect(useGameModeStore.getState().blackjackRestorePending).toBe(false);
+  });
+});

@@ -79,10 +79,11 @@ describe('GameModeSwitcher - the third segment, Roulette (261015-ch8)', () => {
     useGameModeStore.setState({ mode: 'holdem' });
   });
 
-  it('renders Roulette as the last of three segments, unpressed by default, never disabled', () => {
+  it('renders Roulette as the third segment, unpressed by default, never disabled', () => {
     render(<GameModeSwitcher />);
     const buttons = screen.getByTestId('game-mode-switcher').querySelectorAll('button');
-    expect(buttons).toHaveLength(3);
+    // RETARGETED (261015-d7o): 3 -> 4 when Craps joined; Roulette keeps the third slot.
+    expect(buttons).toHaveLength(4);
     expect(buttons[2]).toBe(screen.getByTestId('game-mode-switch-roulette'));
     expect(buttons[2].textContent).toBe('Roulette');
     expect(buttons[2]).toHaveAttribute('aria-pressed', 'false');
@@ -101,5 +102,34 @@ describe('GameModeSwitcher - the third segment, Roulette (261015-ch8)', () => {
     expect(screen.getByTestId('game-mode-switch-blackjack')).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByTestId('game-mode-switch-roulette').textContent).toBe('Roulette');
     expect(screen.getByRole('button', { name: "Hold'em" })).not.toBeDisabled();
+  });
+});
+
+describe('GameModeSwitcher - the fourth segment, Craps (261015-d7o)', () => {
+  beforeEach(() => {
+    useGameModeStore.setState({ mode: 'holdem' });
+  });
+
+  it('renders Craps as the last of four segments, unpressed by default, never disabled', () => {
+    render(<GameModeSwitcher />);
+    const buttons = screen.getByTestId('game-mode-switcher').querySelectorAll('button');
+    expect(buttons).toHaveLength(4);
+    expect(buttons[3]).toBe(screen.getByTestId('game-mode-switch-craps'));
+    expect(buttons[3].textContent).toBe('Craps');
+    expect(buttons[3]).toHaveAttribute('aria-pressed', 'false');
+    expect(buttons[3]).not.toBeDisabled();
+  });
+
+  it('clicking Craps presses it alone and writes the store', async () => {
+    const user = userEvent.setup();
+    render(<GameModeSwitcher />);
+
+    await user.click(screen.getByTestId('game-mode-switch-craps'));
+
+    expect(useGameModeStore.getState().mode).toBe('craps');
+    expect(screen.getByTestId('game-mode-switch-craps')).toHaveAttribute('aria-pressed', 'true');
+    for (const other of ['holdem', 'blackjack', 'roulette']) {
+      expect(screen.getByTestId(`game-mode-switch-${other}`)).toHaveAttribute('aria-pressed', 'false');
+    }
   });
 });
