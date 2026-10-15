@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { formatSignedUnits, scorePrediction } from './predictionScore';
+import { formatSignedUnits, scorePrediction, scoreTallied } from './predictionScore';
 
 describe('scorePrediction', () => {
   it('before the first trial: observed 0 (never NaN), nothing expected, nothing won or lost', () => {
@@ -35,5 +35,37 @@ describe('formatSignedUnits', () => {
     expect(formatSignedUnits(4)).toBe('+4');
     expect(formatSignedUnits(-3)).toBe('−3');
     expect(formatSignedUnits(0)).toBe('0');
+  });
+});
+
+describe('scoreTallied (261015-d7o) - outcomes the game settled itself', () => {
+  it('reports pushes and uses the tallied net rather than hits x payout', () => {
+    const score = scoreTallied({ hits: 48, pushes: 3, trials: 100, netUnits: -1 }, 949 / 1980, 1);
+    expect(score.pushes).toBe(3);
+    expect(score.observed).toBeCloseTo(0.48, 12);
+    expect(score.expectedHits).toBeCloseTo(94900 / 1980, 10);
+    expect(score.netUnits).toBe(-1);
+    expect(score.payout).toBe(1);
+  });
+
+  it('is empty-safe', () => {
+    const score = scoreTallied({ hits: 0, pushes: 0, trials: 0, netUnits: 0 }, 0.5, 1);
+    expect(score.observed).toBe(0);
+    expect(Number.isNaN(score.observed)).toBe(false);
+  });
+
+  it('scorePrediction still reports zero pushes', () => {
+    expect(scorePrediction(1, 2, 0.5, 1).pushes).toBe(0);
+  });
+});
+
+describe('formatSignedUnits - fractional nets (261015-d7o)', () => {
+  it('prints a fractional net to one decimal and a near-zero net as 0', () => {
+    expect(formatSignedUnits(7 / 6 - 1)).toBe('+0.2');
+    expect(formatSignedUnits(-(7 / 6) * 2 + 3)).toBe('+0.7');
+    expect(formatSignedUnits(5 * (7 / 6) - 6)).toBe('−0.2');
+    expect(formatSignedUnits(0.04)).toBe('0');
+    expect(formatSignedUnits(-0.04)).toBe('0');
+    expect(formatSignedUnits(12.0)).toBe('+12');
   });
 });
