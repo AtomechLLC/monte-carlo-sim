@@ -4,6 +4,7 @@ import { HoldemGame } from './ui/HoldemGame';
 import { BlackjackGame } from './ui/BlackjackGame';
 import { RouletteGame } from './ui/RouletteGame';
 import { CrapsGame } from './ui/CrapsGame';
+import { CommunityLink } from './ui/CommunityLink';
 import { useGameModeStore } from './state/gameModeStore';
 
 // D-07 (05-REVIEW WR-03): App is now a cross-game SHELL — it owns no game state, no effects
@@ -25,6 +26,9 @@ function App() {
     // collapses to zero-duration animations when reduced motion is active.
     <MotionConfig reducedMotion="user">
       <h1>Monte Carlo Poker Simulator</h1>
+      {/* Cross-game chrome, like the wordmark: the community link sits in the page's top-right
+          corner on every screen (quick task 261021). */}
+      <CommunityLink />
       {mode === 'holdem' && <HoldemGame />}
       {mode === 'blackjack' && <BlackjackGame />}
       {mode === 'roulette' && <RouletteGame />}

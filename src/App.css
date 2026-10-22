@@ -2134,3 +2134,62 @@ h2 {
 .craps-chip--latest {
   box-shadow: 0 0 0 2px var(--text-h);
 }
+
+/* ---------------------------------------------------------------------------
+ * Community link (quick task 261021)
+ *
+ * The Discord mark and "Funsmith Club" in the page's top-right corner, on
+ * every screen, linking to funsmith.club. Pinned against #root (now
+ * position: relative in index.css) so the corner is the centred page
+ * column's. Label role (14/400/1.4); the mark is drawn in currentColor, so
+ * link and glyph brighten together on hover and focus and no new colour
+ * enters the palette. The 44px floor is met through min-height; the inline
+ * padding keeps the hit area wider than the text.
+ *
+ * It never enters the flow (user: "don't push the page down"): below the
+ * column breakpoint the label hides and the mark stays in the corner alone,
+ * and the wordmark takes side padding so the two cannot collide when the
+ * title wraps on a phone. The accessible name is set on the link itself, so
+ * the icon-only form still reads "Funsmith Club on Discord".
+ * ------------------------------------------------------------------------- */
+.community-link {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+.community-link:hover,
+.community-link:focus-visible {
+  color: var(--text-h);
+}
+
+.community-link:focus-visible {
+  outline: 2px solid var(--text-h);
+  outline-offset: 2px;
+}
+
+.community-link__mark {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+@media (max-width: 1024px) {
+  .community-link__label {
+    display: none;
+  }
+  h1 {
+    padding-inline: 56px;
+  }
+}

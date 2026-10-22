@@ -205,6 +205,11 @@
   /* Widened with the enlarged felt: the scene is 1040px of table plus a ~420px
    * odds cluster beside it at >=1024px, which no longer fits the old 1126px. */
   width: min(100%, 1560px);
+  /* The positioning anchor for the community link in the top-right corner (quick task
+   * 261021): "top right" means the corner of this centred page column, not the viewport's,
+   * so the link stays inside the bordered column at every width. Nothing else positions
+   * against the page — the felt is its own anchor and the picker is a <dialog>. */
+  position: relative;
   max-width: 100%;
   margin: 0 auto;
   text-align: center;
